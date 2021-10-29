@@ -1,0 +1,24 @@
+{
+  "name": "swagger-schematics",
+  "version": "0.1.0-alpha.0",
+  "scripts": {
+    "prebuild": "dtsgen --out schematics/schema.d.ts schematics/**/schema.json",
+    "build": "tsc -p tsconfig.schematics.json",
+    "pretest": "npm run build",
+    "test": "jasmine schematics/**/*_spec.js",
+    "test:types": "jasmine schematics/swagger/*_spec.js"
+  },
+  "schematics": "./collection.json",
+  "peerDependencies": {
+    "@angular-devkit/core": ">= 11.2.9",
+    "@angular-devkit/schematics": ">= 11.2.9"
+  },
+  "devDependencies": {
+    "@types/jasmine": "3.6.9",
+    "@types/node": "14.14.41",
+    "dtsgenerator": "3.9.2",
+    "tslib": "2.2.0",
+    "jasmine": "3.7.0",
+    "typescript": "4.1.3"
+  }
+}

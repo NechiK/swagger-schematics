@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "declaration": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noUnusedParameters": false,
+    "noUnusedLocals": false,
+    "rootDir": "schematics",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2019",
+    "lib": [
+      "es2019"
+    ],
+    "types": [
+      "jasmine",
+      "node"
+    ],
+  },
+  "exclude": [
+    "schematics/*/files/**/*"
+  ]
+}

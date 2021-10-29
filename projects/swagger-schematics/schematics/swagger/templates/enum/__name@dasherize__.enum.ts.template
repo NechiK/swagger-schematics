@@ -1,0 +1,3 @@
+export enum T<%= classify(name) %> {
+<% enums.forEach((enumItem, index) => { %><%= enumLine(enumItem, index, enums) %><% }) %>
+}

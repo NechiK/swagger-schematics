@@ -2,6 +2,9 @@ import {SchematicTestRunner, UnitTestTree} from '@angular-devkit/schematics/test
 import * as path from 'path';
 import {Schema as WorkspaceSchema} from "@schematics/angular/workspace/schema";
 import {Schema as ApplicationSchema} from "@schematics/angular/application/schema";
+import MockAdapter from "axios-mock-adapter";
+import axios from "axios";
+import {SWAGGER_MOCK_DATA} from "./swagger-mock";
 
 const schematicRunner = new SchematicTestRunner('schematics', path.join(__dirname, './../collection.json'));
 
@@ -10,6 +13,7 @@ const appOptions: ApplicationSchema = {
 };
 
 const defaultOptions: SwaggerSchema = {
+  swaggerSchemaUrl: 'https://apidev.example.com/swagger/v1/swagger.json',
   project: appOptions.name,
 };
 
@@ -19,6 +23,11 @@ const workspaceOptions: WorkspaceSchema = {
   version: '11.2.9',
   strict: true
 };
+
+// This sets the mock adapter on the default instance
+const mock = new MockAdapter(axios);
+
+mock.onGet(defaultOptions.swaggerSchemaUrl).reply(200, SWAGGER_MOCK_DATA);
 
 // const srcPath = `/${workspaceOptions.newProjectRoot}/${appOptions.name}/src`;
 // const appPath = `${srcPath}/app`;
@@ -45,6 +54,7 @@ describe('Schematics: App Types', () => {
     const tree = await schematicRunner.runSchematicAsync('types', options, appTree).toPromise();
     const files = tree.files;
     console.log(files);
-    console.log(tree.readContent(`/projects/th-schematics/src/app/interfaces/vehicle-dto.interface.ts`));
+    console.log(tree.readContent(`/projects/th-schematics/src/app/interfaces/claim-detail-dto.interface.ts`));
+    console.log(tree.readContent(`/projects/th-schematics/src/app/interfaces/create-region-dto.interface.ts`));
   });
 });

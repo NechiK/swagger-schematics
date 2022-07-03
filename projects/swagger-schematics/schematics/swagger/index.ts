@@ -2,7 +2,7 @@ import {
     apply,
     applyTemplates, chain,
     mergeWith,
-    move, Rule,
+    move, Rule, SchematicsException,
     Tree,
     url
 } from '@angular-devkit/schematics';
@@ -17,15 +17,17 @@ import {dasherize} from "@angular-devkit/core/src/utils/strings";
 
 export default function(options: SwaggerSchema) {
   return async (host: Tree) => {
-      options.path = options.path || '';
-      options.project = options.project || '';
+      if (!options.swaggerSchemaUrl) {
+          throw new SchematicsException(`Swagger schema URL wasn't provided`);
+      }
+
       const workspace = await getWorkspace(host);
-      const project = workspace.projects.get(options.project);
+      const project = workspace.projects.get(options.project as string);
       if (!options.path && project) {
           options.path = buildDefaultPath(project);
       }
 
-      const swagger: AxiosResponse<ISwaggerSchema> = await axios.get('');
+      const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
       const schemas = swagger.data.components.schemas;
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
@@ -40,7 +42,7 @@ export default function(options: SwaggerSchema) {
       const interfaceTemplates = url('./templates/interface');
       const enumTemplates = url('./templates/enum');
 
-      let finalRule: Rule | undefined = undefined;
+      let finalRule: Rule | undefined;
       parsedSchemas.forEach(schemaData => {
           let itemSource;
           if (schemaData.type === 'enum') {

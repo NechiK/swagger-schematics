@@ -3,14 +3,28 @@ import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import {buildRelativePath} from "@schematics/angular/utility/find-module";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 
+export interface ISwaggerSymbolEnumInterface {
+    type: 'enum' | 'interface';
+    fileName: string;
+    importSymbol: string;
+    propertySymbol: string;
+}
+
+export interface ISwaggerSymbolOther {
+    type: JSONSchema7TypeName;
+    propertySymbol: string;
+}
+
+export type TSwaggerSymbol = ISwaggerSymbolEnumInterface | ISwaggerSymbolOther;
+
 export function transformProperties(properties: {[key: string]: JSONSchema7Definition}, swagger: ISwaggerSchema) {
     const transformed = [];
-    const refs = [];
+    const refs: ISwaggerSymbolEnumInterface[] = [];
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
-        const transformedProperty = transformType(property as JSONSchema7, propertyKey, swagger);
-        transformed.push(`${propertyKey}: ${transformedProperty.symbol};`);
-        if (['enum', 'interface'].includes(transformedProperty.type)) {
+        const transformedProperty = transformType(property as JSONSchema7, swagger);
+        transformed.push(`${propertyKey}: ${transformedProperty.propertySymbol};`);
+        if (transformedProperty.type === 'enum' || transformedProperty.type === 'interface') {
             refs.push(transformedProperty);
         }
     }
@@ -21,16 +35,16 @@ export function transformProperties(properties: {[key: string]: JSONSchema7Defin
     };
 }
 
-export function transformRefsToImport(refs: {type: JSONSchema7TypeName | 'enum' | 'interface'; symbol: string}[], optionsPath: string, sourcePath: string) {
+export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optionsPath: string, sourcePath: string) {
     return refs.map(ref => {
         let folderPath;
         if (ref.type === 'enum') {
             folderPath = `${optionsPath}/enums`;
         } else {
-            folderPath = `${optionsPath}/enums`;
+            folderPath = `${optionsPath}/interfaces`;
         }
 
-        return buildImport(sourcePath, `${folderPath}/${dasherize(ref.symbol)}.${ref.type}.ts`, ref.symbol);
+        return buildImport(sourcePath, `${folderPath}/${ref.fileName}.${ref.type}.ts`, ref.importSymbol);
     }).join('\n');
 }
 
@@ -39,35 +53,47 @@ export function buildImport(fromPath: string, toPath: string, symbolName: string
     return `import {${symbolName}} from "${relativePath}"`;
 }
 
-function transformType(property: JSONSchema7, propertyKey: string, swagger: ISwaggerSchema): {type: JSONSchema7TypeName | 'enum' | 'interface'; symbol: string} {
-    if (!!property.$ref) {
-        const {refProperty, refPropertyKey} = getRefProperty(property.$ref, swagger);
+function transformArraySymbol(arrayProperty: JSONSchema7, swagger: ISwaggerSchema): TSwaggerSymbol {
+    const transformedType = !!arrayProperty.$ref ? parseRefToSymbol(arrayProperty, swagger) : transformType(arrayProperty, swagger);
+    return {
+        ...transformedType,
+        propertySymbol: `${transformedType.propertySymbol}[]`
+    }
+}
 
-        return {
-            type: isRefPropertyEnum(refProperty) ? 'enum' : 'interface',
-            symbol: transformRefProperty(refProperty, refPropertyKey)
-        };
+function parseRefToSymbol(property: JSONSchema7, swagger: ISwaggerSchema): TSwaggerSymbol {
+    const {refProperty, refPropertyKey} = getRefProperty(property.$ref!, swagger);
+    const symbol = transformRefProperty(refProperty, refPropertyKey);
+
+    return {
+        type: isRefPropertyEnum(refProperty) ? 'enum' : 'interface',
+        importSymbol: symbol,
+        propertySymbol: symbol,
+        fileName: dasherize(refPropertyKey)
+    };
+}
+
+function transformType(property: JSONSchema7, swagger: ISwaggerSchema): TSwaggerSymbol {
+    if (!!property.$ref) {
+        return parseRefToSymbol(property, swagger);
     } else {
         switch (property.type) {
             case 'array':
-                return {
-                    type: property.type,
-                    symbol: `${propertyKey}[]`
-                };
+                return transformArraySymbol(property.items as JSONSchema7, swagger);
             case 'integer':
                 return {
                     type: property.type,
-                    symbol: `number`
+                    propertySymbol: `number`
                 };
             case 'object':
                 return {
                     type: property.type,
-                    symbol: `object`
+                    propertySymbol: `object`
                 };
             default:
                 return {
                     type: property.type as JSONSchema7TypeName,
-                    symbol: property.type as JSONSchema7TypeName
+                    propertySymbol: property.type as JSONSchema7TypeName
                 };
         }
     }

@@ -7,7 +7,7 @@ import {
     url
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
-import {buildDefaultPath, getWorkspace} from '@schematics/angular/utility/workspace';
+import {createDefaultPath} from '@schematics/angular/utility/workspace';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, interfaces} from "./utils";
 import {transformProperties, transformRefsToImport} from "./utils/interface";
@@ -21,11 +21,18 @@ export default function(options: SwaggerSchema) {
           throw new SchematicsException(`Swagger schema URL wasn't provided`);
       }
 
-      const workspace = await getWorkspace(host);
-      const project = workspace.projects.get(options.project as string);
-      if (!options.path && project) {
-          options.path = buildDefaultPath(project);
+      if (options.path === undefined) {
+          options.path = await createDefaultPath(host, options.project as string);
       }
+
+      const parsedPath = parseName(options.path, '');
+      options.path = parsedPath.path;
+
+      // const workspace = await getWorkspace(host);
+      // const project = workspace.projects.get(options.project as string);
+      // if (!options.workingDirectory && project) {
+      //     options.workingDirectory = buildDefaultPath(project);
+      // }
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
       const schemas = swagger.data.components.schemas;
@@ -61,7 +68,7 @@ export default function(options: SwaggerSchema) {
           } else {
               const parsed = parseName(`${options.path}/interfaces`, schemaData.name);
               const {propertiesContent, refs} = transformProperties(!!schemaData.data.properties ? schemaData.data.properties : {}, swagger.data);
-              const importsContent = transformRefsToImport(refs, options.path as string, `${parsed.path}/${dasherize(parsed.name)}.ts`);
+              const importsContent = transformRefsToImport(refs, options.path as string, `${parsed.path}/${dasherize(parsed.name)}`);
               itemSource = apply(interfaceTemplates, [
                   applyTemplates({
                       ...options,

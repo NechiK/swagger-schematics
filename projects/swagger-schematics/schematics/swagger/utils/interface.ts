@@ -44,7 +44,7 @@ export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optio
             folderPath = `${optionsPath}/interfaces`;
         }
 
-        return buildImport(sourcePath, `${folderPath}/${ref.fileName}.${ref.type}.ts`, ref.importSymbol);
+        return buildImport(sourcePath, `${folderPath}/${ref.fileName}.${ref.type}`, ref.importSymbol);
     }).join('\n');
 }
 

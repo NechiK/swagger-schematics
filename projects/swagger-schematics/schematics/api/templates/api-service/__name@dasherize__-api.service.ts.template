@@ -1,0 +1,19 @@
+import {CrudApiBaseService} from "./crud-api-base.service";
+<%= importsContent %>
+
+@Injectable({
+  providedIn: 'root',
+})
+export class <%= classify(name) %>ApiService extends CrudApiBaseService<<%= classify(name) %>> {
+  endpoint = '<%= name %>';
+
+  constructor() {
+    super();
+  }
+<% for(let apiItem of apiList) { %>
+  all(<%= apiItem.functionParams %>) {
+    return this.httpClient.<%= apiItem.method %><IDataSearch<Claim>>(<%= apiItem.apiCallParams %>);
+  }
+<% } %>
+
+}

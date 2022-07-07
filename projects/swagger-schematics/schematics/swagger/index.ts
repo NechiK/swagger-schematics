@@ -11,7 +11,7 @@ import {createDefaultPath} from '@schematics/angular/utility/workspace';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, interfaces} from "./utils";
 import {transformProperties, transformRefsToImport} from "./utils/interface";
-import {ISwaggerSchema} from "./interfaces/swagger.interface";
+import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 

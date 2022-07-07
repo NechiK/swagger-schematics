@@ -2,9 +2,14 @@
   "$schema": "./../../../node_modules/@angular-devkit/schematics/collection-schema.json",
   "schematics": {
     "types": {
-      "description": "Schematics for swagger types and APIs",
+      "description": "Schematics for swagger types",
       "factory": "./swagger",
       "schema": "./swagger/schema.json"
+    },
+    "api": {
+      "description": "Schematics for swagger APIs",
+      "factory": "./api",
+      "schema": "./api/schema.json"
     }
   }
 }

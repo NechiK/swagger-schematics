@@ -1,18 +1,19 @@
+import {Injectable} from "@angular/core";
 import {CrudApiBaseService} from "./crud-api-base.service";
 <%= importsContent %>
 
 @Injectable({
   providedIn: 'root',
 })
-export class <%= classify(name) %>ApiService extends CrudApiBaseService<<%= classify(name) %>> {
+export class <%= classify(name) %>ApiService extends CrudApiBaseService<any> {
   endpoint = '<%= name %>';
 
   constructor() {
     super();
   }
 <% for(let apiItem of apiList) { %>
-  all(<%= apiItem.functionParams %>) {
-    return this.httpClient.<%= apiItem.method %><IDataSearch<Claim>>(<%= apiItem.apiCallParams %>);
+  <%= apiItem.apiMethodName %>(<%= apiItem.functionParams %>) {
+    return this.httpClient.<%= apiItem.method %>(<%= apiItem.apiCallParams %>);
   }
 <% } %>
 

@@ -45,6 +45,8 @@ export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optio
             folderPath = `${optionsPath}/interfaces`;
         }
 
+        console.log(folderPath);
+        console.log(sourcePath);
         return buildImport(sourcePath, `${folderPath}/${ref.fileName}.${ref.type}`, ref.importSymbol);
     }).join('\n');
 }

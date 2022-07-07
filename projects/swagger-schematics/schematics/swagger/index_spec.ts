@@ -59,7 +59,7 @@
 //     const tree = await schematicRunner.runSchematicAsync('types', options, appTree).toPromise();
 //     const files = tree.files;
 //     // console.log(files);
-//     // console.log(tree.readContent(`/projects/th-schematics/src/app/interfaces/claim-detail-dto.interface.ts`));
+//     console.log(tree.readContent(`/projects/th-schematics/src/core/interfaces/claim-detail-dto.interface.ts`));
 //     // console.log(tree.readContent(`/projects/th-schematics/src/app/interfaces/create-region-dto.interface.ts`));
 //   });
 // });

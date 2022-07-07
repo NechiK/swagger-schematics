@@ -53,7 +53,7 @@ export default function(options: SwaggerSchema) {
       parsedSchemas.forEach(schemaData => {
           let itemSource;
           if (schemaData.type === 'enum') {
-              const parsed = parseName(`${options.path}/enums`, schemaData.name);
+              const parsed = parseName(`${options.path}/core/enums`, schemaData.name);
               itemSource = apply(enumTemplates, [
                   applyTemplates({
                       ...options,
@@ -66,9 +66,9 @@ export default function(options: SwaggerSchema) {
                   move(parsed.path)
               ]);
           } else {
-              const parsed = parseName(`${options.path}/interfaces`, schemaData.name);
+              const parsed = parseName(`${options.path}/core/interfaces`, schemaData.name);
               const {propertiesContent, refs} = transformProperties(!!schemaData.data.properties ? schemaData.data.properties : {}, swagger.data);
-              const importsContent = transformRefsToImport(refs, options.path as string, `${parsed.path}/${dasherize(parsed.name)}`);
+              const importsContent = transformRefsToImport(refs, `${options.path}/core` as string, `${parsed.path}/${dasherize(parsed.name)}`);
               itemSource = apply(interfaceTemplates, [
                   applyTemplates({
                       ...options,

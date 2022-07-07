@@ -1,0 +1,15 @@
+import {HttpClient} from '@angular/common/http';
+import {Observable} from 'rxjs';
+import { inject } from '@angular/core';
+import { APP_CONFIG } from '@core/constants/app-config.constants';
+
+export abstract class CrudApiBaseService<T> {
+  protected readonly httpClient = inject(HttpClient);
+  private readonly appConfig = inject(APP_CONFIG);
+  protected readonly apiUrl = `/api/`;
+  abstract readonly endpoint: string;
+
+  getUrl(url: string = ''): string {
+    return `${this.apiUrl}${this.endpoint}${!!url ? `/${url}` : ''}`;
+  }
+}

@@ -12,7 +12,7 @@ import {parseName} from '@schematics/angular/utility/parse-name';
 import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {parseRefToSymbol, transformPrimitives, transformRefsToImport} from "../swagger/utils/interface";
-import {camelize, dasherize} from "@angular-devkit/core/src/utils/strings";
+import {camelize} from "@angular-devkit/core/src/utils/strings";
 
 export default function(options: SwaggerApiSchema) {
   return async (host: Tree) => {
@@ -36,7 +36,6 @@ export default function(options: SwaggerApiSchema) {
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
       const apiPaths = swagger.data.paths;
       const apiPathKeys = Object.keys(apiPaths);
-      const importsContent: string[] = [];
 
       const parsedApiSchemas = apiPathKeys.reduce((apiParsedSchema, apiPathKey) => {
           const [nameSegment, ...segments] = apiPathKey.slice(5).split('/');
@@ -45,32 +44,39 @@ export default function(options: SwaggerApiSchema) {
           if (!apiParsedSchema.hasOwnProperty(apiPrefix)) {
               apiParsedSchema[apiPrefix] = {
                   name: apiPrefix,
-                  apiList: []
+                  apiList: [],
+                  importsContent: []
               };
           }
 
           apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(Object.keys(apiData).map(apiMethodKey => {
               const apiMethod = apiData[apiMethodKey];
               let apiUrl = segments.map(urlSegment => urlSegment.match(/\{.*}/) ? `$${urlSegment}` : urlSegment).join('/');
+              let apiMethodName = [apiMethodKey, ...segments.filter(urlSegment => !urlSegment.match(/\{.*}/))].join(' ');
               const queryParams: string[] = [];
               const pathParams: string[] = [];
-              apiMethod.parameters.forEach(apiParam => {
-                  if (apiParam.in === 'query') {
-                      queryParams.push(apiParam.name);
-                  } else {
-                      pathParams.push(`${apiParam.name}: ${transformPrimitives(apiParam.schema).propertySymbol}`)
-                  }
-              });
+              if (apiMethod.parameters) {
+                  apiMethod.parameters.forEach(apiParam => {
+                      if (apiParam.in === 'query') {
+                          queryParams.push(apiParam.name);
+                      } else {
+                          pathParams.push(`${apiParam.name}: ${transformPrimitives(apiParam.schema).propertySymbol}`)
+                      }
+                  });
+              }
 
-              const bodyParam = apiMethod.requestBody && apiMethod.requestBody.content['application/json'] ? parseRefToSymbol(apiMethod.requestBody.content['application/json'].schema, swagger.data) : null;
+              const bodyParam = apiMethod.requestBody && apiMethod.requestBody.content['application/json'] && apiMethod.requestBody.content['application/json'].schema.$ref ? parseRefToSymbol(apiMethod.requestBody.content['application/json'].schema, swagger.data) : null;
               const functionParams = pathParams;
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
               if (bodyParam) {
-                  const parsed = parseName(`${options.path}/${bodyParam.type}s`, bodyParam.refPropertyKey);
+                  const parsed = parseName(`${options.path}/core/${bodyParam.type}s`, bodyParam.refPropertyKey);
                   const camelizeProperty = camelize(bodyParam.refPropertyKey);
                   functionParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
                   apiCallParams.push(camelizeProperty);
-                  importsContent.push(transformRefsToImport([bodyParam], options.path as string, `${parsed.path}/${dasherize(parsed.name)}`));
+                  const importItem = transformRefsToImport([bodyParam], `${options.path}` as string, `${parsed.path}`);
+                  if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
+                      apiParsedSchema[apiPrefix].importsContent.push(importItem);
+                  }
               }
 
               if (queryParams.length > 0) {
@@ -79,6 +85,7 @@ export default function(options: SwaggerApiSchema) {
 
               return {
                   apiUrl,
+                  apiMethodName: camelize(apiMethodName),
                   method: apiMethodKey,
                   functionParams: functionParams.join(', '),
                   bodyParam,
@@ -91,18 +98,19 @@ export default function(options: SwaggerApiSchema) {
       }, {} as any);
 
       const apiServiceTemplates = url('./templates/api-service');
+      const apiCrudServiceTemplates = url('./templates/crud-api-service');
 
       let finalRule: Rule | undefined;
       Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
           let itemSource;
-          const parsed = parseName(`${options.path}/api`, apiSchemaKey);
+          const parsed = parseName(`${options.path}/core/api`, apiSchemaKey);
           itemSource = apply(apiServiceTemplates, [
               applyTemplates({
                   ...options,
                   ...strings,
                   name: apiSchemaKey,
                   apiList: parsedApiSchemas[apiSchemaKey].apiList,
-                  importsContent: importsContent.join('\n'),
+                  importsContent: parsedApiSchemas[apiSchemaKey].importsContent.join('\n'),
               }),
               move(parsed.path)
           ]);
@@ -113,6 +121,18 @@ export default function(options: SwaggerApiSchema) {
               finalRule = chain([mergeWith(itemSource)]);
           }
       });
+
+      const parsed = parseName(`${options.path}/core/api`, 'CrudApiBase');
+      const baseApiSource = apply(apiCrudServiceTemplates, [
+          applyTemplates({
+              ...options,
+              ...strings,
+          }),
+          move(parsed.path)
+      ]);
+      if (!!finalRule) {
+          finalRule = chain([finalRule, mergeWith(baseApiSource)])
+      }
 
       return finalRule;
   };

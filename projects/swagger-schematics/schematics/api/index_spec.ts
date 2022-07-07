@@ -57,6 +57,7 @@ describe('Schematics: App Api', () => {
     const tree = await schematicRunner.runSchematicAsync('api', options, appTree).toPromise();
     const files = tree.files;
     // console.log(files);
-    console.log(tree.readContent(`/projects/th-schematics/src/api/claim-api.service.ts`));
+      console.log(tree.readContent(`/projects/th-schematics/src/core/api/claim-api.service.ts`));
+      //core/api/claim-api.service.ts
   });
 });

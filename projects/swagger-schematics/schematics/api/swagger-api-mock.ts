@@ -48,6 +48,130 @@ export const SWAGGER_MOCK_API_DATA = {
                 }
             }
         },
+        "/api/Claim/{id}/files": {
+            "get": {
+                "tags": [
+                    "Claim"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            },
+                            "text/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/Claim/{claimId}/serviceActions": {
+            "get": {
+                "tags": [
+                    "Claim"
+                ],
+                "parameters": [
+                    {
+                        "name": "claimId",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            },
+                            "text/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/Claim/{guidId}": {
+            "get": {
+                "tags": [
+                    "Claim"
+                ],
+                "summary": "Gets ClaimDetail",
+                "parameters": [
+                    {
+                        "name": "guidId",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            },
+                            "text/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClaimDetailDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/Claim": {
             "post": {
                 "tags": [

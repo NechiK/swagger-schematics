@@ -3,35 +3,28 @@ import {
     applyTemplates, chain,
     mergeWith,
     move, Rule, SchematicsException,
-    Tree,
     url
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
-import {createDefaultPath} from '@schematics/angular/utility/workspace';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
-import {parseRefToSymbol, transformPrimitives, transformRefsToImport} from "../swagger/utils/interface";
+import {
+    getApiMethodName,
+    parseRefToSymbol,
+    transformPrimitives,
+    transformRefsToImport
+} from "../swagger/utils/interface";
 import {camelize} from "@angular-devkit/core/src/utils/strings";
 
 export default function(options: SwaggerApiSchema) {
-  return async (host: Tree) => {
+  return async () => {
       if (!options.swaggerSchemaUrl) {
           throw new SchematicsException(`Swagger schema URL wasn't provided`);
       }
 
-      if (options.path === undefined) {
-          options.path = await createDefaultPath(host, options.project as string);
-      }
-
-      const parsedPath = parseName(options.path, '');
+      const parsedPath = parseName(options.path || '', '');
       options.path = parsedPath.path;
-
-      // const workspace = await getWorkspace(host);
-      // const project = workspace.projects.get(options.project as string);
-      // if (!options.workingDirectory && project) {
-      //     options.workingDirectory = buildDefaultPath(project);
-      // }
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
       const apiPaths = swagger.data.paths;
@@ -40,7 +33,7 @@ export default function(options: SwaggerApiSchema) {
       const parsedApiSchemas = apiPathKeys.reduce((apiParsedSchema, apiPathKey) => {
           const [nameSegment, ...segments] = apiPathKey.slice(5).split('/');
           const apiData = apiPaths[apiPathKey];
-          const apiPrefix = nameSegment.toLowerCase();
+          const apiPrefix = nameSegment;
           if (!apiParsedSchema.hasOwnProperty(apiPrefix)) {
               apiParsedSchema[apiPrefix] = {
                   name: apiPrefix,
@@ -52,7 +45,7 @@ export default function(options: SwaggerApiSchema) {
           apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(Object.keys(apiData).map(apiMethodKey => {
               const apiMethod = apiData[apiMethodKey];
               let apiUrl = segments.map(urlSegment => urlSegment.match(/\{.*}/) ? `$${urlSegment}` : urlSegment).join('/');
-              let apiMethodName = [apiMethodKey, ...segments.filter(urlSegment => !urlSegment.match(/\{.*}/))].join(' ');
+              const apiMethodName = getApiMethodName(apiMethodKey, apiPathKey);
               const queryParams: string[] = [];
               const pathParams: string[] = [];
               if (apiMethod.parameters) {

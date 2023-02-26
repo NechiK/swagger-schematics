@@ -1,7 +1,7 @@
 import {JSONSchema7, JSONSchema7Definition, JSONSchema7TypeName} from "json-schema";
 import {ISwaggerSchema} from "../../interfaces/swagger.interface";
 import {buildRelativePath} from "@schematics/angular/utility/find-module";
-import {dasherize} from "@angular-devkit/core/src/utils/strings";
+import {capitalize, dasherize} from "@angular-devkit/core/src/utils/strings";
 
 export interface ISwaggerSymbolEnumInterface {
     type: 'enum' | 'interface';
@@ -31,7 +31,7 @@ export function transformProperties(properties: {[key: string]: JSONSchema7Defin
     }
 
     return {
-        propertiesContent: transformed.join('\n'),
+        propertiesContent: transformed,
         refs
     };
 }
@@ -45,8 +45,8 @@ export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optio
             folderPath = `${optionsPath}/interfaces`;
         }
 
-        console.log(folderPath);
-        console.log(sourcePath);
+        // console.log(folderPath);
+        // console.log(sourcePath);
         return buildImport(sourcePath, `${folderPath}/${ref.fileName}.${ref.type}`, ref.importSymbol);
     }).join('\n');
 }
@@ -108,6 +108,39 @@ export const transformType = (property: JSONSchema7, swagger: ISwaggerSchema): T
                 return transformPrimitives(property);
         }
     }
+}
+
+export function getApiMethodName(apiMethodKey: string, apiPathKey: string) {
+    switch (apiMethodKey) {
+        case 'get':
+            return parseGetRequestName(apiMethodKey, apiPathKey);
+        default:
+            return parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
+    }
+}
+
+function parseGetRequestName(apiMethodKey: string, apiPathKey: string) {
+    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
+    const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey);
+    if (getModelByParamNameMatch) {
+        const paramName = capitalize(getModelByParamNameMatch[3]);
+        return `${apiMethodKey}By${paramName}`;
+    } else if (getGetModelDataParamNameMatch) {
+        const modelName = capitalize(getGetModelDataParamNameMatch[2]);
+        const paramName = capitalize(getGetModelDataParamNameMatch[3]);
+        const dataName = capitalize(getGetModelDataParamNameMatch[4]);
+        return `${apiMethodKey}${dataName}By${paramName.toLowerCase().includes(modelName.toLowerCase()) ? '' : modelName}${paramName}`;
+    } else {
+        return parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
+    }
+}
+
+function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string) {
+    console.warn('Unexpected API path pattern: ', apiPathKey);
+    console.log(apiPathKey.match(/^\/api\/(.*)/));
+    const segments = apiPathKey.match(/^\/api\/(.*)/)![0].split('/');
+    console.log(segments);
+    return [apiMethodKey, ...segments.filter(urlSegment => !urlSegment.match(/\{.*}/) && !urlSegment.match(/^api/))].join(' ');
 }
 
 function getRefProperty(ref: string, swagger: ISwaggerSchema) {

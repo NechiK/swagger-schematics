@@ -33,7 +33,7 @@ interface ISwaggerApiResponse {
 export interface ISwaggerSchema {
     openapi: string;
     components: {
-        schemas: {[schema: string]: JSONSchema7}
+        schemas: {[schema: string]: JSONSchema7 & {'x-enum-varnames': string[]}}
     },
     paths: {
         [apiKey: string]: {

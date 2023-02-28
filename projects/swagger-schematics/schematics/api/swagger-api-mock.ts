@@ -322,6 +322,36 @@ export const SWAGGER_MOCK_API_DATA = {
                 "additionalProperties": false,
                 "description": "Add a note to a claim"
             },
+            "ClaimNoteViewDTO": {
+                "required": [
+                    "note"
+                ],
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "maxLength": 4000,
+                        "type": "string",
+                        "description": "The note content"
+                    }
+                },
+                "additionalProperties": false,
+                "description": "Add a note to a claim"
+            },
+            "ClaimDetailDTO": {
+                "required": [
+                    "note"
+                ],
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "maxLength": 4000,
+                        "type": "string",
+                        "description": "The note content"
+                    }
+                },
+                "additionalProperties": false,
+                "description": "Add a note to a claim"
+            },
         }
     },
     servers: [{"url": "https://apidev.montagefs.com"}],

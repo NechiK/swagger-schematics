@@ -1,5 +1,5 @@
 import {JSONSchema7, JSONSchema7Definition, JSONSchema7TypeName} from "json-schema";
-import {ISwaggerSchema} from "../../interfaces/swagger.interface";
+import {ISwaggerApi, ISwaggerSchema} from "../../interfaces/swagger.interface";
 import {buildRelativePath} from "@schematics/angular/utility/find-module";
 import {capitalize, dasherize} from "@angular-devkit/core/src/utils/strings";
 
@@ -119,6 +119,20 @@ export function getApiMethodName(apiMethodKey: string, apiPathKey: string) {
     }
 }
 
+export function getApiResponseSymbol(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): ISwaggerSymbolEnumInterface | null {
+    const api200Content = apiMethod.responses['200'].content;
+    const api200ContentJson = api200Content && api200Content['application/json'];
+    if (api200ContentJson) {
+        if (api200ContentJson.schema.$ref) {
+            return parseRefToSymbol(api200ContentJson.schema, swaggerData);
+        } else {
+             return null;
+        }
+    } else {
+        return null;
+    }
+}
+
 function parseGetRequestName(apiMethodKey: string, apiPathKey: string) {
     const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
     const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey);
@@ -137,9 +151,7 @@ function parseGetRequestName(apiMethodKey: string, apiPathKey: string) {
 
 function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string) {
     console.warn('Unexpected API path pattern: ', apiPathKey);
-    console.log(apiPathKey.match(/^\/api\/(.*)/));
     const segments = apiPathKey.match(/^\/api\/(.*)/)![0].split('/');
-    console.log(segments);
     return [apiMethodKey, ...segments.filter(urlSegment => !urlSegment.match(/\{.*}/) && !urlSegment.match(/^api/))].join(' ');
 }
 

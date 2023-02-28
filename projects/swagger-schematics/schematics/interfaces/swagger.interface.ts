@@ -1,13 +1,14 @@
 import {JSONSchema7} from "json-schema";
 
-interface ISwaggerApiParams {
+export interface ISwaggerApiParams {
     name: string,
     in: 'path' | 'query';
     description: string;
     required: boolean;
     schema: JSONSchema7
 }
-interface ISwaggerApiRequestBody {
+
+export interface ISwaggerApiRequestBody {
     content: {
         "application/json": {
             schema: JSONSchema7
@@ -15,7 +16,7 @@ interface ISwaggerApiRequestBody {
     }
 }
 
-interface ISwaggerApiResponse {
+export interface ISwaggerApiResponse {
     description: string,
     content: {
         "text/plain"?: {
@@ -29,6 +30,14 @@ interface ISwaggerApiResponse {
         }
     }
 }
+
+export interface ISwaggerApi {
+    parameters: ISwaggerApiParams[],
+    requestBody: ISwaggerApiRequestBody,
+    responses: {
+        [statusKey: string]: ISwaggerApiResponse
+    }
+};
 
 export interface ISwaggerSchema {
     openapi: string;

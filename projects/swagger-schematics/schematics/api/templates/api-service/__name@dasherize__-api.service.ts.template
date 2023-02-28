@@ -12,8 +12,8 @@ export class <%= classify(name) %>ApiService extends CrudApiBaseService<any> {
     super();
   }
 <% for(let apiItem of apiList) { %>
-  <%= apiItem.apiMethodName %>(<%= apiItem.functionParams %>) {
-    return this.httpClient.<%= apiItem.method %>(<%= apiItem.apiCallParams %>);
+  <%= apiItem.apiMethodName %>(<%= apiItem.functionParams %>): Observable<<%= apiItem.responseSymbol %>> {
+    return this.httpClient.<%= apiItem.method %><<%= apiItem.responseSymbol %>>(<%= apiItem.apiCallParams %>);
   }
 <% } %>
 

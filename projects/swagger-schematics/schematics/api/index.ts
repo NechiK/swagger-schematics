@@ -10,7 +10,7 @@ import {parseName} from '@schematics/angular/utility/parse-name';
 import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {
-    getApiMethodName,
+    getApiMethodName, getApiResponseSymbol,
     parseRefToSymbol,
     transformPrimitives,
     transformRefsToImport
@@ -59,6 +59,7 @@ export default function(options: SwaggerApiSchema) {
               }
 
               const bodyParam = apiMethod.requestBody && apiMethod.requestBody.content['application/json'] && apiMethod.requestBody.content['application/json'].schema.$ref ? parseRefToSymbol(apiMethod.requestBody.content['application/json'].schema, swagger.data) : null;
+              const responseType = getApiResponseSymbol(apiMethod, swagger.data);
               const functionParams = pathParams;
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
               if (bodyParam) {
@@ -72,6 +73,16 @@ export default function(options: SwaggerApiSchema) {
                   }
               }
 
+              if (responseType) {
+                  const parsed = parseName(`${options.path}/core/${responseType.type}s`, responseType.refPropertyKey);
+                  const importItem = transformRefsToImport([responseType], `${options.path}` as string, `${parsed.path}`);
+                  if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
+                      apiParsedSchema[apiPrefix].importsContent.push(importItem);
+                  }
+              }
+
+              const responseSymbol = responseType ? responseType.refPropertyKey : 'void';
+
               if (queryParams.length > 0) {
                   functionParams.push(...queryParams.map(queryParam => `${queryParam}?: string`));
               }
@@ -82,6 +93,7 @@ export default function(options: SwaggerApiSchema) {
                   method: apiMethodKey,
                   functionParams: functionParams.join(', '),
                   bodyParam,
+                  responseSymbol,
                   apiCallParams: apiCallParams.join(', '),
                   response: apiMethod.responses['200']
               }

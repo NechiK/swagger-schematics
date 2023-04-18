@@ -4,6 +4,7 @@ Generate TS types and API via swagger scheme using Schematics.
 
 Documentation in progress...
 
+
 ## How to use?
 
 1. Install package

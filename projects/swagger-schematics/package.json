@@ -1,6 +1,6 @@
 {
   "name": "swagger-schematics",
-  "version": "0.1.0-alpha.0",
+  "version": "1.0.0-alpha.0",
   "description": "Schematics types and API generator via Swagger scheme",
   "scripts": {
     "prebuild": "dtsgen --out schematics/schema.d.ts schematics/**/schema.json",

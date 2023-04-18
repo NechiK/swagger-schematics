@@ -1,6 +1,5 @@
 {
   "name": "swagger-schematics-tool",
-  "version": "0.1.0-alpha.0",
   "description": "Swagger schematics",
   "scripts": {
     "prebuild:publish": "npm run build",
@@ -8,7 +7,8 @@
     "build:publish": "node build-publish.js",
     "build:debug": "npm run build:publish && (cd dist/swagger-schematics && npm link)",
     "test": "(cd projects/swagger-schematics && npm run test)",
-    "test:types": "(cd projects/swagger-schematics && npm run test:types)"
+    "test:types": "(cd projects/swagger-schematics && npm run test:types)",
+    "publish": "npm run build:publish && npm publish dist/swagger-schematics"
   },
   "keywords": [
     "schematics",

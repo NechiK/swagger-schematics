@@ -33,6 +33,10 @@ export default function(options: SwaggerApiSchema) {
       const apiPathKeys = Object.keys(apiPaths);
 
       const parsedApiSchemas = apiPathKeys.reduce((apiParsedSchema, apiPathKey) => {
+          if (!apiPathKey.match(/^\/api\//)) {
+              console.warn(`Path ${apiPathKey} doesn't match /api/ pattern. Skipping...`);
+              return apiParsedSchema;
+          }
           const [nameSegment, ...segments] = apiPathKey.slice(5).split('/');
           const apiData = apiPaths[apiPathKey];
           const apiPrefix = nameSegment;

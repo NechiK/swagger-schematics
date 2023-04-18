@@ -1,6 +1,7 @@
 {
   "name": "swagger-schematics",
   "version": "0.1.0-alpha.0",
+  "description": "Schematics types and API generator via Swagger scheme",
   "scripts": {
     "prebuild": "dtsgen --out schematics/schema.d.ts schematics/**/schema.json",
     "build": "tsc -p tsconfig.schematics.json",
@@ -9,9 +10,16 @@
     "test:types": "jasmine schematics/swagger/*_spec.js"
   },
   "schematics": "./collection.json",
+  "keywords": [
+    "schematics",
+    "angular",
+    "generate"
+  ],
+  "author": "Maks Nechesonov",
+  "license": "MIT",
   "peerDependencies": {
-    "@angular-devkit/schematics-cli": ">= 15.0.0",
-    "@angular-devkit/schematics": ">= 15.0.0"
+    "@angular-devkit/schematics-cli": ">= 14.0.0",
+    "@angular-devkit/schematics": ">= 14.0.0"
   },
   "dependencies": {
     "@angular-devkit/core": "15.2.0",

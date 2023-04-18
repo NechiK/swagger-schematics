@@ -6,3 +6,4 @@ copySync('projects/swagger-schematics/schematics', 'dist/swagger-schematics', {
 });
 copyFileSync('projects/swagger-schematics/package.json', 'dist/swagger-schematics/package.json');
 copyFileSync('.npmignore', 'dist/swagger-schematics/.npmignore');
+copyFileSync('README.md', 'dist/swagger-schematics/README.md');

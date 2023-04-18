@@ -6,7 +6,7 @@ import { APP_CONFIG } from '@core/constants/app-config.constants';
 export abstract class CrudApiBaseService<T> {
   protected readonly httpClient = inject(HttpClient);
   private readonly appConfig = inject(APP_CONFIG);
-  protected readonly apiUrl = `/api/`;
+  protected readonly apiUrl = `${this.appConfig.apiBaseUrl}/api/`;
   abstract readonly endpoint: string;
 
   getUrl(url: string = ''): string {

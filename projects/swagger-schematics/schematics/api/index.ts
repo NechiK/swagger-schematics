@@ -80,7 +80,7 @@ export default function(options: SwaggerApiSchema) {
               }
 
               if (queryParams.length > 0) {
-                  apiCallParams.push(`{params:{${queryParams.join(', ')}}`)
+                  apiCallParams.push(`{params:{${queryParams.join(', ')}}}`)
               }
 
               if (responseType && responseType.importSymbol) {

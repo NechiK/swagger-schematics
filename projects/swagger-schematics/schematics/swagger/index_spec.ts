@@ -32,6 +32,6 @@
 //     // const files = tree.files;
 //     // console.log(files);
 //     console.log(tree.readContent(`/th-common/core/enums/claim-statuses.enum.ts`));
-//     // console.log(tree.readContent(`/projects/th-schematics/src/app/interfaces/create-region-dto.interface.ts`));
+//     console.log(tree.readContent(`/th-common/core/interfaces/create-region-dto.interface.ts`));
 //   });
 // });

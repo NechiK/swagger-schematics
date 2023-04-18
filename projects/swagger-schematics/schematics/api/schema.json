@@ -19,6 +19,9 @@
         "$source": "argv",
         "index": 0
       }
+    },
+    "apiServiceTemplatePath": {
+      "type": "string"
     }
   },
   "required": []

@@ -119,12 +119,12 @@ export function getApiMethodName(apiMethodKey: string, apiPathKey: string) {
     }
 }
 
-export function getApiResponseSymbol(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): ISwaggerSymbolEnumInterface | null {
+export function getApiResponseSymbol(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): TSwaggerSymbol | null {
     const api200Content = apiMethod.responses['200'].content;
     const api200ContentJson = api200Content && api200Content['application/json'];
     if (api200ContentJson) {
-        if (api200ContentJson.schema.$ref) {
-            return parseRefToSymbol(api200ContentJson.schema, swaggerData);
+        if (api200ContentJson.schema) {
+            return transformType(api200ContentJson.schema, swaggerData);
         } else {
              return null;
         }

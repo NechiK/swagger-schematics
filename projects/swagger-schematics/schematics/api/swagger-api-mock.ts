@@ -304,6 +304,56 @@ export const SWAGGER_MOCK_API_DATA = {
                 }
             }
         },
+        "/api/Claim/quicksearch": {
+            "get": {
+                "tags": [
+                    "Claim"
+                ],
+                "summary": "Search for a claim, consumer or warranty, return back matches in tree",
+                "parameters": [
+                    {
+                        "name": "searchString",
+                        "in": "query",
+                        "description": "String to search for\r\n            Search for a match on\r\n            CLAIM:\r\n                claim #\r\n            CONSUMER\r\n                first name + lastname\r\n                any phone #\r\n                email\r\n            WARRANTY\r\n                retailer transaction id/receipt #",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ConsumerSearchResultDTO"
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ConsumerSearchResultDTO"
+                                    }
+                                }
+                            },
+                            "text/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ConsumerSearchResultDTO"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
     },
     components: {
         "schemas": {
@@ -351,6 +401,94 @@ export const SWAGGER_MOCK_API_DATA = {
                 },
                 "additionalProperties": false,
                 "description": "Add a note to a claim"
+            },
+            "ConsumerSearchResultDTO": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "description": "Consumer Id",
+                        "format": "int32"
+                    },
+                    "firstName": {
+                        "type": "string",
+                        "description": "First Name",
+                        "nullable": true
+                    },
+                    "contactId": {
+                        "type": "string",
+                        "description": "Contact Id",
+                        "nullable": true
+                    },
+                    "lastName": {
+                        "type": "string",
+                        "description": "Last name",
+                        "nullable": true
+                    },
+                    "workPhone": {
+                        "type": "string",
+                        "description": "Work phone #",
+                        "nullable": true
+                    },
+                    "mobilePhone": {
+                        "type": "string",
+                        "description": "Mobile phone #",
+                        "nullable": true
+                    },
+                    "homePhone": {
+                        "type": "string",
+                        "description": "Home phone #",
+                        "nullable": true
+                    },
+                    "emailAddress": {
+                        "type": "string",
+                        "description": "Email address",
+                        "nullable": true
+                    },
+                    "streetAddress1": {
+                        "type": "string",
+                        "description": "Street address",
+                        "nullable": true
+                    },
+                    "streetAddress2": {
+                        "type": "string",
+                        "description": "Alternative street address",
+                        "nullable": true
+                    },
+                    "city": {
+                        "type": "string",
+                        "description": "City",
+                        "nullable": true
+                    },
+                    "stateProvince": {
+                        "type": "string",
+                        "description": "State",
+                        "nullable": true
+                    },
+                    "postalCode": {
+                        "type": "string",
+                        "description": "ZIP code",
+                        "nullable": true
+                    },
+                    "myServiceAgreements": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MyServiceAgreementsSearchResult"
+                        },
+                        "description": "My Service agreements found for consumer",
+                        "nullable": true
+                    },
+                    "protectionPlans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProtectionPlanSearchResultDTO"
+                        },
+                        "description": "Protection plans found for consumer",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false,
+                "description": "A consumer record found in a quick search"
             },
         }
     },

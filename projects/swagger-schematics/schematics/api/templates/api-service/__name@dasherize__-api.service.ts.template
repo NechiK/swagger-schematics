@@ -1,5 +1,6 @@
 import {Injectable} from "@angular/core";
 import {CrudApiBaseService} from "./crud-api-base.service";
+import {Observable} from "rxjs";
 <%= importsContent %>
 
 @Injectable({

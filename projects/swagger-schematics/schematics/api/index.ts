@@ -10,7 +10,9 @@ import {parseName} from '@schematics/angular/utility/parse-name';
 import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {
-    getApiMethodName, getApiResponseSymbol,
+    getApiMethodName,
+    getApiResponseSymbol,
+    ISwaggerSymbolEnumInterface,
     parseRefToSymbol,
     transformPrimitives,
     transformRefsToImport
@@ -59,7 +61,7 @@ export default function(options: SwaggerApiSchema) {
               }
 
               const bodyParam = apiMethod.requestBody && apiMethod.requestBody.content['application/json'] && apiMethod.requestBody.content['application/json'].schema.$ref ? parseRefToSymbol(apiMethod.requestBody.content['application/json'].schema, swagger.data) : null;
-              const responseType = getApiResponseSymbol(apiMethod, swagger.data);
+              const responseType = getApiResponseSymbol(apiMethod, swagger.data) as ISwaggerSymbolEnumInterface;
               const functionParams = pathParams;
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
               if (bodyParam) {
@@ -73,15 +75,19 @@ export default function(options: SwaggerApiSchema) {
                   }
               }
 
-              if (responseType) {
-                  const parsed = parseName(`${options.path}/core/${responseType.type}s`, responseType.refPropertyKey);
+              if (queryParams.length > 0) {
+                  apiCallParams.push(`{params:{${queryParams.join(', ')}}`)
+              }
+
+              if (responseType && responseType.importSymbol) {
+                  const parsed = parseName(`${options.path}/core/${responseType.type}s`, responseType.importSymbol);
                   const importItem = transformRefsToImport([responseType], `${options.path}` as string, `${parsed.path}`);
                   if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
                       apiParsedSchema[apiPrefix].importsContent.push(importItem);
                   }
               }
 
-              const responseSymbol = responseType ? responseType.refPropertyKey : 'void';
+              const responseSymbol = responseType ? responseType.propertySymbol : 'void';
 
               if (queryParams.length > 0) {
                   functionParams.push(...queryParams.map(queryParam => `${queryParam}?: string`));
@@ -102,7 +108,7 @@ export default function(options: SwaggerApiSchema) {
           return apiParsedSchema;
       }, {} as any);
 
-      const apiServiceTemplates = url('./templates/api-service');
+      const apiServiceTemplates = url(options.apiServiceTemplatePath || './templates/api-service');
       const apiCrudServiceTemplates = url('./templates/crud-api-service');
 
       let finalRule: Rule | undefined;

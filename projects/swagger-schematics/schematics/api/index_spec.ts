@@ -33,7 +33,7 @@ describe('Schematics: App Api', () => {
     const tree = await schematicRunner.runSchematic('api', options, Tree.empty());
     const files = tree.files;
     console.log(files);
-      console.log(tree.readContent(`/core/api/claim-api.service.ts`));
+      // console.log(tree.readContent(`/core/api/claim-api.service.ts`));
       //core/api/claim-api.service.ts
   });
 });

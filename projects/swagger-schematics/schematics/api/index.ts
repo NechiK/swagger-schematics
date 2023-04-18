@@ -25,8 +25,9 @@ export default function(options: SwaggerApiSchema) {
           throw new SchematicsException(`Swagger schema URL wasn't provided`);
       }
 
-      const parsedPath = parseName(options.path || '', '');
-      options.path = parsedPath.path;
+      options.path = options.path || '';
+      // const parsedPath = parseName(options.path || '', '');
+      // options.path = parsedPath.path;
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
       const apiPaths = swagger.data.paths;

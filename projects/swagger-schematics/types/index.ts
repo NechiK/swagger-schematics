@@ -82,7 +82,7 @@ export default function(options: SwaggerSchema): Rule {
               const parsed = parseName(`${options.path}/interfaces`, schemaData.name);
               const schemaProperties = schemaData.data.properties as { [key: string]: JSONSchema7Definition & {nullable: boolean} }
               const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger.data);
-              const importsContent = transformRefsToImport(refs, `${options.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
+              const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${options.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
               itemSource = apply(interfaceTemplates, [
                   applyTemplates({
                       ...options,

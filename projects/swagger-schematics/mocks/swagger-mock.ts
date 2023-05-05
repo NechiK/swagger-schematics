@@ -357,6 +357,72 @@ export const SWAGGER_MOCK_DATA = {
     },
     components: {
         schemas: {
+            "EstimateItemTypes": {
+                "enum": [
+                    1,
+                    2
+                ],
+                "type": "integer",
+                "format": "int32",
+                "x-enum-varnames": [
+                    "Section",
+                    "LineItem"
+                ]
+            },
+            "EstimateItemDTO": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "parentId": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    },
+                    "itemType": {
+                        "$ref": "#/components/schemas/EstimateItemTypes"
+                    },
+                    "lineNumber": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "min": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "max": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "workTypeId": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    },
+                    "phase": {
+                        "$ref": "#/components/schemas/IdNameDTO"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EstimateItemDTO"
+                        },
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false,
+                "description": "An estimate item"
+            },
             "JournalDetailDTO": {
                 "type": "object",
                 "properties": {

@@ -43,3 +43,22 @@ export interface IJournalDetailDTO {
   invoiceLineId?: number;
 }
 `;
+
+export const RECURSIVE_SYMBOL_CONTENT_MOCK: string = `import { TEstimateItemTypes } from '../enums/estimate-item-types.enum'
+import { IIdNameDTO } from './id-name-dto.interface'
+
+export interface IEstimateItemDTO {
+  id: number;
+  parentId?: number;
+  itemType: TEstimateItemTypes;
+  lineNumber: number;
+  title?: string;
+  description?: string;
+  min: number;
+  max: number;
+  workTypeId?: number;
+  phase: IIdNameDTO;
+  items?: IEstimateItemDTO[];
+}
+`;
+

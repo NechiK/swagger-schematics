@@ -2,7 +2,7 @@ import {
     apply,
     applyTemplates, chain,
     mergeWith,
-    move, Rule, SchematicsException,
+    move, Rule, SchematicsException, Tree,
     url
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
@@ -12,11 +12,28 @@ import {transformProperties, transformRefsToImport} from "./utils/interface";
 import {ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
+import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 
 export default function(options: SwaggerSchema): Rule {
-  return async () => {
+  return async (host: Tree) => {
       if (!options.swaggerSchemaUrl) {
           throw new SchematicsException(`Swagger schema URL wasn't provided`);
+      }
+
+      let indentSize = '2';
+
+      if (host.exists('.editorconfig')) {
+          const editorconfigBuffer = host.read('.editorconfig');
+          if (editorconfigBuffer) {
+              const parsedFile = editorconfigParseBuffer(editorconfigBuffer);
+              const allFilesConfig = parsedFile.find(configs => {
+                  return configs[0] === '*';
+              });
+              const configSection = allFilesConfig ? allFilesConfig[1] : null;
+              if (configSection) {
+                  indentSize = configSection.indent_size || indentSize;
+              }
+          }
       }
 
       options.path = options.path || '';
@@ -25,6 +42,7 @@ export default function(options: SwaggerSchema): Rule {
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
       const schemas = swagger.data.components.schemas;
+      console.log('schemas', schemas);
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
           const schemaType = schemas[schemaKey].type === 'integer' && schemas[schemaKey].hasOwnProperty('enum') ? 'enum' : 'interface'
@@ -42,7 +60,7 @@ export default function(options: SwaggerSchema): Rule {
       parsedSchemas.forEach(schemaData => {
           let itemSource;
           if (schemaData.type === 'enum') {
-              const parsed = parseName(`${options.path}/core/enums`, schemaData.name);
+              const parsed = parseName(`${options.path}/enums`, schemaData.name);
               const enumValuesList = schemaData.data.enum as (number | string)[];
               const enumNamesList = schemaData.data['x-enum-varnames'] as string[] ? schemaData.data['x-enum-varnames'] : enumValuesList;
               itemSource = apply(enumTemplates, [
@@ -55,14 +73,15 @@ export default function(options: SwaggerSchema): Rule {
                       enums: enumValuesList.reduce((parsedEnumValues, currentValue, currentIndex) => {
                           parsedEnumValues.push([enumNamesList[currentIndex], currentValue]);
                           return parsedEnumValues;
-                      }, [] as any[][])
+                      }, [] as any[][]),
+                      indentSize
                   }),
                   move(parsed.path)
               ]);
           } else {
-              const parsed = parseName(`${options.path}/core/interfaces`, schemaData.name);
+              const parsed = parseName(`${options.path}/interfaces`, schemaData.name);
               const {propertiesContent, refs} = transformProperties(!!schemaData.data.properties ? schemaData.data.properties : {}, swagger.data);
-              const importsContent = transformRefsToImport(refs, `${options.path}/core` as string, `${parsed.path}/${dasherize(parsed.name)}`);
+              const importsContent = transformRefsToImport(refs, `${options.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
               itemSource = apply(interfaceTemplates, [
                   applyTemplates({
                       ...options,
@@ -71,7 +90,8 @@ export default function(options: SwaggerSchema): Rule {
                       name: parsed.name,
                       path: parsed.path,
                       propertiesContent,
-                      importsContent
+                      importsContent,
+                      indentSize
                   }),
                   move(parsed.path)
               ]);

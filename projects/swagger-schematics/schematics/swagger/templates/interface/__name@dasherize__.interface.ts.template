@@ -1,5 +1,0 @@
-<%= importsContent %>
-
-export interface I<%= classify(name) %> {
-<% propertiesContent.forEach((propertyLine, index) => { %><%= propertyLine %><% }) %>
-}

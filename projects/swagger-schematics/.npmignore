@@ -1,0 +1,13 @@
+node_modules
+schematics/mocks
+tsconfig.*.json
+tslint.json
+package-lock.json
+
+# Test files
+karma.conf.js
+schematics/tests
+
+# Ignores TypeScript files, but keeps definitions.
+*.ts
+!*.d.ts

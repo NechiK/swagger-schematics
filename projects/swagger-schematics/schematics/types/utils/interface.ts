@@ -18,13 +18,16 @@ export interface ISwaggerSymbolOther {
 
 export type TSwaggerSymbol = ISwaggerSymbolEnumInterface | ISwaggerSymbolOther;
 
-export function transformProperties(properties: {[key: string]: JSONSchema7Definition}, swagger: ISwaggerSchema) {
-    const transformed = [];
+export function transformProperties(properties: {[key: string]: JSONSchema7Definition}, swagger: ISwaggerSchema): {
+    propertiesContent: Array<[string, string]>;
+    refs: ISwaggerSymbolEnumInterface[];
+} {
+    const transformed: Array<[string, string]> = [];
     const refs: ISwaggerSymbolEnumInterface[] = [];
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
         const transformedProperty = transformType(property as JSONSchema7, swagger);
-        transformed.push(`${propertyKey}: ${transformedProperty.propertySymbol};`);
+        transformed.push([propertyKey, transformedProperty.propertySymbol]);
         if (transformedProperty.type === 'enum' || transformedProperty.type === 'interface') {
             refs.push(transformedProperty);
         }
@@ -53,7 +56,15 @@ export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optio
 
 export function buildImport(fromPath: string, toPath: string, symbolName: string) {
     const relativePath = buildRelativePath(fromPath, toPath);
-    return `import {${symbolName}} from "${relativePath}"`;
+    return `import { ${symbolName} } from '${relativePath}'`;
+}
+
+export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string) {
+    const indentString = ' '.repeat(parseInt(indentSize, 10));
+    return `${interfaceProperties.map(([property, type], index) => {
+        const isNotLast = index !== interfaceProperties.length - 1;
+        return `${indentString}${property}: ${type};${isNotLast ? '\n' : ''}`
+    }).join('')}`;
 }
 
 function transformArraySymbol(arrayProperty: JSONSchema7, swagger: ISwaggerSchema): TSwaggerSymbol {
@@ -65,6 +76,7 @@ function transformArraySymbol(arrayProperty: JSONSchema7, swagger: ISwaggerSchem
 }
 
 export function parseRefToSymbol(property: JSONSchema7, swagger: ISwaggerSchema): ISwaggerSymbolEnumInterface {
+    console.log(property);
     const {refProperty, refPropertyKey} = getRefProperty(property.$ref!, swagger);
     const symbol = transformRefProperty(refProperty, refPropertyKey);
 
@@ -168,6 +180,7 @@ function getRefProperty(ref: string, swagger: ISwaggerSchema) {
 }
 
 function transformRefProperty(refProperty: JSONSchema7Definition, refPropertyKey: string) {
+    console.log(refProperty);
     if (refProperty.hasOwnProperty('enum')) {
         return `T${refPropertyKey}`;
     } else {

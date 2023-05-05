@@ -23,6 +23,7 @@
   },
   "exclude": [
     "schematics/*/files/**/*",
-    "schematics/interfaces/**/*"
+    "schematics/interfaces/**/*",
+    "schematics/mocks/**/*"
   ]
 }

@@ -1,0 +1,5 @@
+<%= importsContent %>
+
+export interface I<%= classify(name) %> {
+<%= interfacePropertyLine(propertiesContent, indentSize) %>
+}

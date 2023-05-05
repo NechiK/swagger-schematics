@@ -16,7 +16,7 @@ import {
     parseRefToSymbol,
     transformPrimitives,
     transformRefsToImport
-} from "../swagger/utils/interface";
+} from "../types/utils/interface";
 import {camelize} from "@angular-devkit/core/src/utils/strings";
 
 export default function(options: SwaggerApiSchema) {
@@ -70,7 +70,7 @@ export default function(options: SwaggerApiSchema) {
               const functionParams = pathParams;
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
               if (bodyParam) {
-                  const parsed = parseName(`${options.path}/core/${bodyParam.type}s`, bodyParam.refPropertyKey);
+                  const parsed = parseName(`${options.path}/${bodyParam.type}s`, bodyParam.refPropertyKey);
                   const camelizeProperty = camelize(bodyParam.refPropertyKey);
                   functionParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
                   apiCallParams.push(camelizeProperty);
@@ -85,7 +85,7 @@ export default function(options: SwaggerApiSchema) {
               }
 
               if (responseType && responseType.importSymbol) {
-                  const parsed = parseName(`${options.path}/core/${responseType.type}s`, responseType.importSymbol);
+                  const parsed = parseName(`${options.path}/${responseType.type}s`, responseType.importSymbol);
                   const importItem = transformRefsToImport([responseType], `${options.path}` as string, `${parsed.path}`);
                   if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
                       apiParsedSchema[apiPrefix].importsContent.push(importItem);
@@ -119,7 +119,7 @@ export default function(options: SwaggerApiSchema) {
       let finalRule: Rule | undefined;
       Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
           let itemSource;
-          const parsed = parseName(`${options.path}/core/api`, apiSchemaKey);
+          const parsed = parseName(`${options.path}/api`, apiSchemaKey);
           itemSource = apply(apiServiceTemplates, [
               applyTemplates({
                   ...options,
@@ -138,7 +138,7 @@ export default function(options: SwaggerApiSchema) {
           }
       });
 
-      const parsed = parseName(`${options.path}/core/api`, 'CrudApiBase');
+      const parsed = parseName(`${options.path}/api`, 'CrudApiBase');
       const baseApiSource = apply(apiCrudServiceTemplates, [
           applyTemplates({
               ...options,

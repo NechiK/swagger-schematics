@@ -10,7 +10,7 @@ import {
     CLAIM_TYPE_ENUM_CONTENT_MOCK,
     CLAIM_TYPE_ENUM_NO_NAMES_CONTENT_MOCK
 } from '../mocks/enum-mocks';
-import {CLAIM_VIEW_DTO_CONTENT_MOCK} from '../mocks/interface-mocks';
+import {CLAIM_VIEW_DTO_CONTENT_MOCK, JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT_MOCK} from '../mocks/interface-mocks';
 
 const schematicRunner = new SchematicTestRunner('schematics', path.join(__dirname, './../collection.json'));
 
@@ -33,7 +33,6 @@ describe('Schematics API and types', () => {
         tree = await schematicRunner.runSchematic('types', options, tree);
         tree = await schematicRunner.runSchematic('api', options, tree);
         files = tree.files;
-        console.log(files);
     });
 
     afterAll(() => {
@@ -54,6 +53,11 @@ describe('Schematics API and types', () => {
     it('should create IClaimViewDTO interface', async () => {
         const IClaimViewDTOContent = tree.readContent(`${defaultOptions.path}/interfaces/claim-view-dto.interface.ts`);
         expect(IClaimViewDTOContent).toEqual(CLAIM_VIEW_DTO_CONTENT_MOCK);
+    });
+
+    it('should create filter uniq symbols', async () => {
+        const IJournalDetailDTO = tree.readContent(`${defaultOptions.path}/interfaces/journal-detail-dto.interface.ts`);
+        expect(IJournalDetailDTO).toEqual(JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT_MOCK);
     });
 
     it('should create ClaimApiService api service', async () => {

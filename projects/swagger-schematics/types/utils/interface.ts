@@ -18,7 +18,7 @@ export interface ISwaggerSymbolOther {
 
 export type TSwaggerSymbol = ISwaggerSymbolEnumInterface | ISwaggerSymbolOther;
 
-export function transformProperties(properties: {[key: string]: JSONSchema7Definition}, swagger: ISwaggerSchema): {
+export function transformProperties(properties: {[key: string]: JSONSchema7Definition & {nullable: boolean}}, swagger: ISwaggerSchema): {
     propertiesContent: Array<[string, string]>;
     refs: ISwaggerSymbolEnumInterface[];
 } {
@@ -27,7 +27,7 @@ export function transformProperties(properties: {[key: string]: JSONSchema7Defin
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
         const transformedProperty = transformType(property as JSONSchema7, swagger);
-        transformed.push([propertyKey, transformedProperty.propertySymbol]);
+        transformed.push([`${propertyKey}${property.nullable ? '?' : ''}`, transformedProperty.propertySymbol]);
         if (transformedProperty.type === 'enum' || transformedProperty.type === 'interface') {
             refs.push(transformedProperty);
         }
@@ -40,7 +40,15 @@ export function transformProperties(properties: {[key: string]: JSONSchema7Defin
 }
 
 export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optionsPath: string, sourcePath: string) {
-    return refs.map(ref => {
+    const uniqRefs: string[] = [];
+    return refs.filter(refItem => {
+        if (uniqRefs.includes(refItem.importSymbol)) {
+            return false;
+        } else {
+            uniqRefs.push(refItem.importSymbol);
+            return true;
+        }
+    }).map(ref => {
         let folderPath;
         if (ref.type === 'enum') {
             folderPath = `${optionsPath}/enums`;
@@ -48,8 +56,6 @@ export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optio
             folderPath = `${optionsPath}/interfaces`;
         }
 
-        // console.log(folderPath);
-        // console.log(sourcePath);
         return buildImport(sourcePath, `${folderPath}/${ref.fileName}.${ref.type}`, ref.importSymbol);
     }).join('\n');
 }
@@ -76,7 +82,6 @@ function transformArraySymbol(arrayProperty: JSONSchema7, swagger: ISwaggerSchem
 }
 
 export function parseRefToSymbol(property: JSONSchema7, swagger: ISwaggerSchema): ISwaggerSymbolEnumInterface {
-    console.log(property);
     const {refProperty, refPropertyKey} = getRefProperty(property.$ref!, swagger);
     const symbol = transformRefProperty(refProperty, refPropertyKey);
 
@@ -180,7 +185,6 @@ function getRefProperty(ref: string, swagger: ISwaggerSchema) {
 }
 
 function transformRefProperty(refProperty: JSONSchema7Definition, refPropertyKey: string) {
-    console.log(refProperty);
     if (refProperty.hasOwnProperty('enum')) {
         return `T${refPropertyKey}`;
     } else {

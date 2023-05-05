@@ -357,6 +357,84 @@ export const SWAGGER_MOCK_DATA = {
     },
     components: {
         schemas: {
+            "JournalDetailDTO": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "project": {
+                        "$ref": "#/components/schemas/IdNameDTO"
+                    },
+                    "customer": {
+                        "$ref": "#/components/schemas/IdNameDTO"
+                    },
+                    "workType": {
+                        "$ref": "#/components/schemas/IdNameDTO"
+                    },
+                    "staff": {
+                        "$ref": "#/components/schemas/IdNameDTO"
+                    },
+                    "refNo": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "extId": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "hours": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "estimateLineNo": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "isBilled": {
+                        "type": "boolean"
+                    },
+                    "invoiceLineId": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false,
+                "description": "A detailed journal entry"
+            },
+            "IdNameDTO": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "description": "Id",
+                        "format": "int32"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name",
+                        "nullable": true
+                    },
+                    "displayName": {
+                        "type": "string",
+                        "description": "Display name",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false,
+                "description": "IdName lookup"
+            },
             ClaimDetailDTO: {
                 type: "object",
                 properties: {
@@ -603,23 +681,6 @@ export const SWAGGER_MOCK_DATA = {
                 ],
                 "type": "integer",
                 "format": "int32"
-            },
-            "IdNameDTO": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "description": "The Id",
-                        "format": "int32"
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "The name",
-                        "nullable": true
-                    }
-                },
-                "additionalProperties": false,
-                "description": "Represents something that has an ID and a Name"
             },
             "ConsumerPlanDetailedViewDTO": {
                 "type": "object",

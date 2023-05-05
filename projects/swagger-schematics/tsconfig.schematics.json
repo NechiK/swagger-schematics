@@ -9,7 +9,6 @@
     "noImplicitAny": true,
     "noUnusedParameters": false,
     "noUnusedLocals": false,
-    "rootDir": "schematics",
     "skipLibCheck": true,
     "strict": true,
     "target": "es2019",
@@ -20,10 +19,5 @@
       "jasmine",
       "node"
     ],
-  },
-  "exclude": [
-    "schematics/*/files/**/*",
-    "schematics/interfaces/**/*",
-    "schematics/mocks/**/*"
-  ]
+  }
 }

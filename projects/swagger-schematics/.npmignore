@@ -1,12 +1,12 @@
 node_modules
-schematics/mocks
+mocks
 tsconfig.*.json
 tslint.json
 package-lock.json
 
 # Test files
 karma.conf.js
-schematics/tests
+tests
 
 # Ignores TypeScript files, but keeps definitions.
 *.ts

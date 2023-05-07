@@ -27,3 +27,13 @@ schematics swagger-schematics:types swaggerUrl --path=/src/app/core
 ```
 
 3. Enjoy!
+
+
+## Docs
+
+### Options
+
+| Name             | Type | Description                                                     |
+|------------------| --- |-----------------------------------------------------------------|
+| `usePredictions` | string | Analyze method summary and try to predict method name or prefix |
+| `path`           | string | Path to folder where to generate files                          |

@@ -1,13 +1,19 @@
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import { inject } from '@angular/core';
-import { APP_CONFIG } from '@core/constants/app-config.constants';
+import { API_BASE_URL } from './_api-base-url.token';
 
-export abstract class CrudApiBaseService<T> {
+export abstract class ApiBaseService {
   protected readonly httpClient = inject(HttpClient);
-  private readonly appConfig = inject(APP_CONFIG);
-  protected readonly apiUrl = `${this.appConfig.apiBaseUrl}/api/`;
+  private readonly apiBaseUrl = inject(API_BASE_URL);
+  protected readonly apiUrl = `${this.apiBaseUrl}/api/`;
   abstract readonly endpoint: string;
+
+  constructor() {
+    if (!this.apiBaseUrl) {
+      throw new Error('API_BASE_URL is not provided');
+    }
+  }
 
   getUrl(url: string = ''): string {
     return `${this.apiUrl}${this.endpoint}${!!url ? `/${url}` : ''}`;

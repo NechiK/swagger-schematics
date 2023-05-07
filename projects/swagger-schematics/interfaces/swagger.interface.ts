@@ -12,7 +12,10 @@ export interface ISwaggerApiRequestBody {
     content: {
         "application/json": {
             schema: JSONSchema7
-        }
+        },
+        "multipart/form-data": {
+            schema: JSONSchema7
+        },
     }
 }
 
@@ -31,13 +34,20 @@ export interface ISwaggerApiResponse {
     }
 }
 
-export interface ISwaggerApi {
-    parameters: ISwaggerApiParams[],
-    requestBody: ISwaggerApiRequestBody,
-    responses: {
-        [statusKey: string]: ISwaggerApiResponse
+export interface ISwaggerApiPath {
+    [apiKey: string]: {
+        [methodKey: string]: ISwaggerApi
     }
-};
+}
+
+export interface ISwaggerApi {
+    parameters: ISwaggerApiParams[];
+    requestBody: ISwaggerApiRequestBody;
+    summary: string;
+    responses: {
+        [statusKey: string]: ISwaggerApiResponse;
+    };
+}
 
 export interface ISwaggerSchema {
     openapi: string;

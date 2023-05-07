@@ -1,4 +1,4 @@
-export const EDITORCONFIG_MOCK = `
+export const EDITORCONFIG = `
 # Editor configuration, see https://editorconfig.org
 root = true
 

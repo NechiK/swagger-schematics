@@ -1,20 +1,20 @@
 import {Injectable} from "@angular/core";
-import {CrudApiBaseService} from "./crud-api-base.service";
+import {ApiBaseService} from "./_api-base.service";
 import {Observable} from "rxjs";
 <%= importsContent %>
 
 @Injectable({
   providedIn: 'root',
 })
-export class <%= classify(name) %>ApiService extends CrudApiBaseService<any> {
+export class <%= classify(name) %>ApiService extends ApiBaseService {
   endpoint = '<%= name %>';
 
   constructor() {
     super();
   }
 <% for(let apiItem of apiList) { %>
-  <%= apiItem.apiMethodName %>(<%= apiItem.functionParams %>): Observable<<%= apiItem.responseSymbol %>> {
-    return this.httpClient.<%= apiItem.method %><<%= apiItem.responseSymbol %>>(<%= apiItem.apiCallParams %>);
+  <%= apiItem.apiMethodName %>(<%= apiItem.methodParams %>): Observable<<%= apiItem.returnTypeSymbol %>> {
+    return this.httpClient.<%= apiItem.requestMethod %><<%= apiItem.returnTypeSymbol %>>(<%= apiItem.apiCallParams %>);
   }
 <% } %>
 

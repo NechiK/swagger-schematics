@@ -1,64 +1,184 @@
-export const CLAIM_VIEW_DTO_CONTENT_MOCK: string = `import { TClaimStatuses } from '../enums/claim-statuses.enum'
-import { TClaimStages } from '../enums/claim-stages.enum'
-import { TClaimType } from '../enums/claim-type.enum'
+export const MODEL_WITH_REF_SWAGGER = {
+    "ClaimDetailDTO": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "problemType": {
+                "$ref": "#/components/schemas/IdNameDTO"
+            },
+            "causeType": {
+                "$ref": "#/components/schemas/IdNameDTO"
+            },
+            "claimStatus": {
+                "$ref": "#/components/schemas/ClaimStatuses"
+            },
+            "crmRefId": {
+                "type": "string",
+                "nullable": true
+            },
+        },
+        "additionalProperties": false,
+        "description": "A detailed journal entry"
+    },
+    "IdNameDTO": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "integer",
+                "description": "Id",
+                "format": "int32"
+            },
+            "name": {
+                "type": "string",
+                "description": "Name",
+                "nullable": true
+            },
+            "displayName": {
+                "type": "string",
+                "description": "Display name",
+                "nullable": true
+            }
+        },
+        "additionalProperties": false,
+        "description": "IdName lookup"
+    },
+    "ClaimStatuses": {
+        "enum": [
+            1,
+            2,
+            3,
+            99
+        ],
+        "type": "integer",
+        "format": "int32"
+    },
+    "CreateNoteDTO": {
+        "required": [
+            "note"
+        ],
+        "type": "object",
+        "properties": {
+            "note": {
+                "maxLength": 4000,
+                "type": "string",
+                "description": "The note content"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Add a note to a claim"
+    },
+    "ClaimNoteViewDTO": {
+        "required": [
+            "note"
+        ],
+        "type": "object",
+        "properties": {
+            "note": {
+                "maxLength": 4000,
+                "type": "string",
+                "description": "The note content"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Add a note to a claim"
+    },
+}
 
-export interface IClaimViewDTO {
+export const ENUM_WITH_VAR_NAMES_SWAGGER = {
+    "ClaimType": {
+        "enum": [
+            1,
+            2
+        ],
+        "x-enum-varnames": ["MS", "PP"],
+        "type": "integer",
+        "format": "int32"
+    },
+};
+
+export const API_GET_CHILD_OF_MODEL_BY_ID = {
+    "/api/Claim/{claimId}/serviceActions": {
+        "get": {
+            "tags": [
+                "Claim"
+            ],
+            "parameters": [
+                {
+                    "name": "claimId",
+                    "in": "path",
+                    "description": "",
+                    "required": true,
+                    "schema": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Success",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClaimDetailDTO"
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    },
+};
+
+export const MODEL_WITH_REF_DTO_CONTENT: string = `import { IIdNameDTO } from './id-name-dto.interface'
+import { TClaimStatuses } from '../enums/claim-statuses.enum'
+
+export interface IClaimDetailDTO {
   id: number;
-  claimNumber?: string;
+  problemType: IIdNameDTO;
+  causeType: IIdNameDTO;
   claimStatus: TClaimStatuses;
-  claimStage: TClaimStages;
-  claimType: TClaimType;
-  dateOpen?: string;
-  submitterFirstName?: string;
-  submitterLastName?: string;
-  submitterEmail?: string;
-  submitterPhone?: string;
-  isFlaggedForRetailerReview: boolean;
-  escalation?: number;
-  furnitureStreetAddress1?: string;
-  furnitureStreetAddress2?: string;
-  furnitureCity?: string;
-  furniturePostalCode?: string;
-  furnitureCountry?: string;
-  furnitureProvince?: string;
-  dateClosed?: string;
+  crmRefId?: string;
 }
 `;
 
-export const JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT_MOCK: string = `import { IIdNameDTO } from './id-name-dto.interface'
-
-export interface IJournalDetailDTO {
-  id: number;
-  project: IIdNameDTO;
-  customer: IIdNameDTO;
-  workType: IIdNameDTO;
-  staff: IIdNameDTO;
-  refNo?: string;
-  extId?: number;
-  notes?: string;
-  date: string;
-  hours: number;
-  estimateLineNo?: string;
-  isBilled: boolean;
-  invoiceLineId?: number;
-}
-`;
-
-export const RECURSIVE_SYMBOL_CONTENT_MOCK: string = `import { TEstimateItemTypes } from '../enums/estimate-item-types.enum'
-import { IIdNameDTO } from './id-name-dto.interface'
-
-export interface IEstimateItemDTO {
-  id: number;
-  parentId?: number;
-  itemType: TEstimateItemTypes;
-  lineNumber: number;
-  title?: string;
-  description?: string;
-  min: number;
-  max: number;
-  workTypeId?: number;
-  phase: IIdNameDTO;
-  items?: IEstimateItemDTO[];
-}
-`;
+// export const JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT: string = `import { IIdNameDTO } from './id-name-dto.interface'
+//
+// export interface IJournalDetailDTO {
+//   id: number;
+//   project: IIdNameDTO;
+//   customer: IIdNameDTO;
+//   workType: IIdNameDTO;
+//   staff: IIdNameDTO;
+//   refNo?: string;
+//   extId?: number;
+//   notes?: string;
+//   date: string;
+//   hours: number;
+//   estimateLineNo?: string;
+//   isBilled: boolean;
+//   invoiceLineId?: number;
+// }
+// `;
+//
+// export const RECURSIVE_SYMBOL_CONTENT: string = `import { TEstimateItemTypes } from '../enums/estimate-item-types.enum'
+// import { IIdNameDTO } from './id-name-dto.interface'
+//
+// export interface IEstimateItemDTO {
+//   id: number;
+//   parentId?: number;
+//   itemType: TEstimateItemTypes;
+//   lineNumber: number;
+//   title?: string;
+//   description?: string;
+//   min: number;
+//   max: number;
+//   workTypeId?: number;
+//   phase: IIdNameDTO;
+//   items?: IEstimateItemDTO[];
+// }
+// `;
 

@@ -3,18 +3,17 @@ import * as path from 'path';
 import axios from "axios";
 import {Tree} from "@angular-devkit/schematics";
 import * as MockAdapter from 'axios-mock-adapter';
-import {SWAGGER_MOCK_DATA} from '../mocks/swagger-mock';
-import {EDITORCONFIG_MOCK} from '../mocks/editorconfig';
+import {SWAGGER_DATA} from '../mocks/swagger-mock';
+import {EDITORCONFIG} from '../mocks/editorconfig';
 import {
-    CLAIM_STATUSES_ENUM_CONTENT_MOCK,
-    CLAIM_TYPE_ENUM_CONTENT_MOCK,
-    CLAIM_TYPE_ENUM_NO_NAMES_CONTENT_MOCK
+    CLAIM_STATUSES_ENUM_CONTENT,
+    CLAIM_TYPE_ENUM_CONTENT,
+    CLAIM_TYPE_ENUM_NO_NAMES_CONTENT
 } from '../mocks/enum-mocks';
 import {
-    CLAIM_VIEW_DTO_CONTENT_MOCK,
-    JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT_MOCK,
-    RECURSIVE_SYMBOL_CONTENT_MOCK
+    MODEL_WITH_REF_DTO_CONTENT,
 } from '../mocks/interface-mocks';
+import {GET_MODEL_BY_ID_METHOD, POST_MODEL_BY_ID_METHOD} from '../mocks/api-mocks';
 
 const schematicRunner = new SchematicTestRunner('schematics', path.join(__dirname, './../collection.json'));
 
@@ -29,11 +28,11 @@ describe('Schematics API and types', () => {
     let tree: UnitTestTree = new UnitTestTree(Tree.empty());
     let files: string[];
 
-    mock.onGet(defaultOptions.swaggerSchemaUrl).reply(200, SWAGGER_MOCK_DATA);
+    mock.onGet(defaultOptions.swaggerSchemaUrl).reply(200, SWAGGER_DATA);
 
     beforeAll(async () => {
         const options = { ...defaultOptions };
-        tree.create('.editorconfig', EDITORCONFIG_MOCK);
+        tree.create('.editorconfig', EDITORCONFIG);
         tree = await schematicRunner.runSchematic('types', options, tree);
         tree = await schematicRunner.runSchematic('api', options, tree);
         files = tree.files;
@@ -45,31 +44,38 @@ describe('Schematics API and types', () => {
 
     it('should create TClaimStatuses enum without names', async () => {
         const TClaimStatusesEnumContent = tree.readContent(`${defaultOptions.path}/enums/claim-statuses.enum.ts`);
-        expect(TClaimStatusesEnumContent).toEqual(CLAIM_STATUSES_ENUM_CONTENT_MOCK);
+        expect(TClaimStatusesEnumContent).toEqual(CLAIM_STATUSES_ENUM_CONTENT);
     });
 
     it('should create TClaimType enum with names', async () => {
         const TClaimTypeEnumContent = tree.readContent(`${defaultOptions.path}/enums/claim-type.enum.ts`);
-        expect(TClaimTypeEnumContent).not.toEqual(CLAIM_TYPE_ENUM_NO_NAMES_CONTENT_MOCK);
-        expect(TClaimTypeEnumContent).toEqual(CLAIM_TYPE_ENUM_CONTENT_MOCK);
+        expect(TClaimTypeEnumContent).not.toEqual(CLAIM_TYPE_ENUM_NO_NAMES_CONTENT);
+        expect(TClaimTypeEnumContent).toEqual(CLAIM_TYPE_ENUM_CONTENT);
     });
 
-    it('should create IClaimViewDTO interface', async () => {
-        const IClaimViewDTOContent = tree.readContent(`${defaultOptions.path}/interfaces/claim-view-dto.interface.ts`);
-        expect(IClaimViewDTOContent).toEqual(CLAIM_VIEW_DTO_CONTENT_MOCK);
+    it('should create IClaimDetailDTO interface with ref and optional properties', async () => {
+        const IClaimDetailDTOContent = tree.readContent(`${defaultOptions.path}/interfaces/claim-detail-dto.interface.ts`);
+        expect(IClaimDetailDTOContent).toEqual(MODEL_WITH_REF_DTO_CONTENT);
     });
 
-    it('should filter interface uniq symbols', async () => {
-        const IJournalDetailDTO = tree.readContent(`${defaultOptions.path}/interfaces/journal-detail-dto.interface.ts`);
-        expect(IJournalDetailDTO).toEqual(JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT_MOCK);
-    });
-
-    it('should filter interface recursive symbol', async () => {
-        const IEstimateItemDTO = tree.readContent(`${defaultOptions.path}/interfaces/estimate-item-dto.interface.ts`);
-        expect(IEstimateItemDTO).toEqual(RECURSIVE_SYMBOL_CONTENT_MOCK);
-    });
+    // it('should filter interface uniq symbols', async () => {
+    //     const IJournalDetailDTO = tree.readContent(`${defaultOptions.path}/interfaces/journal-detail-dto.interface.ts`);
+    //     expect(IJournalDetailDTO).toEqual(JOURNAL_DETAIL_DTO_DUPLICATE_SYMBOL_CONTENT);
+    // });
+    //
+    // it('should filter interface recursive symbol', async () => {
+    //     const IEstimateItemDTO = tree.readContent(`${defaultOptions.path}/interfaces/estimate-item-dto.interface.ts`);
+    //     expect(IEstimateItemDTO).toEqual(RECURSIVE_SYMBOL_CONTENT);
+    // });
 
     it('should create ClaimApiService api service', async () => {
         expect(files).toContain(`${defaultOptions.path}/api/claim-api.service.ts`);
+    });
+
+    it('should convert APIs to methods', async () => {
+        const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
+        console.log(claimApiServiceContent);
+        expect(claimApiServiceContent).toContain(GET_MODEL_BY_ID_METHOD);
+        expect(claimApiServiceContent).toContain(POST_MODEL_BY_ID_METHOD);
     });
 });

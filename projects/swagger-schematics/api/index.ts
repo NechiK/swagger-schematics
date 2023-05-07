@@ -7,17 +7,16 @@ import {
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
-import {ISwaggerSchema} from "../interfaces/swagger.interface";
+import {ISwaggerApiPath, ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {
-    getApiMethodName,
-    getApiResponseSymbol,
+    IParsedApiSchema,
     ISwaggerSymbolEnumInterface,
-    parseRefToSymbol,
     transformPrimitives,
     transformRefsToImport
 } from "../types/utils/interface";
 import {camelize} from "@angular-devkit/core/src/utils/strings";
+import {getApiMethodName, getApiResponseSymbol, parseRequestBody} from '../types/utils/api';
 
 export default function(options: SwaggerApiSchema) {
   return async () => {
@@ -30,7 +29,7 @@ export default function(options: SwaggerApiSchema) {
       // options.path = parsedPath.path;
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
-      const apiPaths = swagger.data.paths;
+      const apiPaths = swagger.data.paths as ISwaggerApiPath;
       const apiPathKeys = Object.keys(apiPaths);
 
       const parsedApiSchemas = apiPathKeys.reduce((apiParsedSchema, apiPathKey) => {
@@ -52,66 +51,69 @@ export default function(options: SwaggerApiSchema) {
           apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(Object.keys(apiData).map(apiMethodKey => {
               const apiMethod = apiData[apiMethodKey];
               let apiUrl = segments.map(urlSegment => urlSegment.match(/\{.*}/) ? `$${urlSegment}` : urlSegment).join('/');
-              const apiMethodName = getApiMethodName(apiMethodKey, apiPathKey);
+              const apiMethodName = getApiMethodName(apiMethod, apiMethodKey, apiPathKey);
               const queryParams: string[] = [];
-              const pathParams: string[] = [];
+              const methodParams: string[] = [];
               if (apiMethod.parameters) {
                   apiMethod.parameters.forEach(apiParam => {
                       if (apiParam.in === 'query') {
                           queryParams.push(apiParam.name);
                       } else {
-                          pathParams.push(`${apiParam.name}: ${transformPrimitives(apiParam.schema).propertySymbol}`)
+                          methodParams.push(`${apiParam.name}: ${transformPrimitives(apiParam.schema).propertySymbol}`)
                       }
                   });
               }
 
-              const bodyParam = apiMethod.requestBody && apiMethod.requestBody.content['application/json'] && apiMethod.requestBody.content['application/json'].schema.$ref ? parseRefToSymbol(apiMethod.requestBody.content['application/json'].schema, swagger.data) : null;
-              const responseType = getApiResponseSymbol(apiMethod, swagger.data) as ISwaggerSymbolEnumInterface;
-              const functionParams = pathParams;
+              const bodyParam: ISwaggerSymbolEnumInterface | null = parseRequestBody(apiMethod, swagger.data);
+              const responseType: ISwaggerSymbolEnumInterface = getApiResponseSymbol(apiMethod, swagger.data) as ISwaggerSymbolEnumInterface;
+
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
+
               if (bodyParam) {
                   const parsed = parseName(`${options.path}/${bodyParam.type}s`, bodyParam.refPropertyKey);
                   const camelizeProperty = camelize(bodyParam.refPropertyKey);
-                  functionParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
+                  methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
                   apiCallParams.push(camelizeProperty);
+
                   const importItem = transformRefsToImport([bodyParam], `${options.path}` as string, `${parsed.path}`);
+
                   if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
                       apiParsedSchema[apiPrefix].importsContent.push(importItem);
                   }
               }
 
-              if (queryParams.length > 0) {
-                  apiCallParams.push(`{params:{${queryParams.join(', ')}}}`)
-              }
-
+              // Add response type import
               if (responseType && responseType.importSymbol) {
                   const parsed = parseName(`${options.path}/${responseType.type}s`, responseType.importSymbol);
                   const importItem = transformRefsToImport([responseType], `${options.path}` as string, `${parsed.path}`);
+
                   if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
                       apiParsedSchema[apiPrefix].importsContent.push(importItem);
                   }
               }
 
-              const responseSymbol = responseType ? responseType.propertySymbol : 'void';
-
+              // Add query params to API call body and method params (as object)
               if (queryParams.length > 0) {
-                  functionParams.push(...queryParams.map(queryParam => `${queryParam}?: string`));
+                  apiCallParams.push(`{params: queryParams}`);
+                  methodParams.push(`queryParams: {${queryParams.map(queryParam => `${queryParam}?: string`).join(';')}} = {}`);
               }
+
+              const returnTypeSymbol = responseType ? responseType.propertySymbol : 'void';
 
               return {
                   apiUrl,
-                  apiMethodName: camelize(apiMethodName),
-                  method: apiMethodKey,
-                  functionParams: functionParams.join(', '),
+                  apiMethodName,
+                  requestMethod: apiMethodKey,
+                  methodParams: methodParams.join(', '),
                   bodyParam,
-                  responseSymbol,
+                  returnTypeSymbol,
                   apiCallParams: apiCallParams.join(', '),
                   response: apiMethod.responses['200']
               }
           }));
 
           return apiParsedSchema;
-      }, {} as any);
+      }, {} as IParsedApiSchema);
 
       const apiServiceTemplates = url(options.apiServiceTemplatePath || './templates/api-service');
       const apiCrudServiceTemplates = url('./templates/crud-api-service');

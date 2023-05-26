@@ -1,6 +1,11 @@
 import {ISwaggerApi, ISwaggerSchema} from '../../interfaces/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
-import {ISwaggerSymbolEnumInterface, parseRefToSymbol, transformType, TSwaggerSymbol} from './interface';
+import {
+    parseRefToSymbol,
+    transformPrimitives,
+    transformType,
+    TSwaggerSymbol
+} from './interface';
 
 export function getApiMethodName(apiMethod: ISwaggerApi,apiMethodKey: string, apiPathKey: string) {
     let parsedMethodName = '';
@@ -35,16 +40,16 @@ export function getApiResponseSymbol(apiMethod: ISwaggerApi, swaggerData: ISwagg
     }
 }
 
-export function parseRequestBody(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): ISwaggerSymbolEnumInterface | null {
+export function parseRequestBody(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): TSwaggerSymbol | null {
     const apiRequestBody = apiMethod.requestBody;
     const applicationJSON = apiRequestBody && apiRequestBody.content['application/json'];
     const multipartFormData = apiRequestBody && apiRequestBody.content['multipart/form-data'];
 
-    if (applicationJSON && applicationJSON.schema.$ref) {
+    if (applicationJSON) {
         if (applicationJSON.schema.$ref) {
             return parseRefToSymbol(apiMethod.requestBody.content['application/json'].schema, swaggerData);
         } else {
-            return null;
+            return transformPrimitives(applicationJSON.schema);
         }
     } else if (multipartFormData) {
         return null;

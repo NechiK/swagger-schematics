@@ -13,7 +13,7 @@ import {
 import {
     MODEL_WITH_REF_DTO_CONTENT,
 } from '../mocks/interface-mocks';
-import {GET_MODEL_BY_ID_METHOD, POST_MODEL_BY_ID_METHOD} from '../mocks/api-mocks';
+import {GET_MODEL_BY_ID_METHOD, POST_MODEL_BY_ID_METHOD, PUT_MODEL_WITH_INTEGER_BODY_METHOD} from '../mocks/api-mocks';
 
 const schematicRunner = new SchematicTestRunner('schematics', path.join(__dirname, './../collection.json'));
 
@@ -74,8 +74,12 @@ describe('Schematics API and types', () => {
 
     it('should convert APIs to methods', async () => {
         const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
+        // console.log(files);
         console.log(claimApiServiceContent);
+        expect(claimApiServiceContent).toContain("import { IClaimNoteViewDTO } from '../interfaces/claim-note-view-dto.interface'");
+
         expect(claimApiServiceContent).toContain(GET_MODEL_BY_ID_METHOD);
         expect(claimApiServiceContent).toContain(POST_MODEL_BY_ID_METHOD);
+        expect(claimApiServiceContent).toContain(PUT_MODEL_WITH_INTEGER_BODY_METHOD);
     });
 });

@@ -13,9 +13,9 @@ import {
     IParsedApiSchema,
     ISwaggerSymbolEnumInterface,
     transformPrimitives,
-    transformRefsToImport
+    transformRefsToImport, TSwaggerSymbol
 } from "../types/utils/interface";
-import {camelize} from "@angular-devkit/core/src/utils/strings";
+import {camelize, dasherize} from "@angular-devkit/core/src/utils/strings";
 import {getApiMethodName, getApiResponseSymbol, parseRequestBody} from '../types/utils/api';
 
 export default function(options: SwaggerApiSchema) {
@@ -64,32 +64,36 @@ export default function(options: SwaggerApiSchema) {
                   });
               }
 
-              const bodyParam: ISwaggerSymbolEnumInterface | null = parseRequestBody(apiMethod, swagger.data);
-              const responseType: ISwaggerSymbolEnumInterface = getApiResponseSymbol(apiMethod, swagger.data) as ISwaggerSymbolEnumInterface;
+              const bodyParam: TSwaggerSymbol | null = parseRequestBody(apiMethod, swagger.data);
+              const responseType: TSwaggerSymbol | null = getApiResponseSymbol(apiMethod, swagger.data);
 
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
 
+              const importRefs = [];
+
               if (bodyParam) {
-                  const parsed = parseName(`${options.path}/${bodyParam.type}s`, bodyParam.refPropertyKey);
-                  const camelizeProperty = camelize(bodyParam.refPropertyKey);
-                  methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
-                  apiCallParams.push(camelizeProperty);
-
-                  const importItem = transformRefsToImport([bodyParam], `${options.path}` as string, `${parsed.path}`);
-
-                  if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
-                      apiParsedSchema[apiPrefix].importsContent.push(importItem);
+                  if (bodyParam.type === 'enum' || bodyParam.type === 'interface') {
+                      const camelizeProperty = camelize(bodyParam.refPropertyKey);
+                      methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
+                      apiCallParams.push(camelizeProperty);
+                      importRefs.push(bodyParam);
+                  } else {
+                      const property = 'body';
+                      methodParams.push(`${property}: ${bodyParam.propertySymbol}`);
+                      apiCallParams.push(property);
                   }
               }
 
               // Add response type import
-              if (responseType && responseType.importSymbol) {
-                  const parsed = parseName(`${options.path}/${responseType.type}s`, responseType.importSymbol);
-                  const importItem = transformRefsToImport([responseType], `${options.path}` as string, `${parsed.path}`);
+              if (responseType && (
+                  responseType.type === 'enum' || responseType.type === 'interface'
+              ) && responseType.importSymbol) {
+                  importRefs.push(responseType);
+              }
 
-                  if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
-                      apiParsedSchema[apiPrefix].importsContent.push(importItem);
-                  }
+              const importItem = transformRefsToImport(importRefs, `${options.path}` as string, `${options.path}/api/${dasherize(nameSegment)}-api.service`);
+              if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
+                  apiParsedSchema[apiPrefix].importsContent.push(importItem);
               }
 
               // Add query params to API call body and method params (as object)

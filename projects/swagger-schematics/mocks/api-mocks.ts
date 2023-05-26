@@ -196,3 +196,51 @@ export const PUT_MODEL_BY_ID_METHOD = `addClaimNote(id: number, createNoteDTO: I
     return this.httpClient.post<IClaimNoteViewDTO>(this.getUrl(\`\${id}/note\`), createNoteDTO);
   }
 `;
+
+export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER = {
+    "put": {
+        "tags": [
+            "Claim"
+        ],
+        "summary": "Called when a web claim changes status",
+        "requestBody": {
+            "description": "Id of claim",
+            "content": {
+                "application/json-patch+json": {
+                    "schema": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                },
+                "application/json": {
+                    "schema": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                },
+                "text/json": {
+                    "schema": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                },
+                "application/*+json": {
+                    "schema": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "Success"
+            }
+        }
+    }
+}
+
+export const PUT_MODEL_WITH_INTEGER_BODY_METHOD = `updateClaimStatus(body: number): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`status\`), body);
+  }
+`;

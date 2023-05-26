@@ -18,7 +18,7 @@ export interface IParsedApiItem {
     apiMethodName: string;
     requestMethod: string;
     methodParams: string;
-    bodyParam: ISwaggerSymbolEnumInterface | null;
+    bodyParam: TSwaggerSymbol | null;
     returnTypeSymbol: string;
     apiCallParams: string;
     response: any;

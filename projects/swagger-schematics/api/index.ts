@@ -63,21 +63,35 @@ export default function(options: SwaggerApiSchema) {
                   });
               }
 
-              const bodyParam: TSwaggerSymbol | null = parseRequestBody(apiMethod, swagger.data);
+              let bodyParam: TSwaggerSymbol | null = null;
               const responseType: TSwaggerSymbol | null = getApiResponseSymbol(apiMethod, swagger.data);
 
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
 
-              if (bodyParam) {
-                  if (bodyParam.type === 'enum' || bodyParam.type === 'interface') {
-                      const camelizeProperty = camelize(bodyParam.refPropertyKey);
-                      methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
-                      apiCallParams.push(camelizeProperty);
-                      apiParsedSchema[apiPrefix].importRefs.push(bodyParam);
+              if (['post', 'put', 'patch', 'delete'].includes(apiMethodKey)) {
+                  bodyParam = parseRequestBody(apiMethod, swagger.data);
+
+                  if (bodyParam) {
+                      switch (bodyParam.type) {
+                            case 'enum':
+                            case 'interface':
+                                const camelizeProperty = camelize(bodyParam.refPropertyKey);
+                                methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
+                                apiCallParams.push(camelizeProperty);
+                                apiParsedSchema[apiPrefix].importRefs.push(bodyParam);
+                                break;
+                            default:
+                                const property = 'body';
+                                methodParams.push(`${property}: ${bodyParam.propertySymbol}`);
+
+                                if (apiMethodKey === 'delete') {
+                                    apiCallParams.push(`{ ${property} }`);
+                                } else {
+                                    apiCallParams.push(property);
+                                }
+                      }
                   } else {
-                      const property = 'body';
-                      methodParams.push(`${property}: ${bodyParam.propertySymbol}`);
-                      apiCallParams.push(property);
+                      apiCallParams.push('{}');
                   }
               }
 

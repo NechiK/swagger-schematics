@@ -13,7 +13,12 @@ import {
 import {
     MODEL_WITH_REF_DTO_CONTENT,
 } from '../mocks/interface-mocks';
-import {GET_MODEL_BY_ID_METHOD, POST_MODEL_BY_ID_METHOD, PUT_MODEL_WITH_INTEGER_BODY_METHOD} from '../mocks/api-mocks';
+import {
+    DELETE_MANY_ARRAY_OF_IDS_METHOD,
+    GET_MODEL_BY_ID_METHOD,
+    POST_MODEL_BY_ID_METHOD, PUT_MODEL_WITH_EMPTY_BODY_METHOD,
+    PUT_MODEL_WITH_INTEGER_BODY_METHOD
+} from '../mocks/api-mocks';
 
 const schematicRunner = new SchematicTestRunner('schematics', path.join(__dirname, './../collection.json'));
 
@@ -83,13 +88,32 @@ describe('Schematics API and types', () => {
         expect(claimApiServiceContent).toContain(importsArray.join('\n'));
     });
 
-    it('should convert APIs to methods', async () => {
-        const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
-        // console.log(files);
-        console.log(claimApiServiceContent);
+    describe('should convert', () => {
+        let claimApiServiceContent = '';
 
-        expect(claimApiServiceContent).toContain(GET_MODEL_BY_ID_METHOD);
-        expect(claimApiServiceContent).toContain(POST_MODEL_BY_ID_METHOD);
-        expect(claimApiServiceContent).toContain(PUT_MODEL_WITH_INTEGER_BODY_METHOD);
+        beforeAll(() => {
+            claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
+            console.log(claimApiServiceContent);
+        });
+
+        it('get model by id', async () => {
+            expect(claimApiServiceContent).toContain(GET_MODEL_BY_ID_METHOD);
+        });
+
+        it('post model by id', async () => {
+            expect(claimApiServiceContent).toContain(POST_MODEL_BY_ID_METHOD);
+        });
+
+        it('put model with integer body', async () => {
+            expect(claimApiServiceContent).toContain(PUT_MODEL_WITH_INTEGER_BODY_METHOD);
+        });
+
+        it('put model with empty body', async () => {
+            expect(claimApiServiceContent).toContain(PUT_MODEL_WITH_EMPTY_BODY_METHOD);
+        });
+
+        it('delete many array of ids', async () => {
+            expect(claimApiServiceContent).toContain(DELETE_MANY_ARRAY_OF_IDS_METHOD);
+        });
     });
 });

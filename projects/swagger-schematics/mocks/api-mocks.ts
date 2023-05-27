@@ -283,3 +283,67 @@ export const PUT_MODEL_WITH_INTEGER_BODY_METHOD = `updateClaimStatus(body: numbe
     return this.httpClient.put<void>(this.getUrl(\`status\`), body);
   }
 `;
+
+export const PUT_MODEL_WITH_EMPTY_BODY_SWAGGER = {
+    "put": {
+        "parameters": [
+            {
+                "name": "id",
+                "in": "path",
+                "description": "Id of user",
+                "required": true,
+                "schema": {
+                    "type": "integer",
+                    "format": "int32"
+                }
+            }
+        ],
+        "responses": {
+            "200": {
+                "description": "Success"
+            }
+        }
+    }
+}
+
+export const PUT_MODEL_WITH_EMPTY_BODY_METHOD = `updateClaimReactivate(id: number): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`\${id}/reactivate\`), {});
+  }
+`;
+
+export const DELETE_MANY_ARRAY_OF_IDS_SWAGGER = {
+    "delete": {
+        "summary": "Delete multiple entities",
+        "requestBody": {
+            "description": "Ids of entities to delete",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                },
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                }
+            }
+        }
+    }
+}
+
+export const DELETE_MANY_ARRAY_OF_IDS_METHOD = `deleteClaimDeletemany(body: number[]): Observable<boolean> {
+    return this.httpClient.delete<boolean>(this.getUrl(\`deletemany\`), { body });
+  }
+`;

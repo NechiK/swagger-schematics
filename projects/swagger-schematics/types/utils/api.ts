@@ -75,9 +75,9 @@ function parseGetRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiPa
 }
 
 function parsePostRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiPathKey: string) {
-    const predictCreate = apiMethod.summary.toLowerCase().includes('create');
-    const predictAdd = apiMethod.summary.toLowerCase().includes('add');
-    const predictSearch = apiMethod.summary.toLowerCase().includes('search');
+    const predictCreate = apiMethod.summary?.toLowerCase().includes('create');
+    const predictAdd = apiMethod.summary?.toLowerCase().includes('add');
+    const predictSearch = apiMethod.summary?.toLowerCase().includes('search');
     if (predictCreate) {
         return parseDefaultMethodName('create', apiPathKey);
     } else if (predictAdd) {

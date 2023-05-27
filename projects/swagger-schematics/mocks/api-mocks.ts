@@ -154,6 +154,63 @@ export const POST_MODEL_BY_ID_METHOD = `addClaimNote(id: number, createNoteDTO: 
   }
 `;
 
+export const POST_SEARCH_ALL_SWAGGER = {
+    "post": {
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/CompanySearchDTO"
+                    }
+                },
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ClaimDetailDTO"
+                        }
+                    },
+                }
+            }
+        }
+    }
+};
+
+export const POST_SEARCH_IDS_SWAGGER = {
+    "post": {
+        "requestBody": {
+            "description": "Paging, sorting and filtering settings",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/CompanySearchDTO"
+                    }
+                },
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int32"
+                            }
+                        }
+                    },
+                }
+            }
+        }
+    }
+};
+
 export const PUT_MODEL_BY_ID_SWAGGER = {
     "put": {
         "tags": ["Claim"],
@@ -206,30 +263,12 @@ export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER = {
         "requestBody": {
             "description": "Id of claim",
             "content": {
-                "application/json-patch+json": {
-                    "schema": {
-                        "type": "integer",
-                        "format": "int32"
-                    }
-                },
                 "application/json": {
                     "schema": {
                         "type": "integer",
                         "format": "int32"
                     }
                 },
-                "text/json": {
-                    "schema": {
-                        "type": "integer",
-                        "format": "int32"
-                    }
-                },
-                "application/*+json": {
-                    "schema": {
-                        "type": "integer",
-                        "format": "int32"
-                    }
-                }
             }
         },
         "responses": {

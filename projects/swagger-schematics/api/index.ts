@@ -11,7 +11,6 @@ import {ISwaggerApiPath, ISwaggerSchema} from "../interfaces/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {
     IParsedApiSchema,
-    ISwaggerSymbolEnumInterface,
     transformPrimitives,
     transformRefsToImport, TSwaggerSymbol
 } from "../types/utils/interface";
@@ -44,7 +43,7 @@ export default function(options: SwaggerApiSchema) {
               apiParsedSchema[apiPrefix] = {
                   name: apiPrefix,
                   apiList: [],
-                  importsContent: []
+                  importRefs: []
               };
           }
 
@@ -69,14 +68,12 @@ export default function(options: SwaggerApiSchema) {
 
               const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
 
-              const importRefs = [];
-
               if (bodyParam) {
                   if (bodyParam.type === 'enum' || bodyParam.type === 'interface') {
                       const camelizeProperty = camelize(bodyParam.refPropertyKey);
                       methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
                       apiCallParams.push(camelizeProperty);
-                      importRefs.push(bodyParam);
+                      apiParsedSchema[apiPrefix].importRefs.push(bodyParam);
                   } else {
                       const property = 'body';
                       methodParams.push(`${property}: ${bodyParam.propertySymbol}`);
@@ -88,12 +85,7 @@ export default function(options: SwaggerApiSchema) {
               if (responseType && (
                   responseType.type === 'enum' || responseType.type === 'interface'
               ) && responseType.importSymbol) {
-                  importRefs.push(responseType);
-              }
-
-              const importItem = transformRefsToImport(importRefs, `${options.path}` as string, `${options.path}/api/${dasherize(nameSegment)}-api.service`);
-              if (!apiParsedSchema[apiPrefix].importsContent.find((importContentItem: string) => importContentItem === importItem)) {
-                  apiParsedSchema[apiPrefix].importsContent.push(importItem);
+                  apiParsedSchema[apiPrefix].importRefs.push(responseType);
               }
 
               // Add query params to API call body and method params (as object)
@@ -130,9 +122,10 @@ export default function(options: SwaggerApiSchema) {
               applyTemplates({
                   ...options,
                   ...strings,
+                  transformRefsToImport,
                   name: apiSchemaKey,
                   apiList: parsedApiSchemas[apiSchemaKey].apiList,
-                  importsContent: parsedApiSchemas[apiSchemaKey].importsContent.join('\n'),
+                  importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
               }),
               move(parsed.path)
           ]);

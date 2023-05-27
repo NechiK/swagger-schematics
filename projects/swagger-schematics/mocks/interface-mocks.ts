@@ -1,4 +1,52 @@
 export const MODEL_WITH_REF_SWAGGER = {
+    "CompanySearchDTO": {
+        "type": "object",
+        "properties": {
+            "page": {
+                "maximum": 2147483647,
+                "minimum": 0,
+                "type": "integer",
+                "description": "Page number, 1 based",
+                "format": "int32"
+            },
+            "pageSize": {
+                "maximum": 2147483647,
+                "minimum": 0,
+                "type": "integer",
+                "description": "The page size (number of rows per page). Specify a size of 0 to get all the\r\nrows (no paging)",
+                "format": "int32"
+            },
+            "searches": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Strings to search for",
+                "nullable": true
+            },
+            "noCount": {
+                "type": "boolean",
+                "description": "Set to true to not count the records in the table"
+            },
+            "noRows": {
+                "type": "boolean",
+                "description": "Set to true to not return any rows (just count)"
+            },
+            "excludeActive": {
+                "type": "boolean",
+                "description": "Return deleted records",
+                "nullable": true
+            },
+            "companyTypeId": {
+                "type": "integer",
+                "description": "Specific company type",
+                "format": "int32",
+                "nullable": true
+            }
+        },
+        "additionalProperties": false,
+        "description": "Company search"
+    },
     "ClaimDetailDTO": {
         "type": "object",
         "properties": {
@@ -133,8 +181,8 @@ export const API_GET_CHILD_OF_MODEL_BY_ID = {
     },
 };
 
-export const MODEL_WITH_REF_DTO_CONTENT: string = `import { IIdNameDTO } from './id-name-dto.interface'
-import { TClaimStatuses } from '../enums/claim-statuses.enum'
+export const MODEL_WITH_REF_DTO_CONTENT: string = `import { IIdNameDTO } from './id-name-dto.interface';
+import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
 export interface IClaimDetailDTO {
   id: number;

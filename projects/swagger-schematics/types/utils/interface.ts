@@ -10,7 +10,7 @@ export interface IParsedApiSchema {
 export interface IParsedSchemaItem {
     name: string;
     apiList: IParsedApiItem[];
-    importsContent: string[];
+    importRefs: ISwaggerSymbolEnumInterface[];
 }
 
 export interface IParsedApiItem {
@@ -83,7 +83,7 @@ export function transformRefsToImport(refs: ISwaggerSymbolEnumInterface[], optio
 
 export function buildImport(fromPath: string, toPath: string, symbolName: string) {
     const relativePath = buildRelativePath(fromPath, toPath);
-    return `import { ${symbolName} } from '${relativePath}'`;
+    return `import { ${symbolName} } from '${relativePath}';`;
 }
 
 export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string) {

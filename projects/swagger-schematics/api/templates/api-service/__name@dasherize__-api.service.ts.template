@@ -1,7 +1,8 @@
 import {Injectable} from "@angular/core";
 import {ApiBaseService} from "./_api-base.service";
 import {Observable} from "rxjs";
-<%= importsContent %>
+
+<%= transformRefsToImport(importRefs, path, `${path}/api/${dasherize(name)}-api.service`) %>
 
 @Injectable({
   providedIn: 'root',

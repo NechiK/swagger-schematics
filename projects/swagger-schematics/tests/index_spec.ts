@@ -72,11 +72,21 @@ describe('Schematics API and types', () => {
         expect(files).toContain(`${defaultOptions.path}/api/claim-api.service.ts`);
     });
 
+    it('should add imports without duplicates', async () => {
+        const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
+        const importsArray = [
+            `import { IClaimDetailDTO } from '../interfaces/claim-detail-dto.interface';`,
+            `import { ICreateNoteDTO } from '../interfaces/create-note-dto.interface';`,
+            `import { IClaimNoteViewDTO } from '../interfaces/claim-note-view-dto.interface';`,
+            `import { ICompanySearchDTO } from '../interfaces/company-search-dto.interface';`,
+        ]
+        expect(claimApiServiceContent).toContain(importsArray.join('\n'));
+    });
+
     it('should convert APIs to methods', async () => {
         const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
         // console.log(files);
         console.log(claimApiServiceContent);
-        expect(claimApiServiceContent).toContain("import { IClaimNoteViewDTO } from '../interfaces/claim-note-view-dto.interface'");
 
         expect(claimApiServiceContent).toContain(GET_MODEL_BY_ID_METHOD);
         expect(claimApiServiceContent).toContain(POST_MODEL_BY_ID_METHOD);

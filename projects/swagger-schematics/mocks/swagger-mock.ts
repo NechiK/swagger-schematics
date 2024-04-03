@@ -1,13 +1,14 @@
+import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import {
     DELETE_MANY_ARRAY_OF_IDS_SWAGGER,
-    GET_MODEL_BY_ID_SWAGGER,
+    GET_MODEL_BY_ID_SWAGGER, GET_SERVICE_ACTIONS_BY_ID_SWAGGER, GET_SERVICE_ACTIONS_SWAGGER,
     POST_MODEL_CHILD_BY_MODEL_ID_SWAGGER,
     POST_MODEL_FORM_DATA_SWAGGER, POST_SEARCH_ALL_SWAGGER, POST_SEARCH_IDS_SWAGGER,
     PUT_MODEL_BY_ID_SWAGGER, PUT_MODEL_WITH_EMPTY_BODY_SWAGGER, PUT_MODEL_WITH_INTEGER_BODY_SWAGGER
 } from './api-mocks';
 import {API_GET_CHILD_OF_MODEL_BY_ID, ENUM_WITH_VAR_NAMES_SWAGGER, MODEL_WITH_REF_SWAGGER} from './interface-mocks';
 
-export const SWAGGER_DATA = {
+export const SWAGGER_DATA: ISwaggerSchema = {
     openapi: "3.0.1",
     info: {
         title: "Montage Platform API",
@@ -40,6 +41,12 @@ export const SWAGGER_DATA = {
         },
         "/api/Claim/deletemany": {
             ...DELETE_MANY_ARRAY_OF_IDS_SWAGGER
+        },
+        "/api/Claim/serviceactions": {
+            ...GET_SERVICE_ACTIONS_SWAGGER
+        },
+        "/api/Claim/serviceactions/{serviceActionId}": {
+            ...GET_SERVICE_ACTIONS_BY_ID_SWAGGER
         },
     },
     components: {

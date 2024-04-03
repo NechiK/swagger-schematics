@@ -1,4 +1,6 @@
-export const GET_MODEL_BY_ID_SWAGGER = {
+import { IPathOperations } from "../interfaces/version_3_1/operation.interface";
+
+export const GET_MODEL_BY_ID_SWAGGER: IPathOperations = {
     "get": {
         "tags": ["Claim"],
         "summary": "Gets ClaimDetail",
@@ -32,7 +34,71 @@ export const GET_MODEL_BY_ID_METHOD = `getById(id: number): Observable<IClaimDet
   }
 `;
 
-export const POST_MODEL_FORM_DATA_SWAGGER = {
+export const GET_SERVICE_ACTIONS_SWAGGER: IPathOperations = {
+    "get": {
+        "summary": "Get service actions",
+        "parameters": [{
+            "name": "serviceActionId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+                "type": "integer",
+                "format": "int32"
+            }
+        }],
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int32"
+                            }
+                        }
+                    },
+                }
+            }
+        }
+    },
+}
+
+export const GET_SERVICE_ACTIONS_BY_ID_SWAGGER: IPathOperations = {
+    "get": {
+        "summary": "Get service actions",
+        "parameters": [{
+            "name": "serviceActionId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+                "type": "integer",
+                "format": "int32"
+            }
+        }],
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int32"
+                            }
+                        }
+                    },
+                }
+            }
+        }
+    },
+}
+
+export const POST_MODEL_FORM_DATA_SWAGGER: IPathOperations = {
     "post": {
         "tags": [
             "Claim"
@@ -105,7 +171,7 @@ export const POST_MODEL_FORM_DATA_METHOD = `createClaim(model: any, formfiles: a
   }
 `;
 
-export const POST_MODEL_CHILD_BY_MODEL_ID_SWAGGER = {
+export const POST_MODEL_CHILD_BY_MODEL_ID_SWAGGER: IPathOperations = {
     "post": {
         "tags": [
             "Claim"
@@ -154,7 +220,7 @@ export const POST_MODEL_BY_ID_METHOD = `addClaimNote(id: number, createNoteDTO: 
   }
 `;
 
-export const POST_SEARCH_ALL_SWAGGER = {
+export const POST_SEARCH_ALL_SWAGGER: IPathOperations = {
     "post": {
         "requestBody": {
             "content": {
@@ -180,7 +246,7 @@ export const POST_SEARCH_ALL_SWAGGER = {
     }
 };
 
-export const POST_SEARCH_IDS_SWAGGER = {
+export const POST_SEARCH_IDS_SWAGGER: IPathOperations = {
     "post": {
         "requestBody": {
             "description": "Paging, sorting and filtering settings",
@@ -211,7 +277,7 @@ export const POST_SEARCH_IDS_SWAGGER = {
     }
 };
 
-export const PUT_MODEL_BY_ID_SWAGGER = {
+export const PUT_MODEL_BY_ID_SWAGGER: IPathOperations = {
     "put": {
         "tags": ["Claim"],
         "summary": "Updates ClaimDetail",
@@ -254,7 +320,7 @@ export const PUT_MODEL_BY_ID_METHOD = `addClaimNote(id: number, createNoteDTO: I
   }
 `;
 
-export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER = {
+export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER: IPathOperations = {
     "put": {
         "tags": [
             "Claim"
@@ -284,7 +350,7 @@ export const PUT_MODEL_WITH_INTEGER_BODY_METHOD = `updateClaimStatus(body: numbe
   }
 `;
 
-export const PUT_MODEL_WITH_EMPTY_BODY_SWAGGER = {
+export const PUT_MODEL_WITH_EMPTY_BODY_SWAGGER: IPathOperations = {
     "put": {
         "parameters": [
             {
@@ -311,7 +377,7 @@ export const PUT_MODEL_WITH_EMPTY_BODY_METHOD = `updateClaimReactivate(id: numbe
   }
 `;
 
-export const DELETE_MANY_ARRAY_OF_IDS_SWAGGER = {
+export const DELETE_MANY_ARRAY_OF_IDS_SWAGGER: IPathOperations = {
     "delete": {
         "summary": "Delete multiple entities",
         "requestBody": {

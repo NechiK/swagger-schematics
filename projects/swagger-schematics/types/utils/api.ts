@@ -1,11 +1,14 @@
-import {ISwaggerApi, ISwaggerSchema} from '../../interfaces/swagger.interface';
+import {ISwaggerSchema} from '../../interfaces/version_3_1/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
 import {
+    TTypeSymbol,
     transformType,
-    TSwaggerSymbol
 } from './interface';
+import { TOperation, TOperationWithRequestBody, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
+import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
+import { IRequestBody } from '../../interfaces/version_3_1/request.interface';
 
-export function getApiMethodName(apiMethod: ISwaggerApi,apiMethodKey: string, apiPathKey: string) {
+export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string) {
     let parsedMethodName = '';
     switch (apiMethodKey) {
         case 'get':
@@ -24,8 +27,8 @@ export function getApiMethodName(apiMethod: ISwaggerApi,apiMethodKey: string, ap
     return camelize(parsedMethodName);
 }
 
-export function getApiResponseSymbol(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): TSwaggerSymbol | null {
-    const api200Content = apiMethod.responses['200'].content;
+export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema): TTypeSymbol | null {
+    const api200Content = apiMethod.responses[THttpStatusCode.OK]!.content!;
     const api200ContentJson = api200Content && api200Content['application/json'];
     if (api200ContentJson) {
         if (api200ContentJson.schema) {
@@ -38,28 +41,33 @@ export function getApiResponseSymbol(apiMethod: ISwaggerApi, swaggerData: ISwagg
     }
 }
 
-export function parseRequestBody(apiMethod: ISwaggerApi, swaggerData: ISwaggerSchema): TSwaggerSymbol | null {
+export function parseRequestBody(apiMethod: TOperationWithRequestBody, swaggerData: ISwaggerSchema): TTypeSymbol | null {
     const apiRequestBody = apiMethod.requestBody;
 
     if (apiRequestBody) {
-        const applicationJSON = apiRequestBody.content['application/json'];
-        const multipartFormData = apiRequestBody.content['multipart/form-data'];
-
-        if (applicationJSON) {
-            return transformType(applicationJSON.schema, swaggerData);
-        } else if (multipartFormData) {
-            return null;
+        if ('$ref' in apiRequestBody && apiRequestBody.$ref) {
+            return transformType(apiRequestBody, swaggerData);
         } else {
-            return null;
+            const typedApiRequestBody = apiRequestBody as IRequestBody;
+            const applicationJSON = typedApiRequestBody.content['application/json'];
+            const multipartFormData = typedApiRequestBody.content['multipart/form-data'];
+
+            if (applicationJSON) {
+                return transformType(applicationJSON.schema, swaggerData);
+            } else if (multipartFormData) {
+                return null;
+            } else {
+                return null;
+            }
         }
     } else {
         return null;
     }
 }
 
-function parseGetRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiPathKey: string) {
-    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
-    const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey);
+function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
+    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/{id}
+    const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/{id}/dataName
     if (getModelByParamNameMatch) {
         const paramName = capitalize(getModelByParamNameMatch[3]);
         return `${apiMethodKey}By${paramName}`;
@@ -73,7 +81,7 @@ function parseGetRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiPa
     }
 }
 
-function parsePostRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiPathKey: string) {
+function parsePostRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
     const predictCreate = apiMethod.summary?.toLowerCase().includes('create');
     const predictAdd = apiMethod.summary?.toLowerCase().includes('add');
     const predictSearch = apiMethod.summary?.toLowerCase().includes('search');
@@ -88,7 +96,7 @@ function parsePostRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiP
     }
 }
 
-function parsePutRequestName(apiMethod: ISwaggerApi, apiMethodKey: string, apiPathKey: string) {
+function parsePutRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
     return parseDefaultMethodName('update', apiPathKey);
 }
 
@@ -98,6 +106,23 @@ function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: stri
 }
 
 function parseDefaultMethodName(methodPrefix: string, apiPathKey: string) {
-    const segments = apiPathKey.match(/^\/api\/(.*)/)![0].split('/');
-    return [methodPrefix, ...segments.filter(urlSegment => !urlSegment.match(/\{.*}/) && !urlSegment.match(/^api/))].join(' ');
+    const segments = apiPathKey.split('/');
+    // model/submodel/{property}
+    const segmentsWithParams = apiPathKey.match(/(([a-zA-Z]+\/)+{(\w+)})+/g);
+    if (segmentsWithParams) {
+        return [methodPrefix, ...segments.map(urlSegment => {
+            const isParam = urlSegment.match(/\{(.*)}/);
+            const isApi = urlSegment.match(/^api/);
+            if (isApi) {
+                return '';
+            } else if (isParam) {
+                return camelize(`By ${isParam[1]}`);
+            } else {
+                return urlSegment;
+            }
+        })].join(' ');
+    } else {
+        return [methodPrefix, ...segments.filter(urlSegment =>
+            !urlSegment.match(/\{.*}/) && !urlSegment.match(/^api/))].join(' ');
+    }
 }

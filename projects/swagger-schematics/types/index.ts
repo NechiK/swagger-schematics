@@ -9,11 +9,12 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, interfaces} from "./utils";
 import {transformProperties, transformRefsToImport} from "./utils/interface";
-import {ISwaggerSchema} from "../interfaces/swagger.interface";
+import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
-import {JSONSchema7Definition} from 'json-schema';
+import { IRef } from '../interfaces/version_3_1/ref.interface';
+import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
 
 export default function(options: SwaggerSchema): Rule {
   return async (host: Tree) => {
@@ -45,13 +46,20 @@ export default function(options: SwaggerSchema): Rule {
       const schemas = swagger.data.components.schemas;
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
-          const schemaType = schemas[schemaKey].type === 'integer' && schemas[schemaKey].hasOwnProperty('enum') ? 'enum' : 'interface'
-          return {
-              name: schemaKey,
-              type: schemaType,
-              data: swagger.data.components.schemas[schemaKey]
-          };
-      });
+        let typedSchema;
+        if ('$ref' in schemas[schemaKey]) {
+            typedSchema = schemas[schemaKey] as IRef;
+            return;
+        } else {
+            typedSchema = schemas[schemaKey] as TSchemaByType;
+            const schemaType = typedSchema.type === 'integer' && typedSchema.hasOwnProperty('enum') ? 'enum' : 'interface'
+            return {
+                name: schemaKey,
+                type: schemaType,
+                data: swagger.data.components.schemas[schemaKey]
+            } as TSwaggerSchematicsSchema;
+        }
+      }).filter(schema => !!schema) as TSwaggerSchematicsSchema[];
 
       const interfaceTemplates = url('./templates/interface');
       const enumTemplates = url('./templates/enum');
@@ -61,8 +69,8 @@ export default function(options: SwaggerSchema): Rule {
           let itemSource;
           if (schemaData.type === 'enum') {
               const parsed = parseName(`${options.path}/enums`, schemaData.name);
-              const enumValuesList = schemaData.data.enum as (number | string)[];
-              const enumNamesList = schemaData.data['x-enum-varnames'] as string[] ? schemaData.data['x-enum-varnames'] : enumValuesList;
+              const enumValuesList = schemaData.data.enum;
+              const enumNamesList = schemaData.data['x-enum-varnames'] ? schemaData.data['x-enum-varnames'] : enumValuesList;
               itemSource = apply(enumTemplates, [
                   applyTemplates({
                       ...options,
@@ -80,7 +88,7 @@ export default function(options: SwaggerSchema): Rule {
               ]);
           } else {
               const parsed = parseName(`${options.path}/interfaces`, schemaData.name);
-              const schemaProperties = schemaData.data.properties as { [key: string]: JSONSchema7Definition & {nullable: boolean} }
+              const schemaProperties = schemaData.data.properties
               const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger.data);
               const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${options.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
               itemSource = apply(interfaceTemplates, [

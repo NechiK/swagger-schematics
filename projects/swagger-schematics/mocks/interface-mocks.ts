@@ -1,4 +1,6 @@
-export const MODEL_WITH_REF_SWAGGER = {
+import { IPath, TSchemaByType } from "../interfaces/version_3_1/swagger.interface";
+
+export const MODEL_WITH_REF_SWAGGER: Record<string, TSchemaByType> = {
     "CompanySearchDTO": {
         "type": "object",
         "properties": {
@@ -44,7 +46,6 @@ export const MODEL_WITH_REF_SWAGGER = {
                 "nullable": true
             }
         },
-        "additionalProperties": false,
         "description": "Company search"
     },
     "ClaimDetailDTO": {
@@ -68,7 +69,6 @@ export const MODEL_WITH_REF_SWAGGER = {
                 "nullable": true
             },
         },
-        "additionalProperties": false,
         "description": "A detailed journal entry"
     },
     "IdNameDTO": {
@@ -90,7 +90,6 @@ export const MODEL_WITH_REF_SWAGGER = {
                 "nullable": true
             }
         },
-        "additionalProperties": false,
         "description": "IdName lookup"
     },
     "ClaimStatuses": {
@@ -115,7 +114,6 @@ export const MODEL_WITH_REF_SWAGGER = {
                 "description": "The note content"
             }
         },
-        "additionalProperties": false,
         "description": "Add a note to a claim"
     },
     "ClaimNoteViewDTO": {
@@ -130,12 +128,11 @@ export const MODEL_WITH_REF_SWAGGER = {
                 "description": "The note content"
             }
         },
-        "additionalProperties": false,
         "description": "Add a note to a claim"
     },
 }
 
-export const ENUM_WITH_VAR_NAMES_SWAGGER = {
+export const ENUM_WITH_VAR_NAMES_SWAGGER: Record<string, TSchemaByType> = {
     "ClaimType": {
         "enum": [
             1,
@@ -147,12 +144,9 @@ export const ENUM_WITH_VAR_NAMES_SWAGGER = {
     },
 };
 
-export const API_GET_CHILD_OF_MODEL_BY_ID = {
+export const API_GET_CHILD_OF_MODEL_BY_ID: Record<string, IPath> = {
     "/api/Claim/{claimId}/serviceActions": {
         "get": {
-            "tags": [
-                "Claim"
-            ],
             "parameters": [
                 {
                     "name": "claimId",

@@ -7,15 +7,12 @@ import {
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
-import {ISwaggerApiPath, ISwaggerSchema} from "../interfaces/swagger.interface";
+import {ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {
-    IParsedApiSchema,
-    transformPrimitives,
-    transformRefsToImport, TSwaggerSymbol
+    transformRefsToImport
 } from "../types/utils/interface";
-import {camelize, dasherize} from "@angular-devkit/core/src/utils/strings";
-import {getApiMethodName, getApiResponseSymbol, parseRequestBody} from '../types/utils/api';
+import { transformSwaggerSchema } from './helpers/api-helpers';
 
 export default function(options: SwaggerApiSchema) {
   return async () => {
@@ -28,102 +25,8 @@ export default function(options: SwaggerApiSchema) {
       // options.path = parsedPath.path;
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
-      const apiPaths = swagger.data.paths as ISwaggerApiPath;
-      const apiPathKeys = Object.keys(apiPaths);
 
-      const parsedApiSchemas = apiPathKeys.reduce((apiParsedSchema, apiPathKey) => {
-          if (!apiPathKey.match(/^\/api\//)) {
-              console.warn(`Path ${apiPathKey} doesn't match /api/ pattern. Skipping...`);
-              return apiParsedSchema;
-          }
-          const [nameSegment, ...segments] = apiPathKey.slice(5).split('/');
-          const apiData = apiPaths[apiPathKey];
-          const apiPrefix = nameSegment;
-          if (!apiParsedSchema.hasOwnProperty(apiPrefix)) {
-              apiParsedSchema[apiPrefix] = {
-                  name: apiPrefix,
-                  apiList: [],
-                  importRefs: []
-              };
-          }
-
-          apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(Object.keys(apiData).map(apiMethodKey => {
-              const apiMethod = apiData[apiMethodKey];
-              let apiUrl = segments.map(urlSegment => urlSegment.match(/\{.*}/) ? `$${urlSegment}` : urlSegment).join('/');
-              const apiMethodName = getApiMethodName(apiMethod, apiMethodKey, apiPathKey);
-              const queryParams: string[] = [];
-              const methodParams: string[] = [];
-              if (apiMethod.parameters) {
-                  apiMethod.parameters.forEach(apiParam => {
-                      if (apiParam.in === 'query') {
-                          queryParams.push(apiParam.name);
-                      } else {
-                          methodParams.push(`${apiParam.name}: ${transformPrimitives(apiParam.schema).propertySymbol}`)
-                      }
-                  });
-              }
-
-              let bodyParam: TSwaggerSymbol | null = null;
-              const responseType: TSwaggerSymbol | null = getApiResponseSymbol(apiMethod, swagger.data);
-
-              const apiCallParams = [`this.getUrl(\`${apiUrl}\`)`];
-
-              if (['post', 'put', 'patch', 'delete'].includes(apiMethodKey)) {
-                  bodyParam = parseRequestBody(apiMethod, swagger.data);
-
-                  if (bodyParam) {
-                      switch (bodyParam.type) {
-                            case 'enum':
-                            case 'interface':
-                                const camelizeProperty = camelize(bodyParam.refPropertyKey);
-                                methodParams.push(`${camelizeProperty}: ${bodyParam.propertySymbol}`);
-                                apiCallParams.push(camelizeProperty);
-                                apiParsedSchema[apiPrefix].importRefs.push(bodyParam);
-                                break;
-                            default:
-                                const property = 'body';
-                                methodParams.push(`${property}: ${bodyParam.propertySymbol}`);
-
-                                if (apiMethodKey === 'delete') {
-                                    apiCallParams.push(`{ ${property} }`);
-                                } else {
-                                    apiCallParams.push(property);
-                                }
-                      }
-                  } else {
-                      apiCallParams.push('{}');
-                  }
-              }
-
-              // Add response type import
-              if (responseType && (
-                  responseType.type === 'enum' || responseType.type === 'interface'
-              ) && responseType.importSymbol) {
-                  apiParsedSchema[apiPrefix].importRefs.push(responseType);
-              }
-
-              // Add query params to API call body and method params (as object)
-              if (queryParams.length > 0) {
-                  apiCallParams.push(`{params: queryParams}`);
-                  methodParams.push(`queryParams: {${queryParams.map(queryParam => `${queryParam}?: string`).join(';')}} = {}`);
-              }
-
-              const returnTypeSymbol = responseType ? responseType.propertySymbol : 'void';
-
-              return {
-                  apiUrl,
-                  apiMethodName,
-                  requestMethod: apiMethodKey,
-                  methodParams: methodParams.join(', '),
-                  bodyParam,
-                  returnTypeSymbol,
-                  apiCallParams: apiCallParams.join(', '),
-                  response: apiMethod.responses['200']
-              }
-          }));
-
-          return apiParsedSchema;
-      }, {} as IParsedApiSchema);
+      const parsedApiSchemas = transformSwaggerSchema(swagger.data)
 
       const apiServiceTemplates = url(options.apiServiceTemplatePath || './templates/api-service');
       const apiCrudServiceTemplates = url('./templates/crud-api-service');

@@ -20,6 +20,9 @@
         "index": 0
       }
     },
+    "apiPathKey": {
+      "type": "string"
+    },
     "apiServiceTemplatePath": {
       "type": "string"
     }

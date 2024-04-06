@@ -1,4 +1,4 @@
-<%= importsContent %>
+<%= transformRefsToImport(importRefs, optionsPath, sourcePath) %>
 
 export interface I<%= classify(name) %> {
 <%= interfacePropertyLine(propertiesContent, indentSize) %>

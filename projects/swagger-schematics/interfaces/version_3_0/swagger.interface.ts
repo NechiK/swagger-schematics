@@ -28,12 +28,14 @@ export interface IServerVariable {
 }
 
 export interface ISchemaBase {
+    format?: string;
     title?: string;
     description?: string;
     default?: any;
+    enum?: any[];
     example?: any;
     required?: string[];
-    // properties?: ISchemaProperties;
+    properties?: ISchemaProperties;
     minLength?: number;
     maxLength?: number;
     pattern?: string;
@@ -43,23 +45,7 @@ export interface ISchemaBase {
     maximum?: number;
     multipleOf?: number;
     nullable?: boolean;
-}
-
-export interface ISchemaString extends ISchemaBase {
-    type: 'string';
-    format?: 'date' | 'date-time' | 'password' | 'byte' | 'binary';
-}
-
-export interface ISchemaInteger extends ISchemaBase {
-    type: 'integer';
-    format: 'int32' | 'int64';
-    enum?: number[];
     'x-enum-varnames'?: string[];
-}
-
-export interface ISchemaObject extends ISchemaBase {
-    type: 'object';
-    properties: ISchemaProperties;
 }
 
 export interface ISchemaArray extends ISchemaBase {
@@ -68,10 +54,10 @@ export interface ISchemaArray extends ISchemaBase {
 }
 
 export interface ISchemaOther extends ISchemaBase {
-    type: 'number' | 'boolean';
+    type: 'string' | 'number' | 'integer' | 'boolean' | 'object';
 }
 
-export type TSchemaByType = ISchemaString | ISchemaInteger | ISchemaObject | ISchemaArray | ISchemaOther;
+export type TSchemaByType = ISchemaArray | ISchemaOther;
 
 export interface ISchemaProperties {
     [propertyName: string]: TSchema;
@@ -79,12 +65,12 @@ export interface ISchemaProperties {
 
 export type TSchema = TSchemaByType | IRef;
 
-export interface ISwaggerSchema<PathKey extends string = string> {
+export interface ISwaggerSchema {
     openapi: string;
     info: IInfo;
     components: {
         schemas: Record<string, TSchema>;
     };
-    paths: Record<PathKey, IPath>;
+    paths: Record<string, IPath>;
     servers: IServer[];
 }

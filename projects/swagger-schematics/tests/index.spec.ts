@@ -77,6 +77,7 @@ describe('Schematics API and types', () => {
         expect(files).toContain(`${defaultOptions.path}/api/claim-api.service.ts`);
     });
 
+    // Described in separate API SPEC
     it('should add imports without duplicates', async () => {
         const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
         const importsArray = [

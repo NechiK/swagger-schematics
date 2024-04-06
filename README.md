@@ -7,7 +7,6 @@ Going to support React templates soon.
 
 Documentation in progress...
 
-
 ## How to use?
 
 1. Install package

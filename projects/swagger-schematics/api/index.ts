@@ -9,10 +9,9 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import axios, {AxiosResponse} from "axios";
-import {
-    transformRefsToImport
-} from "../types/utils/interface";
-import { transformSwaggerSchema } from './helpers/api-helpers';
+import { transformSwaggerSchema } from './helpers/api.helper';
+import { apiToTemplate } from './helpers/template.helper';
+import { transformRefsToImport } from '../types/helpers/template.helper';
 
 export default function(options: SwaggerApiSchema) {
   return async () => {
@@ -20,13 +19,15 @@ export default function(options: SwaggerApiSchema) {
           throw new SchematicsException(`Swagger schema URL wasn't provided`);
       }
 
+      const indentSize = '2';
+
       options.path = options.path || '';
       // const parsedPath = parseName(options.path || '', '');
       // options.path = parsedPath.path;
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
 
-      const parsedApiSchemas = transformSwaggerSchema(swagger.data)
+      const parsedApiSchemas = transformSwaggerSchema(swagger.data);
 
       const apiServiceTemplates = url(options.apiServiceTemplatePath || './templates/api-service');
       const apiCrudServiceTemplates = url('./templates/crud-api-service');
@@ -43,6 +44,8 @@ export default function(options: SwaggerApiSchema) {
                   name: apiSchemaKey,
                   apiList: parsedApiSchemas[apiSchemaKey].apiList,
                   importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
+                  indentString: ' '.repeat(parseInt(indentSize, 10)),
+                  apiToTemplate,
               }),
               move(parsed.path)
           ]);

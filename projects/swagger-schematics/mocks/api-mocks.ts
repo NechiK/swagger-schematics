@@ -31,8 +31,7 @@ export const GET_MODEL_BY_ID_SWAGGER: IPathOperations = {
 
 export const GET_MODEL_BY_ID_METHOD = `getById(id: number): Observable<IClaimDetailDTO> {
     return this.httpClient.get<IClaimDetailDTO>(this.getUrl(\`\${id}\`));
-  }
-`;
+  }`;
 
 export const GET_SERVICE_ACTIONS_SWAGGER: IPathOperations = {
     "get": {
@@ -215,10 +214,9 @@ export const POST_MODEL_CHILD_BY_MODEL_ID_SWAGGER: IPathOperations = {
     }
 }
 
-export const POST_MODEL_BY_ID_METHOD = `addClaimNote(id: number, createNoteDTO: ICreateNoteDTO): Observable<IClaimNoteViewDTO> {
-    return this.httpClient.post<IClaimNoteViewDTO>(this.getUrl(\`\${id}/note\`), createNoteDTO);
-  }
-`;
+export const POST_MODEL_BY_ID_METHOD = `addClaimByIdNote(id: number, body: ICreateNoteDTO): Observable<IClaimNoteViewDTO> {
+    return this.httpClient.post<IClaimNoteViewDTO>(this.getUrl(\`\${id}/note\`), body);
+  }`;
 
 export const POST_SEARCH_ALL_SWAGGER: IPathOperations = {
     "post": {
@@ -347,8 +345,7 @@ export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER: IPathOperations = {
 
 export const PUT_MODEL_WITH_INTEGER_BODY_METHOD = `updateClaimStatus(body: number): Observable<void> {
     return this.httpClient.put<void>(this.getUrl(\`status\`), body);
-  }
-`;
+  }`;
 
 export const PUT_MODEL_WITH_EMPTY_BODY_SWAGGER: IPathOperations = {
     "put": {
@@ -372,10 +369,9 @@ export const PUT_MODEL_WITH_EMPTY_BODY_SWAGGER: IPathOperations = {
     }
 }
 
-export const PUT_MODEL_WITH_EMPTY_BODY_METHOD = `updateClaimReactivate(id: number): Observable<void> {
+export const PUT_MODEL_WITH_EMPTY_BODY_METHOD = `updateClaimByIdReactivate(id: number): Observable<void> {
     return this.httpClient.put<void>(this.getUrl(\`\${id}/reactivate\`), {});
-  }
-`;
+  }`;
 
 export const DELETE_MANY_ARRAY_OF_IDS_SWAGGER: IPathOperations = {
     "delete": {
@@ -411,5 +407,4 @@ export const DELETE_MANY_ARRAY_OF_IDS_SWAGGER: IPathOperations = {
 
 export const DELETE_MANY_ARRAY_OF_IDS_METHOD = `deleteClaimDeletemany(body: number[]): Observable<boolean> {
     return this.httpClient.delete<boolean>(this.getUrl(\`deletemany\`), { body });
-  }
-`;
+  }`;

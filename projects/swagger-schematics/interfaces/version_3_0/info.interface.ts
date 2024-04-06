@@ -1,7 +1,6 @@
 export interface IInfo {
     title: string;
     version: string;
-    summary?: string;
     description?: string;
     termsOfService?: string;
     contact?: {

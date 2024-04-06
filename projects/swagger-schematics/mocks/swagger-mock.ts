@@ -1,4 +1,4 @@
-import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
+import { IPath, ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import {
     DELETE_MANY_ARRAY_OF_IDS_SWAGGER,
     GET_MODEL_BY_ID_SWAGGER, GET_SERVICE_ACTIONS_BY_ID_SWAGGER, GET_SERVICE_ACTIONS_SWAGGER,
@@ -8,7 +8,10 @@ import {
 } from './api-mocks';
 import {API_GET_CHILD_OF_MODEL_BY_ID, ENUM_WITH_VAR_NAMES_SWAGGER, MODEL_WITH_REF_SWAGGER} from './interface-mocks';
 
-export const SWAGGER_DATA: ISwaggerSchema = {
+export const MOCK_GROUP = 'Claim';
+export type TMockApiPath = `/api/${typeof MOCK_GROUP}` | `/api/${typeof MOCK_GROUP}/${string}`;
+
+export const SWAGGER_DATA: ISwaggerSchema<TMockApiPath> = {
     openapi: "3.0.1",
     info: {
         title: "Montage Platform API",

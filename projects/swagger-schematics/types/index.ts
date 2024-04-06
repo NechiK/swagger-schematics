@@ -7,14 +7,14 @@ import {
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
-import {enums, interfaces} from "./utils";
-import {transformProperties, transformRefsToImport} from "./utils/interface";
+import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { IRef } from '../interfaces/version_3_1/ref.interface';
 import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
+import { removeImportDuplicates, transformProperties } from './helpers/template.helper';
 
 export default function(options: SwaggerSchema): Rule {
   return async (host: Tree) => {
@@ -90,16 +90,19 @@ export default function(options: SwaggerSchema): Rule {
               const parsed = parseName(`${options.path}/interfaces`, schemaData.name);
               const schemaProperties = schemaData.data.properties
               const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger.data);
-              const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${options.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
+            //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${options.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
+              const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));
               itemSource = apply(interfaceTemplates, [
                   applyTemplates({
                       ...options,
                       ...strings,
-                      ...interfaces,
+                      ...templateHelpers,
                       name: parsed.name,
                       path: parsed.path,
+                      optionsPath: options.path,
+                      sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                       propertiesContent,
-                      importsContent,
+                      importRefs,
                       indentSize
                   }),
                   move(parsed.path)

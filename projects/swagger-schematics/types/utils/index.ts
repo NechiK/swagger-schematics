@@ -1,4 +1,4 @@
 import * as enums from './enum';
-import * as interfaces from './interface';
+import * as templateHelpers from '../helpers/template.helper';
 
-export { enums, interfaces };
+export { enums, templateHelpers };

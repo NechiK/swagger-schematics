@@ -1,12 +1,8 @@
 import {ISwaggerSchema} from '../../interfaces/version_3_1/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
-import {
-    TTypeSymbol,
-    transformType,
-} from './interface';
-import { TOperation, TOperationWithRequestBody, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
+import { TOperation, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
 import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
-import { IRequestBody } from '../../interfaces/version_3_1/request.interface';
+import { TTypeWithImport, transformType } from './transform-type';
 
 export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string) {
     let parsedMethodName = '';
@@ -27,41 +23,17 @@ export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOpera
     return camelize(parsedMethodName);
 }
 
-export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema): TTypeSymbol | null {
+export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema): TTypeWithImport {
     const api200Content = apiMethod.responses[THttpStatusCode.OK]!.content!;
     const api200ContentJson = api200Content && api200Content['application/json'];
     if (api200ContentJson) {
         if (api200ContentJson.schema) {
             return transformType(api200ContentJson.schema, swaggerData);
         } else {
-            return null;
+            return ['void'];
         }
     } else {
-        return null;
-    }
-}
-
-export function parseRequestBody(apiMethod: TOperationWithRequestBody, swaggerData: ISwaggerSchema): TTypeSymbol | null {
-    const apiRequestBody = apiMethod.requestBody;
-
-    if (apiRequestBody) {
-        if ('$ref' in apiRequestBody && apiRequestBody.$ref) {
-            return transformType(apiRequestBody, swaggerData);
-        } else {
-            const typedApiRequestBody = apiRequestBody as IRequestBody;
-            const applicationJSON = typedApiRequestBody.content['application/json'];
-            const multipartFormData = typedApiRequestBody.content['multipart/form-data'];
-
-            if (applicationJSON) {
-                return transformType(applicationJSON.schema, swaggerData);
-            } else if (multipartFormData) {
-                return null;
-            } else {
-                return null;
-            }
-        }
-    } else {
-        return null;
+        return ['void'];
     }
 }
 

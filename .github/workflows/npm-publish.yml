@@ -3,7 +3,7 @@ name: Run npm publish script
 on:
   push:
     branches:
-      - main  # Or 'master' or any branch you want
+      - develop
 
 jobs:
   npm-publish:
@@ -16,7 +16,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18  # Or your project's Node version
+          node-version: 18
 
       - name: Install dependencies
         run: npm install
@@ -24,4 +24,4 @@ jobs:
       - name: Run npm publish script
         run: npm run publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_SWAGGER_SCHEMATICS_SECRET }}

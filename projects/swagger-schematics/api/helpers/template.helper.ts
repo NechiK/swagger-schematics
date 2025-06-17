@@ -9,14 +9,20 @@ export function apiToTemplate(apiItem: IParsedApiItem, indentString: string = ' 
 }
 
 export function apiItemToHttpClientMethodCallParams(apiItem: IParsedApiItem): string {
+    const itemApiUrl = apiItem.apiUrl.includes('$') ? `\`${apiItem.apiUrl}\`` : `'${apiItem.apiUrl}'`;
     const apiCallParams: string[] = [
-        `this.getUrl(\`${apiItem.apiUrl}\`)`
+        `this.getUrl(${itemApiUrl})`
     ];
 
     if (['post', 'put'].includes(apiItem.apiMethodType)) {
         apiCallParams.push(apiItem.bodyParam ? apiItem.bodyParam.objectSymbol : '{}');
     } else if (['delete'].includes(apiItem.apiMethodType)) {
-        apiCallParams.push(apiItem.bodyParam ? `{ ${apiItem.bodyParam.objectSymbol} }` : '');
+        apiCallParams.push(apiItem.bodyParam ? `{ ${apiItem.bodyParam.objectSymbol} }` : '{}');
+    }
+
+    if (apiItem.queryParams.length > 0) {
+        const queryParams = apiItem.queryParams.map(param => `${param.objectSymbol}`).join(', ');
+        apiCallParams.push(`{ params: { ${queryParams} } }`);
     }
 
     return apiCallParams.join(', ');

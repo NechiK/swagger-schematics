@@ -2,9 +2,10 @@ import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/oper
 import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
 import { getApiMethodName, getApiResponseSymbol } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
-import { transformRequestyBody } from "../../types/utils/request-body";
+import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams } from "../../types/utils/params";
 import { IImportRef } from "../../types/utils/transform-type";
+import { camelize } from "@angular-devkit/core/src/utils/strings";
 
 export interface IParsedApiSchema {
     [key: string]: IParsedSchemaItem;
@@ -40,7 +41,13 @@ export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][
             if (operation) {
                 return [
                     operationKey,
-                    operation
+                    {
+                        ...operation,
+                        parameters: (operation.parameters || []).map(param => ({
+                            ...param,
+                            name: camelize(param.name || '')
+                        }))
+                    }
                 ] as [TPathOperationKey, TOperation];
             }
         }
@@ -59,7 +66,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
             return apiParsedSchema;
         }
         const [nameSegment, ...segments]: string[] = apiPathKey.slice(defaultApiPathKey.length).split('/');
-        const swagerPath: IPath = apiPaths[apiPathKey];
+        const swaggerPath: IPath = apiPaths[apiPathKey];
         const apiPrefix: string = nameSegment;
         if (!apiParsedSchema.hasOwnProperty(apiPrefix)) {
             apiParsedSchema[apiPrefix] = {
@@ -69,7 +76,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
             };
         }
 
-        const apiOperations = getPathOperations(swagerPath);
+        const apiOperations = getPathOperations(swaggerPath);
 
         apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(apiOperations.map((
             [operationKey, operation]
@@ -88,7 +95,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
                 apiParsedSchema[apiPrefix].importRefs.push(responseTypeImportRef);
             }
 
-            const [bodyParam, importRef] = transformRequestyBody(operation, swaggerSchema);
+            const [bodyParam, importRef] = transformRequestBody(operation, swaggerSchema);
             if (importRef) {
                 apiParsedSchema[apiPrefix].importRefs.push(importRef);
             }

@@ -9,9 +9,9 @@
       "description": "The path at which to create the store files, relative to the current workspace.",
       "visible": false
     },
-    "project": {
+    "baseApiServicesPath": {
       "type": "string",
-      "description": "Generate in specific Angular CLI workspace project"
+      "description": "Path for base API files (if not specified, the path property will be used)."
     },
     "swaggerSchemaUrl": {
       "type": "string",
@@ -24,6 +24,9 @@
       "type": "string"
     },
     "apiServiceTemplatePath": {
+      "type": "string"
+    },
+    "apiCrudServiceTemplatePath": {
       "type": "string"
     }
   },

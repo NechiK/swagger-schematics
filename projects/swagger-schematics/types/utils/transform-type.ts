@@ -60,8 +60,12 @@ export const transformPrimitives = (property: TSchemaByType): [string] => {
 }
 
 function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema): TTypeWithImport {
-    const [typeSymbol, importRef] = transformType(arrayProperty, swagger);
-    return [`${typeSymbol}[]`, importRef];
+    if (!arrayProperty) {
+        return ['any[]'];
+    } else {
+        const [typeSymbol, importRef] = transformType(arrayProperty, swagger);
+        return [`${typeSymbol}[]`, importRef];
+    }
 }
 
 export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): {

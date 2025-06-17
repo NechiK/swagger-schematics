@@ -1,12 +1,12 @@
-import {HttpClient} from '@angular/common/http';
-import {Observable} from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { inject } from '@angular/core';
+
 import { API_BASE_URL } from './_api-base-url.token';
 
 export abstract class ApiBaseService {
   protected readonly httpClient = inject(HttpClient);
-  private readonly apiBaseUrl = inject(API_BASE_URL);
-  protected readonly apiUrl = `${this.apiBaseUrl}/api/`;
+  protected readonly apiBaseUrl = inject(API_BASE_URL);
+  protected readonly apiUrl = new URL('api', this.apiBaseUrl);
   abstract readonly endpoint: string;
 
   constructor() {
@@ -16,6 +16,6 @@ export abstract class ApiBaseService {
   }
 
   getUrl(url: string = ''): string {
-    return `${this.apiUrl}${this.endpoint}${!!url ? `/${url}` : ''}`;
+    return `${this.apiUrl}${this.endpoint}${url ? `/${url}` : ''}`;
   }
 }

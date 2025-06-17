@@ -37,6 +37,24 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
     }
 }
 
+type TOperationPredictionProperties = 'summary' | 'description';
+
+function predictByString(apiMethod: TOperation, predictString: string) {
+    const predictionProperties: TOperationPredictionProperties[] = ['summary', 'description'];
+    return predictionProperties.some(property => {
+        return apiMethod[property]?.toLowerCase().includes(predictString.toLowerCase());
+    });
+}
+
+function parseMethodName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string, predictionStrings: string[]) {
+    const prediction = predictionStrings.find(predictString => predictByString(apiMethod, predictString));
+    if (prediction) {
+        return parseDefaultMethodName(prediction, apiPathKey);
+    } else {
+        return parseDefaultMethodName(apiMethodKey, apiPathKey);
+    }
+}
+
 function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
     const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/{id}
     const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/{id}/dataName
@@ -54,22 +72,11 @@ function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPat
 }
 
 function parsePostRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
-    const predictCreate = apiMethod.summary?.toLowerCase().includes('create');
-    const predictAdd = apiMethod.summary?.toLowerCase().includes('add');
-    const predictSearch = apiMethod.summary?.toLowerCase().includes('search');
-    if (predictCreate) {
-        return parseDefaultMethodName('create', apiPathKey);
-    } else if (predictAdd) {
-        return parseDefaultMethodName('add', apiPathKey);
-    } else if (predictSearch) {
-        return parseDefaultMethodName('search', apiPathKey);
-    } else {
-        return parseDefaultMethodName(apiMethodKey, apiPathKey);
-    }
+    return parseMethodName(apiMethod, apiMethodKey, apiPathKey, ['create', 'add', 'search']);
 }
 
 function parsePutRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
-    return parseDefaultMethodName('update', apiPathKey);
+    return parseMethodName(apiMethod, apiMethodKey, apiPathKey, ['update', 'edit']);
 }
 
 function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string) {

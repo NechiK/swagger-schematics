@@ -4,7 +4,7 @@ import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IImportRef, transformType } from "./transform-type";
 import { IParsedParam } from "./params";
 
-export function transformRequestyBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>): [IParsedParam<any> | null, IImportRef | undefined] {
+export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>): [IParsedParam<any> | null, IImportRef | undefined] {
     const apiRequestBody = operation.requestBody;
     let typeSymbol, importRef: IImportRef | undefined;
     let parsedRequestBodyParams: IParsedParam<any> | null = null;

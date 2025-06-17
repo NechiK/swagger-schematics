@@ -12,13 +12,12 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
         const [typeSymbol, importRef] = transformType(property, swagger);
-        transformed.push([`${propertyKey}`, typeSymbol]);
         if (importRef) {
             refs.push(importRef);
-        } else {
-            const propertyAsSchema = property as TSchemaByType;
-            transformed.push([`${propertyKey}${propertyAsSchema.nullable ? '?' : ''}`, typeSymbol]);
         }
+
+        const propertyAsSchema = property as TSchemaByType;
+        transformed.push([`${propertyKey}${propertyAsSchema.nullable ? '?' : ''}`, typeSymbol]);
     }
 
     return {

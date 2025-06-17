@@ -1,6 +1,7 @@
 import {
     apply,
     applyTemplates, chain,
+    MergeStrategy,
     mergeWith,
     move, Rule, SchematicsException,
     url
@@ -12,33 +13,33 @@ import axios, {AxiosResponse} from "axios";
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { apiToTemplate } from './helpers/template.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
+import { getOpenapiSchematicsConfig } from '../helpers/config';
 
 export default function(options: SwaggerApiSchema) {
   return async () => {
-      if (!options.swaggerSchemaUrl) {
-          throw new SchematicsException(`Swagger schema URL wasn't provided`);
-      }
+    const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
+
+    if (!openApiSchematicsConfig.path) {
+        throw new SchematicsException(`Path for API services is not defined in the configuration.`);
+    }
 
       const indentSize = '2';
 
-      options.path = options.path || '';
-      // const parsedPath = parseName(options.path || '', '');
-      // options.path = parsedPath.path;
-
-      const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(options.swaggerSchemaUrl as string);
+      const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(openApiSchematicsConfig.swaggerSchemaUrl as string);
 
       const parsedApiSchemas = transformSwaggerSchema(swagger.data);
 
-      const apiServiceTemplates = url(options.apiServiceTemplatePath || './templates/api-service');
-      const apiCrudServiceTemplates = url('./templates/crud-api-service');
+      const apiServiceTemplates = url(openApiSchematicsConfig.apiServiceTemplatePath || './templates/api-service');
+      const apiCrudServiceTemplates = url(openApiSchematicsConfig.apiCrudServiceTemplatePath || './templates/crud-api-service');
 
       let finalRule: Rule | undefined;
+
       Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
           let itemSource;
-          const parsed = parseName(`${options.path}/api`, apiSchemaKey);
+          const parsed = parseName(openApiSchematicsConfig.path!, apiSchemaKey);
           itemSource = apply(apiServiceTemplates, [
               applyTemplates({
-                  ...options,
+                  ...openApiSchematicsConfig,
                   ...strings,
                   transformRefsToImport,
                   name: apiSchemaKey,
@@ -51,22 +52,27 @@ export default function(options: SwaggerApiSchema) {
           ]);
 
           if (!!finalRule) {
-              finalRule = chain([finalRule, mergeWith(itemSource)]);
+              finalRule = chain([finalRule, mergeWith(itemSource, MergeStrategy.Overwrite)]);
           } else {
-              finalRule = chain([mergeWith(itemSource)]);
+              finalRule = chain([mergeWith(itemSource, MergeStrategy.Overwrite)]);
           }
       });
 
-      const parsed = parseName(`${options.path}/api`, 'CrudApiBase');
+      const baseApiServicesPath = openApiSchematicsConfig.baseApiServicesPath || openApiSchematicsConfig.path;
+        if (!baseApiServicesPath) {
+            throw new SchematicsException(`Base API services path is not defined in the configuration.`);
+        }
+
+      const parsed = parseName(baseApiServicesPath, 'CrudApiBase');
       const baseApiSource = apply(apiCrudServiceTemplates, [
           applyTemplates({
-              ...options,
+              ...openApiSchematicsConfig,
               ...strings,
           }),
           move(parsed.path)
       ]);
       if (!!finalRule) {
-          finalRule = chain([finalRule, mergeWith(baseApiSource)])
+          finalRule = chain([finalRule, mergeWith(baseApiSource, MergeStrategy.Overwrite)])
       }
 
       return finalRule;

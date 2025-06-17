@@ -158,7 +158,6 @@ export function transformParamsToApiMethodParams(params: {
         transformParamsToObject(params.queryParams),
         params.bodyParam ? params.bodyParam.functionSymbol : ''
     ].filter(item => !!item);
-    console.log(methodParams);
     return methodParams.join(', ');
 }
 
@@ -181,5 +180,5 @@ export function transformParamsToObject(params: IParsedParam<TParam>[]): string 
     if (params.length === 0) {
         return '';
     }
-    return `{${params.map(param => `${param.objectSymbol}`).join(';')}}`;
+    return `{ ${params.map(param => `${param.objectSymbol}`).join(';')} }: { ${params.map(param => `${param.objectSymbol}: ${param.typeSymbol}`).join(', ')} }`;
 }

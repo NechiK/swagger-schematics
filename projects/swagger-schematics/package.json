@@ -16,6 +16,7 @@
     "generate"
   ],
   "author": "Maks Nechesonov",
+  "repository": "git@github.com:NechiK/swagger-schematics.git",
   "license": "ISC",
   "dependencies": {
     "@angular-devkit/core": "19.2.15",

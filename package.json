@@ -6,7 +6,7 @@
     "test:api:helper": "(cd projects/swagger-schematics && npm run test:api:helper)",
     "test:types": "(cd projects/swagger-schematics && npm run test:types)",
     "version:prerelease": "(cd projects/swagger-schematics && npm version prerelease)",
-    "publish": "npm run build && npm publish projects/swagger-schematics",
+    "publish": "npm run build && (cd projects/swagger-schematics && npm publish --provenance --access public)",
     "publish:debug": "npm run build && (cd projects/swagger-schematics && npm pack)"
   },
   "dependencies": {

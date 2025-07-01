@@ -16,6 +16,6 @@ export abstract class ApiBaseService {
   }
 
   getUrl(url: string = ''): string {
-    return `${this.apiUrl}${this.endpoint}${url ? `/${url}` : ''}`;
+    return `${this.apiUrl}/${this.endpoint}${url ? `/${url}` : ''}`;
   }
 }

@@ -53,3 +53,5 @@ Thumbs.db
 *.tgz
 
 package-lock.json
+openapi-schematics.json
+test

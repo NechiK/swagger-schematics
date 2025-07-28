@@ -25,9 +25,5 @@
       "description": "Framework templates to use for generating API services."
     }
   },
-  "required": [
-    "swaggerSchemaUrl",
-    "framework",
-    "path"
-  ]
+  "required": []
 }

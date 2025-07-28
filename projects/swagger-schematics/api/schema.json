@@ -34,9 +34,5 @@
       "type": "string"
     }
   },
-  "required": [
-    "swaggerSchemaUrl",
-    "framework",
-    "path"
-  ]
+  "required": []
 }

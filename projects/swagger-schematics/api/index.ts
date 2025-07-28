@@ -19,6 +19,10 @@ export default function(options: SwaggerApiSchema) {
   return async () => {
     const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
 
+    if (!openApiSchematicsConfig.framework) {
+        throw new SchematicsException(`Framework is not defined in the configuration.`);
+    }
+
     if (!openApiSchematicsConfig.path) {
         throw new SchematicsException(`Path for API services is not defined in the configuration.`);
     }
@@ -29,8 +33,8 @@ export default function(options: SwaggerApiSchema) {
 
       const parsedApiSchemas = transformSwaggerSchema(swagger.data);
 
-      const apiServiceTemplates = url(openApiSchematicsConfig.apiServiceTemplatePath || './templates/api-service');
-      const apiCrudServiceTemplates = url(openApiSchematicsConfig.apiCrudServiceTemplatePath || './templates/crud-api-service');
+      const apiServiceTemplates = url(openApiSchematicsConfig.apiServiceTemplatePath || `./templates/${openApiSchematicsConfig.framework}/api-service`);
+      const apiCrudServiceTemplates = url(openApiSchematicsConfig.apiCrudServiceTemplatePath || `./templates/${openApiSchematicsConfig.framework}/base-api-service`);
 
       let finalRule: Rule | undefined;
 

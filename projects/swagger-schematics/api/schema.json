@@ -20,6 +20,10 @@
         "index": 0
       }
     },
+    "framework": {
+      "type": "string",
+      "description": "Framework templates to use for generating API services."
+    },
     "apiPathKey": {
       "type": "string"
     },
@@ -30,5 +34,9 @@
       "type": "string"
     }
   },
-  "required": []
+  "required": [
+    "swaggerSchemaUrl",
+    "framework",
+    "path"
+  ]
 }

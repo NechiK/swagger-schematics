@@ -24,7 +24,8 @@ const schematicRunner = new SchematicTestRunner('schematics', path.join(__dirnam
 
 const defaultOptions: SwaggerSchema = {
     swaggerSchemaUrl: 'https://apidev.example.com/swagger/v1/swagger.json',
-    path: '/th-common/core'
+    path: '/th-common/core',
+    framework: 'angular',
 };
 
 describe('Schematics API and types', () => {

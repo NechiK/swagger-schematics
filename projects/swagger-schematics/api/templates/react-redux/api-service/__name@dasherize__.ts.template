@@ -1,0 +1,20 @@
+import { Injectable } from "@angular/core";
+import { ApiBaseService } from "../_api-base.service";
+import { Observable } from "rxjs";
+
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
+
+@Injectable({
+<%= indentString %>providedIn: 'root',
+})
+export class <%= classify(name) %>ApiService extends ApiBaseService {
+<%= indentString %>endpoint = '<%= name %>';
+
+<%= indentString %>constructor() {
+<%= indentString %><%= indentString %>super();
+<%= indentString %>}
+<% for(let apiItem of apiList) { %>
+<%= indentString %><%= apiToTemplate(apiItem, indentString) %>
+<% } %>
+
+}

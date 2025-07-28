@@ -19,7 +19,15 @@
         "$source": "argv",
         "index": 0
       }
+    },
+    "framework": {
+      "type": "string",
+      "description": "Framework templates to use for generating API services."
     }
   },
-  "required": []
+  "required": [
+    "swaggerSchemaUrl",
+    "framework",
+    "path"
+  ]
 }

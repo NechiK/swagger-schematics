@@ -32,6 +32,18 @@ schematics swagger-schematics:types https://apidev.montagefs.com/swagger/v1/swag
 
 ## Docs
 
+### Config
+
+File: `openapi-schematics.json`
+
+| Property         | Type | Description                                                    |
+|------------------| --- |-----------------------------------------------------------------|
+| `swaggerSchemaUrl` | string | OpenAPI JSON URL |
+| `framework` | angular, react-redux | Framework templates |
+| `path`           | string | Path to folder where to generate files |
+| `baseApiServicesPath` | string | Path to folder where to generate base api services |
+
+
 ### Options
 
 | Name             | Type | Description                                                     |

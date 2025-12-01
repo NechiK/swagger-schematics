@@ -14,7 +14,9 @@ export class <%= classify(name) %>ApiService extends ApiBaseService {
 <%= indentString %><%= indentString %>super();
 <%= indentString %>}
 <% for(let apiItem of apiList) { %>
-<%= indentString %><%= apiToTemplate(apiItem, indentString) %>
+<%= indentString %><%= apiItem.apiMethodName %>(<%= apiItem.apiMethodParams %>): Observable<<%= apiItem.responseTypeSymbol %>> {
+<%= indentString %><%= indentString %>return this.httpClient.<%= apiItem.requestMethod %><<%= apiItem.responseTypeSymbol %>>(<%= getHttpClientCallParams(apiItem) %>);
+<%= indentString %>}
 <% } %>
 
 }

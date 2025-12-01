@@ -11,7 +11,7 @@ import {parseName} from '@schematics/angular/utility/parse-name';
 import {ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import axios, {AxiosResponse} from "axios";
 import { transformSwaggerSchema } from './helpers/api.helper';
-import { apiToTemplate } from './helpers/template.helper';
+import { getHttpClientCallParams } from './helpers/template.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 
@@ -46,7 +46,7 @@ export default function(options: SwaggerApiSchema) {
                   apiList: parsedApiSchemas[apiSchemaKey].apiList,
                   importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
                   indentString: ' '.repeat(parseInt(indentSize, 10)),
-                  apiToTemplate,
+                  getHttpClientCallParams,
               }),
               move(parsed.path)
           ]);

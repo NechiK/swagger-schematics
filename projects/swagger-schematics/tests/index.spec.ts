@@ -74,17 +74,17 @@ describe('Schematics API and types', () => {
     // });
 
     it('should create ClaimApiService api service', async () => {
-        expect(files).toContain(`${defaultOptions.path}/api/claim-api.service.ts`);
+        expect(files).toContain(`${defaultOptions.path}/claim-api.service.ts`);
     });
 
     // Described in separate API SPEC
     it('should add imports without duplicates', async () => {
-        const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
+        const claimApiServiceContent = tree.readContent(`${defaultOptions.path}/claim-api.service.ts`);
         const importsArray = [
-            `import { IClaimDetailDTO } from '../interfaces/claim-detail-dto.interface';`,
-            `import { ICreateNoteDTO } from '../interfaces/create-note-dto.interface';`,
-            `import { IClaimNoteViewDTO } from '../interfaces/claim-note-view-dto.interface';`,
-            `import { ICompanySearchDTO } from '../interfaces/company-search-dto.interface';`,
+            `import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';`,
+            `import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';`,
+            `import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';`,
+            `import { ICompanySearchDTO } from './interfaces/company-search-dto.interface';`,
         ]
         expect(claimApiServiceContent).toContain(importsArray.join('\n'));
     });
@@ -93,7 +93,7 @@ describe('Schematics API and types', () => {
         let claimApiServiceContent = '';
 
         beforeAll(() => {
-            claimApiServiceContent = tree.readContent(`${defaultOptions.path}/api/claim-api.service.ts`);
+            claimApiServiceContent = tree.readContent(`${defaultOptions.path}/claim-api.service.ts`);
             console.log(claimApiServiceContent);
         });
 

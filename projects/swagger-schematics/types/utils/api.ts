@@ -12,9 +12,15 @@ export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOpera
             break;
         case 'post':
             parsedMethodName = parsePostRequestName(apiMethod, apiMethodKey, apiPathKey);
-            break
+            break;
         case 'put':
             parsedMethodName = parsePutRequestName(apiMethod, apiMethodKey, apiPathKey);
+            break;
+        case 'delete':
+            parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, apiPathKey);
+            break;
+        case 'patch':
+            parsedMethodName = parsePatchRequestName(apiMethod, apiMethodKey, apiPathKey);
             break;
         default:
             parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
@@ -76,7 +82,70 @@ function parsePostRequestName(apiMethod: TOperation, apiMethodKey: string, apiPa
 }
 
 function parsePutRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
-    return parseMethodName(apiMethod, apiMethodKey, apiPathKey, ['update', 'edit']);
+    // First try to predict from summary/description
+    const prediction = ['update', 'edit'].find(predictString => predictByString(apiMethod, predictString));
+    if (prediction) {
+        return parseDefaultMethodName(prediction, apiPathKey);
+    }
+    
+    // Pattern: /api/Model/{id} - update model by id
+    const updateModelByIdMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
+    if (updateModelByIdMatch) {
+        const paramName = capitalize(updateModelByIdMatch[3]);
+        return `updateBy${paramName}`;
+    }
+    
+    // Pattern: /api/Model/{id}/action - update model action by id
+    const updateModelActionMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey);
+    if (updateModelActionMatch) {
+        const modelName = capitalize(updateModelActionMatch[2]);
+        const paramName = capitalize(updateModelActionMatch[3]);
+        const actionName = capitalize(updateModelActionMatch[4]);
+        return `update${modelName}By${paramName}${actionName}`;
+    }
+    
+    // Pattern: /api/Model/action - update model action (no param)
+    const updateActionMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(apiPathKey);
+    if (updateActionMatch) {
+        const modelName = capitalize(updateActionMatch[2]);
+        const actionName = capitalize(updateActionMatch[3]);
+        return `update${modelName}${actionName}`;
+    }
+    
+    // Fallback to default with 'update' prefix
+    return parseDefaultMethodName('update', apiPathKey);
+}
+
+function parseDeleteRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
+    // First try to predict from summary/description
+    const prediction = ['delete', 'remove'].find(predictString => predictByString(apiMethod, predictString));
+    if (prediction) {
+        return parseDefaultMethodName(prediction, apiPathKey);
+    }
+    
+    // Pattern: /api/Model/{id} - delete model by id
+    const deleteModelByIdMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
+    if (deleteModelByIdMatch) {
+        const modelName = capitalize(deleteModelByIdMatch[2]);
+        const paramName = capitalize(deleteModelByIdMatch[3]);
+        return `delete${modelName}By${paramName}`;
+    }
+    
+    // Fallback to default with 'delete' prefix
+    return parseDefaultMethodName('delete', apiPathKey);
+}
+
+function parsePatchRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
+    // Pattern: /api/Model/{id} - patch model by id
+    const patchModelByIdMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
+    if (patchModelByIdMatch) {
+        const modelName = capitalize(patchModelByIdMatch[2]);
+        const paramName = capitalize(patchModelByIdMatch[3]);
+        return `patch${modelName}By${paramName}`;
+    }
+    
+    // Fallback to default with 'patch' prefix
+    return parseDefaultMethodName('patch', apiPathKey);
 }
 
 function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string) {

@@ -3,7 +3,7 @@
  * Tests: updateClaimStatus method with integer body, no path params
  */
 export const PUT_MODEL_WITH_INTEGER_BODY_METHOD = `updateClaimStatus(body: number): Observable<void> {
-    return this.httpClient.put<void>(this.getUrl(\`status\`), body);
+    return this.httpClient.put<void>(this.getUrl('status'), body);
   }`;
 
 /**

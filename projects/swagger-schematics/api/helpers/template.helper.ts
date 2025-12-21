@@ -6,8 +6,8 @@ import { IParsedApiItem } from "../../types/utils/params";
  * @returns A string of comma-separated parameters for the HttpClient call
  */
 export function getHttpClientCallParams(apiItem: IParsedApiItem): string {
-    // Always use backticks for URL template consistency
-    const itemApiUrl = `\`${apiItem.apiUrl}\``;
+    // Use backticks only when interpolation is needed (contains $)
+    const itemApiUrl = apiItem.apiUrl.includes('$') ? `\`${apiItem.apiUrl}\`` : `'${apiItem.apiUrl}'`;
     const apiCallParams: string[] = [
         `this.getUrl(${itemApiUrl})`
     ];

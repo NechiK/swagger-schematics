@@ -3,7 +3,7 @@
  * Tests: GET with query parameters
  */
 export const GET_WITH_QUERY_PARAMS_METHOD = `getClaimList({ page;pageSize }: { page: number, pageSize: number }): Observable<IClaimDetailDTO[]> {
-    return this.httpClient.get<IClaimDetailDTO[]>(this.getUrl(\`list\`), { params: { page, pageSize } });
+    return this.httpClient.get<IClaimDetailDTO[]>(this.getUrl('list'), { params: { page, pageSize } });
   }`;
 
 /**
@@ -35,5 +35,5 @@ export const PUT_MODEL_BY_ID_WITH_BODY_METHOD = `updateClaimById(id: number, bod
  * Tests: POST without path params, just body
  */
 export const POST_WITHOUT_PATH_PARAMS_METHOD = `postClaimAll(body: ICompanySearchDTO): Observable<IClaimDetailDTO> {
-    return this.httpClient.post<IClaimDetailDTO>(this.getUrl(\`all\`), body);
+    return this.httpClient.post<IClaimDetailDTO>(this.getUrl('all'), body);
   }`;

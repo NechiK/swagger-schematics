@@ -5,18 +5,17 @@ import { Observable } from "rxjs";
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
 
 @Injectable({
-<%= indentString %>providedIn: 'root',
+  providedIn: 'root',
 })
 export class <%= classify(name) %>ApiService extends ApiBaseService {
-<%= indentString %>endpoint = '<%= name %>';
+  endpoint = '<%= name %>';
 
-<%= indentString %>constructor() {
-<%= indentString %><%= indentString %>super();
-<%= indentString %>}
+  constructor() {
+    super();
+  }
 <% for(let apiItem of apiList) { %>
-<%= indentString %><%= apiItem.apiMethodName %>(<%= apiItem.apiMethodParams %>): Observable<<%= apiItem.responseTypeSymbol %>> {
-<%= indentString %><%= indentString %>return this.httpClient.<%= apiItem.requestMethod %><<%= apiItem.responseTypeSymbol %>>(<%= getHttpClientCallParams(apiItem) %>);
-<%= indentString %>}
+  <%= apiItem.apiMethodName %>(<%= apiItem.apiMethodParams %>): Observable<<%= apiItem.responseTypeSymbol %>> {
+    return this.httpClient.<%= apiItem.requestMethod %><<%= apiItem.responseTypeSymbol %>>(<%= getHttpClientCallParams(apiItem) %>);
+  }
 <% } %>
-
 }

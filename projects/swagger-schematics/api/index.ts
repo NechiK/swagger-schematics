@@ -23,8 +23,6 @@ export default function(options: SwaggerApiSchema) {
         throw new SchematicsException(`Path for API services is not defined in the configuration.`);
     }
 
-      const indentSize = '2';
-
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(openApiSchematicsConfig.swaggerSchemaUrl as string);
 
       const parsedApiSchemas = transformSwaggerSchema(swagger.data);
@@ -45,7 +43,6 @@ export default function(options: SwaggerApiSchema) {
                   name: apiSchemaKey,
                   apiList: parsedApiSchemas[apiSchemaKey].apiList,
                   importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
-                  indentString: ' '.repeat(parseInt(indentSize, 10)),
                   getHttpClientCallParams,
               }),
               move(parsed.path)

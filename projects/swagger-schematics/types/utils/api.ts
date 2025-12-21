@@ -62,19 +62,41 @@ function parseMethodName(apiMethod: TOperation, apiMethodKey: string, apiPathKey
 }
 
 function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
-    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/{id}
-    const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/{id}/dataName
+    // Pattern: /api/Model/{id} - get model by id
+    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
     if (getModelByParamNameMatch) {
         const paramName = capitalize(getModelByParamNameMatch[3]);
         return `${apiMethodKey}By${paramName}`;
-    } else if (getGetModelDataParamNameMatch) {
-        const modelName = capitalize(getGetModelDataParamNameMatch[2]);
-        const paramName = capitalize(getGetModelDataParamNameMatch[3]);
-        const dataName = capitalize(getGetModelDataParamNameMatch[4]);
-        return `${apiMethodKey}${dataName}By${paramName.toLowerCase().includes(modelName.toLowerCase()) ? '' : modelName}${paramName}`;
-    } else {
-        return parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
     }
+    
+    // Pattern: /api/Model/{id}/data - get model data by id
+    const getModelDataByParamMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey);
+    if (getModelDataByParamMatch) {
+        const modelName = capitalize(getModelDataByParamMatch[2]);
+        const paramName = capitalize(getModelDataByParamMatch[3]);
+        const dataName = capitalize(getModelDataByParamMatch[4]);
+        return `${apiMethodKey}${dataName}By${paramName.toLowerCase().includes(modelName.toLowerCase()) ? '' : modelName}${paramName}`;
+    }
+    
+    // Pattern: /api/Model/action - get model action (no param)
+    const getModelActionMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(apiPathKey);
+    if (getModelActionMatch) {
+        const modelName = capitalize(getModelActionMatch[2]);
+        const actionName = capitalize(getModelActionMatch[3]);
+        return `${apiMethodKey}${modelName}${actionName}`;
+    }
+    
+    // Pattern: /api/Model/action/{param} - get model action by param
+    const getModelActionByParamMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey);
+    if (getModelActionByParamMatch) {
+        const modelName = capitalize(getModelActionByParamMatch[2]);
+        const actionName = capitalize(getModelActionByParamMatch[3]);
+        const paramName = capitalize(getModelActionByParamMatch[4]);
+        return `${apiMethodKey}${modelName}${actionName}By${paramName}`;
+    }
+    
+    // Fallback - should rarely happen now
+    return parseDefaultMethodName(apiMethodKey, apiPathKey);
 }
 
 function parsePostRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {

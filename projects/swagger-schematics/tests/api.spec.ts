@@ -1,6 +1,6 @@
 import { IParsedApiSchema, transformSwaggerSchema } from "../api/helpers/api.helper";
 import { apiToTemplate } from "../api/helpers/template.helper";
-import { DELETE_MANY_ARRAY_OF_IDS_METHOD, GET_MODEL_BY_ID_METHOD, POST_MODEL_BY_ID_METHOD, PUT_MODEL_WITH_EMPTY_BODY_METHOD, PUT_MODEL_WITH_INTEGER_BODY_METHOD } from "../mocks/api-mocks";
+import { DELETE_MANY_ARRAY_OF_IDS_METHOD, GET_MODEL_BY_ID_METHOD, GET_BY_STATUS_WITH_ENUM_PARAM_METHOD, POST_MODEL_BY_ID_METHOD, PUT_MODEL_WITH_EMPTY_BODY_METHOD, PUT_MODEL_WITH_INTEGER_BODY_METHOD, PUT_WITH_PATH_PARAM_FROM_BODY_METHOD } from "../mocks/api-mocks";
 import { SWAGGER_DATA } from "../mocks/swagger-mock";
 import { transformRefsToImport } from "../types/helpers/template.helper";
 
@@ -22,18 +22,25 @@ describe('Schematics API', () => {
 
   it('should have importRefs without duplicates', () => {
     const importRefs = parsedSchema.Claim.importRefs.map(ref => ref.importSymbol);
-    expect(isArrayUnique(importRefs)).withContext('ImportRefs should be unique').toBe(true);
+    expect(isArrayUnique(importRefs)).toBe(true);
+  });
+
+  it('should include enum import from parameter', () => {
+    // This tests the bug fix: when a parameter has an enum type, the enum should be imported
+    const enumImportRef = parsedSchema.Claim.importRefs.find(ref => ref.importSymbol === 'TClaimStatuses');
+    expect(enumImportRef).toBeDefined();
+    expect(enumImportRef?.type).toBe('enum');
+    expect(enumImportRef?.fileName).toBe('claim-statuses');
   });
 
   it('should generate template imports without duplicates', () => {
     const templateImports = transformRefsToImport(parsedSchema.Claim.importRefs, '/optionsPath', 'sourcePath').split('\n');
-    expect(isArrayUnique(templateImports)).withContext('Template imports should be unique').toBe(true);
+    expect(isArrayUnique(templateImports)).toBe(true);
   });
 
   it('should have uniq apiList', () => {
     const apiList = parsedSchema.Claim.apiList.map(api => api.apiMethodName);
-    // console.log(parsedSchema.Claim.apiList);
-    expect(isArrayUnique(apiList)).withContext('Api method names should be unique').toBe(true);
+    expect(isArrayUnique(apiList)).toBe(true);
   });
 
   describe('method to template', () => {
@@ -79,6 +86,24 @@ describe('Schematics API', () => {
       if (apiMethod) {
         const apiTemplate = apiToTemplate(apiMethod);
         expect(apiTemplate).toEqual(DELETE_MANY_ARRAY_OF_IDS_METHOD);
+      }
+    });
+
+    it('should generate get with enum parameter', () => {
+      const apiMethod = parsedSchema.Claim.apiList.find(api => api.apiMethodName === 'getClaimBystatus');
+      expect(apiMethod).toBeDefined();
+      if (apiMethod) {
+        const apiTemplate = apiToTemplate(apiMethod);
+        expect(apiTemplate).toEqual(GET_BY_STATUS_WITH_ENUM_PARAM_METHOD);
+      }
+    });
+
+    it('should use body.id for path param when no separate path param defined (PUT/POST)', () => {
+      const apiMethod = parsedSchema.Claim.apiList.find(api => api.apiMethodName === 'updateClaimNoteById');
+      expect(apiMethod).toBeDefined();
+      if (apiMethod) {
+        const apiTemplate = apiToTemplate(apiMethod);
+        expect(apiTemplate).toEqual(PUT_WITH_PATH_PARAM_FROM_BODY_METHOD);
       }
     });
 

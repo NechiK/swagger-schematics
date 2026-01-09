@@ -1,11 +1,11 @@
-import { TSchemaByType } from "./swagger.interface";
+import { TSchema } from "./swagger.interface";
 
 export interface IParamBase {
     name: string;
     description?: string;
     deprecated?: boolean;
     allowEmptyValue?: boolean;
-    schema: TSchemaByType;
+    schema: TSchema;
 }
 
 export interface IPathParam extends IParamBase {

@@ -81,14 +81,18 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
         apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(apiOperations.map((
             [operationKey, operation]
         ): IParsedApiItem => {
-            const apiUrl = segments.map(urlSegment => urlSegment.match(/\{.*}/) ? `$${urlSegment}` : urlSegment).join('/');
             const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey);
             const {
                 queryParams,
                 pathParams,
                 headerParams,
-                cookieParams
+                cookieParams,
+                importRefs: paramImportRefs
             } = transformOperationParams(operation, swaggerSchema);
+
+            if (paramImportRefs.length > 0) {
+                apiParsedSchema[apiPrefix].importRefs.push(...paramImportRefs);
+            }
 
             const [responseTypeSymbol, responseTypeImportRef] = getApiResponseSymbol(operation, swaggerSchema);
             if (responseTypeImportRef) {
@@ -99,6 +103,21 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
             if (importRef) {
                 apiParsedSchema[apiPrefix].importRefs.push(importRef);
             }
+
+            // Build API URL, handling path params that may come from body for PUT/POST
+            const apiUrl = segments.map(urlSegment => {
+                const pathParamMatch = urlSegment.match(/\{(.*)}/);
+                if (pathParamMatch) {
+                    const paramName = camelize(pathParamMatch[1]);
+                    const hasPathParam = pathParams.some(p => p.objectSymbol === paramName);
+                    // For PUT/POST with body and no separate path param, use body.paramName
+                    if (!hasPathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
+                        return `\${${bodyParam.objectSymbol}.${paramName}}`;
+                    }
+                    return `\${${paramName}}`;
+                }
+                return urlSegment;
+            }).join('/');
 
             return {
                 apiUrl,

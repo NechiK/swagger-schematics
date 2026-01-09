@@ -323,7 +323,7 @@ export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER: IPathOperations = {
         "tags": [
             "Claim"
         ],
-        "summary": "Called when a web claim changes status",
+        "summary": "Update claim status",
         "requestBody": {
             "description": "Id of claim",
             "content": {
@@ -344,11 +344,12 @@ export const PUT_MODEL_WITH_INTEGER_BODY_SWAGGER: IPathOperations = {
 }
 
 export const PUT_MODEL_WITH_INTEGER_BODY_METHOD = `updateClaimStatus(body: number): Observable<void> {
-    return this.httpClient.put<void>(this.getUrl(\`status\`), body);
+    return this.httpClient.put<void>(this.getUrl('status'), body);
   }`;
 
 export const PUT_MODEL_WITH_EMPTY_BODY_SWAGGER: IPathOperations = {
     "put": {
+        "summary": "Update claim by id reactivate",
         "parameters": [
             {
                 "name": "id",
@@ -406,5 +407,80 @@ export const DELETE_MANY_ARRAY_OF_IDS_SWAGGER: IPathOperations = {
 }
 
 export const DELETE_MANY_ARRAY_OF_IDS_METHOD = `deleteClaimDeletemany(body: number[]): Observable<boolean> {
-    return this.httpClient.delete<boolean>(this.getUrl(\`deletemany\`), { body });
+    return this.httpClient.delete<boolean>(this.getUrl('deletemany'), { body });
+  }`;
+
+// Test case for enum parameter import bug fix and multiple query params
+export const GET_BY_STATUS_WITH_ENUM_PARAM_SWAGGER: IPathOperations = {
+    "get": {
+        "tags": ["Claim"],
+        "summary": "Get claims by status",
+        "parameters": [
+            {
+                "name": "id",
+                "in": "query",
+                "description": "Filter by id",
+                "required": true,
+                "schema": {
+                    "type": "string"
+                }
+            },
+            {
+                "name": "status",
+                "in": "query",
+                "description": "Filter by claim status",
+                "required": true,
+                "schema": {
+                    "$ref": "#/components/schemas/ClaimStatuses"
+                }
+            }
+        ],
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/components/schemas/ClaimDetailDTO"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+
+export const GET_BY_STATUS_WITH_ENUM_PARAM_METHOD = `getClaimBystatus({ id, status }: { id: string; status: TClaimStatuses }): Observable<IClaimDetailDTO[]> {
+    return this.httpClient.get<IClaimDetailDTO[]>(this.getUrl('bystatus'), { params: { id, status } });
+  }`;
+
+// Test case for PUT/POST with path param from body (no separate path param defined)
+export const PUT_WITH_PATH_PARAM_FROM_BODY_SWAGGER: IPathOperations = {
+    "put": {
+        "tags": ["Claim"],
+        "summary": "Update note by id",
+        "requestBody": {
+            "description": "Note data with id",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/CreateNoteDTO"
+                    }
+                }
+            },
+            "required": true
+        },
+        "responses": {
+            "200": {
+                "description": "Success"
+            }
+        }
+    }
+};
+
+export const PUT_WITH_PATH_PARAM_FROM_BODY_METHOD = `updateClaimNoteById(body: ICreateNoteDTO): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`note/\${body.id}\`), body);
   }`;

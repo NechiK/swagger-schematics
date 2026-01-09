@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0-alpha.13] - 2026-01-09
+
+### Fixed
+- Enum types used in API parameters are now properly imported in generated services
+- Object destructuring in method parameters now uses commas instead of semicolons (`{ id, status }` instead of `{ id;status }`)
+- PUT/POST methods with path parameters but no separate path param definition now correctly use `body.paramName` in the URL (e.g., `${body.id}` instead of `${id}`)
+
+### Changed
+- Migrated test framework from Jasmine to Jest
+- Parameter schema interface now supports `$ref` types (aligned with OpenAPI spec)
+
+### Added
+- New test cases for enum parameter imports and multiple query parameters
+
 ## [1.0.0-alpha.12] - 2026-01-09
 
 ### Added

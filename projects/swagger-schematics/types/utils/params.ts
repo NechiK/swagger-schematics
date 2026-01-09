@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { transformType } from "./transform-type";
+import { IImportRef, transformType } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 
 /**
@@ -106,15 +106,21 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
     pathParams: IParsedParam<IPathParam>[];
     headerParams: IParsedParam<IHeaderParam>[];
     cookieParams: IParsedParam<ICookieParam>[];
+    importRefs: IImportRef[];
 } => {
     const queryParams: IParsedParam<IQueryParam>[] = [];
     const pathParams: IParsedParam<IPathParam>[] = [];
     const headerParams: IParsedParam<IHeaderParam>[] = [];
     const cookieParams: IParsedParam<ICookieParam>[] = [];
+    const importRefs: IImportRef[] = [];
 
     if (operation.parameters) {
         operation.parameters.forEach(apiParam => {
-            const [typeSymbol] = transformType(apiParam.schema, swagger);
+            const [typeSymbol, importRef] = transformType(apiParam.schema, swagger);
+
+            if (importRef) {
+                importRefs.push(importRef);
+            }
 
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
@@ -144,7 +150,8 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
         queryParams,
         pathParams,
         headerParams,
-        cookieParams
+        cookieParams,
+        importRefs
     };
 }
 
@@ -180,5 +187,5 @@ export function transformParamsToObject(params: IParsedParam<TParam>[]): string 
     if (params.length === 0) {
         return '';
     }
-    return `{ ${params.map(param => `${param.objectSymbol}`).join(';')} }: { ${params.map(param => `${param.objectSymbol}: ${param.typeSymbol}`).join(', ')} }`;
+    return `{ ${params.map(param => `${param.objectSymbol}`).join(', ')} }: { ${params.map(param => `${param.objectSymbol}: ${param.typeSymbol}`).join('; ')} }`;
 }

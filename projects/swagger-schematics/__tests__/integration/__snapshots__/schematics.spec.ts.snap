@@ -1,0 +1,142 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Schematics Integration API Service Generation should generate full API service 1`] = `
+"import { Injectable } from \\"@angular/core\\";
+import { ApiBaseService } from \\"../_api-base.service\\";
+import { Observable } from \\"rxjs\\";
+
+import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
+import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
+import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
+import { ICompanySearchDTO } from './interfaces/company-search-dto.interface';
+import { TClaimStatuses } from './enums/claim-statuses.enum';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ClaimApiService extends ApiBaseService {
+  endpoint = 'Claim';
+
+  constructor() {
+    super();
+  }
+
+  getById(id: number): Observable<IClaimDetailDTO> {
+    return this.httpClient.get<IClaimDetailDTO>(this.getUrl(\`\${id}\`));
+  }
+
+  updateClaimById(id: number, body: IClaimDetailDTO): Observable<IClaimDetailDTO> {
+    return this.httpClient.put<IClaimDetailDTO>(this.getUrl(\`\${id}\`), body);
+  }
+
+  getServiceActionsByClaimId(claimId: number): Observable<IClaimDetailDTO> {
+    return this.httpClient.get<IClaimDetailDTO>(this.getUrl(\`\${claimId}/serviceActions\`));
+  }
+
+  createClaim({ width, height }: { width: number; height: number }, body: object): Observable<void> {
+    return this.httpClient.post<void>(this.getUrl(''), body, { params: { width, height } });
+  }
+
+  createClaimByIdNote(id: number, body: ICreateNoteDTO): Observable<IClaimNoteViewDTO> {
+    return this.httpClient.post<IClaimNoteViewDTO>(this.getUrl(\`\${id}/note\`), body);
+  }
+
+  updateClaimStatus(body: number): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl('status'), body);
+  }
+
+  postClaimAll(body: ICompanySearchDTO): Observable<IClaimDetailDTO> {
+    return this.httpClient.post<IClaimDetailDTO>(this.getUrl('all'), body);
+  }
+
+  postClaimIds(body: ICompanySearchDTO): Observable<number[]> {
+    return this.httpClient.post<number[]>(this.getUrl('ids'), body);
+  }
+
+  updateClaimByIdReactivate(id: number): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`\${id}/reactivate\`), {});
+  }
+
+  deleteClaimDeletemany(body: number[]): Observable<boolean> {
+    return this.httpClient.delete<boolean>(this.getUrl('deletemany'), { body });
+  }
+
+  getClaimServiceactions(serviceActionId: number): Observable<number[]> {
+    return this.httpClient.get<number[]>(this.getUrl('serviceactions'));
+  }
+
+  getClaimServiceactionsByServiceActionId(serviceActionId: number): Observable<number[]> {
+    return this.httpClient.get<number[]>(this.getUrl(\`serviceactions/\${serviceActionId}\`));
+  }
+
+  getClaimBystatus({ id, status }: { id: string; status: TClaimStatuses }): Observable<IClaimDetailDTO[]> {
+    return this.httpClient.get<IClaimDetailDTO[]>(this.getUrl('bystatus'), { params: { id, status } });
+  }
+
+  updateClaimNoteById(body: ICreateNoteDTO): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`note/\${body.id}\`), body);
+  }
+
+
+}
+"
+`;
+
+exports[`Schematics Integration Enum Generation should generate ClaimStatuses enum without names 1`] = `
+"export enum TClaimStatuses {
+  1 = 1,
+  2 = 2,
+  3 = 3,
+  99 = 99
+}
+"
+`;
+
+exports[`Schematics Integration Enum Generation should generate ClaimType enum with names 1`] = `
+"export enum TClaimType {
+  MS = 1,
+  PP = 2
+}
+"
+`;
+
+exports[`Schematics Integration File Generation should generate expected files 1`] = `
+[
+  "/.editorconfig",
+  "/test-output/claim-api.service.ts",
+  "/test-output/_api-base-url.token.ts",
+  "/test-output/_api-base.service.ts",
+  "/test-output/interfaces/company-search-dto.interface.ts",
+  "/test-output/interfaces/claim-detail-dto.interface.ts",
+  "/test-output/interfaces/id-name-dto.interface.ts",
+  "/test-output/interfaces/create-note-dto.interface.ts",
+  "/test-output/interfaces/claim-note-view-dto.interface.ts",
+  "/test-output/enums/claim-statuses.enum.ts",
+  "/test-output/enums/claim-type.enum.ts",
+]
+`;
+
+exports[`Schematics Integration Interface Generation should generate ClaimDetailDTO interface with ref and optional properties 1`] = `
+"import { IIdNameDTO } from './id-name-dto.interface';
+import { TClaimStatuses } from '../enums/claim-statuses.enum';
+
+export interface IClaimDetailDTO {
+  id: number;
+  problemType: IIdNameDTO;
+  causeType: IIdNameDTO;
+  claimStatus: TClaimStatuses;
+  crmRefId?: string;
+}
+"
+`;
+
+exports[`Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
+"
+
+export interface IIdNameDTO {
+  id: number;
+  name?: string;
+  displayName?: string;
+}
+"
+`;

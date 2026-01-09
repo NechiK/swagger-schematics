@@ -8,7 +8,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:api:helper": "jest api.spec.ts"
+    "test:unit": "jest __tests__/unit",
+    "test:integration": "jest __tests__/integration",
+    "test:update-snapshots": "jest --updateSnapshot"
   },
   "schematics": "./collection.json",
   "keywords": [

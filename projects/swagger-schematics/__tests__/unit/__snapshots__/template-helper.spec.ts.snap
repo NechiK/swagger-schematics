@@ -1,0 +1,63 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Template Helper - apiToTemplate DELETE Operations should generate DELETE many array of IDs template 1`] = `
+"deleteClaimDeletemany(body: number[]): Observable<boolean> {
+    return this.httpClient.delete<boolean>(this.getUrl('deletemany'), { body });
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate GET Operations should generate GET by ID template 1`] = `
+"getById(id: number): Observable<IClaimDetailDTO> {
+    return this.httpClient.get<IClaimDetailDTO>(this.getUrl(\`\${id}\`));
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate GET Operations should generate GET child by parent ID template 1`] = `
+"getServiceActionsByClaimId(claimId: number): Observable<IClaimDetailDTO> {
+    return this.httpClient.get<IClaimDetailDTO>(this.getUrl(\`\${claimId}/serviceActions\`));
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate GET Operations should generate GET with enum parameter template 1`] = `
+"getClaimBystatus({ id, status }: { id: string; status: TClaimStatuses }): Observable<IClaimDetailDTO[]> {
+    return this.httpClient.get<IClaimDetailDTO[]>(this.getUrl('bystatus'), { params: { id, status } });
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate POST Operations should generate POST model by ID template 1`] = `
+"createClaimByIdNote(id: number, body: ICreateNoteDTO): Observable<IClaimNoteViewDTO> {
+    return this.httpClient.post<IClaimNoteViewDTO>(this.getUrl(\`\${id}/note\`), body);
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate POST Operations should generate POST search all template 1`] = `
+"postClaimAll(body: ICompanySearchDTO): Observable<IClaimDetailDTO> {
+    return this.httpClient.post<IClaimDetailDTO>(this.getUrl('all'), body);
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate PUT Operations should generate PUT with empty body template 1`] = `
+"updateClaimByIdReactivate(id: number): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`\${id}/reactivate\`), {});
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate PUT Operations should generate PUT with integer body template 1`] = `
+"updateClaimStatus(body: number): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl('status'), body);
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate PUT Operations should use body.id for path param when no separate path param defined 1`] = `
+"updateClaimNoteById(body: ICreateNoteDTO): Observable<void> {
+    return this.httpClient.put<void>(this.getUrl(\`note/\${body.id}\`), body);
+  }"
+`;
+
+exports[`Template Helper - transformRefsToImport should generate correct import format 1`] = `
+"import { IClaimDetailDTO } from './test-path/interfaces/claim-detail-dto.interface';
+import { IClaimNoteViewDTO } from './test-path/interfaces/claim-note-view-dto.interface';
+import { ICreateNoteDTO } from './test-path/interfaces/create-note-dto.interface';
+import { ICompanySearchDTO } from './test-path/interfaces/company-search-dto.interface';
+import { TClaimStatuses } from './test-path/enums/claim-statuses.enum';"
+`;

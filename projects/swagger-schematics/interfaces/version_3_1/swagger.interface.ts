@@ -33,7 +33,6 @@ export interface ISchemaBase {
     default?: any;
     example?: any;
     required?: string[];
-    // properties?: ISchemaProperties;
     minLength?: number;
     maxLength?: number;
     pattern?: string;
@@ -43,35 +42,117 @@ export interface ISchemaBase {
     maximum?: number;
     multipleOf?: number;
     nullable?: boolean;
+    // Additional properties from OpenAPI spec
+    readOnly?: boolean;
+    writeOnly?: boolean;
+    deprecated?: boolean;
+    externalDocs?: IExternalDocs;
 }
+
+export interface IExternalDocs {
+    url: string;
+    description?: string;
+}
+
+// String formats per OpenAPI spec
+export type TStringFormat = 
+    | 'date' 
+    | 'date-time' 
+    | 'password' 
+    | 'byte' 
+    | 'binary'
+    | 'uuid'
+    | 'email'
+    | 'uri'
+    | 'hostname'
+    | 'ipv4'
+    | 'ipv6';
 
 export interface ISchemaString extends ISchemaBase {
     type: 'string';
-    format?: 'date' | 'date-time' | 'password' | 'byte' | 'binary';
+    format?: TStringFormat;
+    enum?: string[];
+    'x-enum-varnames'?: string[];
 }
 
 export interface ISchemaInteger extends ISchemaBase {
     type: 'integer';
-    format: 'int32' | 'int64';
+    format?: 'int32' | 'int64';
     enum?: number[];
     'x-enum-varnames'?: string[];
 }
 
+export interface ISchemaNumber extends ISchemaBase {
+    type: 'number';
+    format?: 'float' | 'double';
+}
+
+export interface ISchemaBoolean extends ISchemaBase {
+    type: 'boolean';
+}
+
 export interface ISchemaObject extends ISchemaBase {
     type: 'object';
-    properties: ISchemaProperties;
+    properties?: ISchemaProperties;
+    additionalProperties?: boolean | TSchema;
+    minProperties?: number;
+    maxProperties?: number;
 }
 
 export interface ISchemaArray extends ISchemaBase {
     type: 'array';
     items: TSchema;
+    minItems?: number;
+    maxItems?: number;
+    uniqueItems?: boolean;
 }
 
-export interface ISchemaOther extends ISchemaBase {
-    type: 'number' | 'boolean';
+// Schema Composition (allOf, oneOf, anyOf, not)
+export interface ISchemaAllOf extends ISchemaBase {
+    allOf: TSchema[];
 }
 
-export type TSchemaByType = ISchemaString | ISchemaInteger | ISchemaObject | ISchemaArray | ISchemaOther;
+export interface ISchemaOneOf extends ISchemaBase {
+    oneOf: TSchema[];
+    discriminator?: IDiscriminator;
+}
+
+export interface ISchemaAnyOf extends ISchemaBase {
+    anyOf: TSchema[];
+    discriminator?: IDiscriminator;
+}
+
+export interface ISchemaNot extends ISchemaBase {
+    not: TSchema;
+}
+
+export interface IDiscriminator {
+    propertyName: string;
+    mapping?: Record<string, string>;
+}
+
+export type TSchemaComposition = ISchemaAllOf | ISchemaOneOf | ISchemaAnyOf | ISchemaNot;
+
+// Backward compatibility alias
+export type ISchemaOther = ISchemaNumber | ISchemaBoolean;
+
+export type TSchemaByType = 
+    | ISchemaString 
+    | ISchemaInteger 
+    | ISchemaNumber
+    | ISchemaBoolean
+    | ISchemaObject 
+    | ISchemaArray 
+    | TSchemaComposition;
+
+// Type with explicit type property (non-composition schemas)
+export type TSchemaWithType = 
+    | ISchemaString 
+    | ISchemaInteger 
+    | ISchemaNumber
+    | ISchemaBoolean
+    | ISchemaObject 
+    | ISchemaArray;
 
 export interface ISchemaProperties {
     [propertyName: string]: TSchema;
@@ -79,12 +160,112 @@ export interface ISchemaProperties {
 
 export type TSchema = TSchemaByType | IRef;
 
+import { IResponse } from "./response.interface";
+import { IRequestBody } from "./request.interface";
+import { IExample } from "./params.interface";
+
+// Security Scheme types per OpenAPI spec
+export interface ISecuritySchemeApiKey {
+    type: 'apiKey';
+    name: string;
+    in: 'query' | 'header' | 'cookie';
+    description?: string;
+}
+
+export interface ISecuritySchemeHttp {
+    type: 'http';
+    scheme: string;
+    bearerFormat?: string;
+    description?: string;
+}
+
+export interface ISecuritySchemeOAuth2 {
+    type: 'oauth2';
+    flows: IOAuthFlows;
+    description?: string;
+}
+
+export interface ISecuritySchemeOpenIdConnect {
+    type: 'openIdConnect';
+    openIdConnectUrl: string;
+    description?: string;
+}
+
+export type TSecurityScheme = 
+    | ISecuritySchemeApiKey 
+    | ISecuritySchemeHttp 
+    | ISecuritySchemeOAuth2 
+    | ISecuritySchemeOpenIdConnect;
+
+export interface IOAuthFlows {
+    implicit?: IOAuthFlow;
+    password?: IOAuthFlow;
+    clientCredentials?: IOAuthFlow;
+    authorizationCode?: IOAuthFlow;
+}
+
+export interface IOAuthFlow {
+    authorizationUrl?: string;
+    tokenUrl?: string;
+    refreshUrl?: string;
+    scopes: Record<string, string>;
+}
+
+// Link object for HATEOAS
+export interface ILink {
+    operationRef?: string;
+    operationId?: string;
+    parameters?: Record<string, any>;
+    requestBody?: any;
+    description?: string;
+    server?: IServer;
+}
+
+// Callback object for webhooks
+export type TCallback = Record<string, IPath>;
+
+// Header object (reusable)
+export interface IHeader {
+    description?: string;
+    required?: boolean;
+    deprecated?: boolean;
+    allowEmptyValue?: boolean;
+    style?: 'simple';
+    explode?: boolean;
+    schema?: TSchema;
+    example?: any;
+    examples?: Record<string, IExample>;
+}
+
+// Components object with all reusable components
+export interface IComponents {
+    schemas?: Record<string, TSchema>;
+    responses?: Record<string, IResponse>;
+    parameters?: Record<string, TParam>;
+    examples?: Record<string, IExample>;
+    requestBodies?: Record<string, IRequestBody>;
+    headers?: Record<string, IHeader>;
+    securitySchemes?: Record<string, TSecurityScheme>;
+    links?: Record<string, ILink>;
+    callbacks?: Record<string, TCallback>;
+}
+
 export interface ISwaggerSchema<PathKey extends string = string> {
     openapi: string;
     info: IInfo;
-    components: {
-        schemas: Record<string, TSchema>;
-    };
+    components: IComponents;
     paths: Record<PathKey, IPath>;
     servers: IServer[];
+    // Optional top-level security
+    security?: Record<string, string[]>[];
+    // Tags for grouping operations
+    tags?: ITag[];
+    // External documentation
+    externalDocs?: IExternalDocs;
+}
+
+export interface ITag {
+    name: string;
+    description?: string;
+    externalDocs?: IExternalDocs;
 }

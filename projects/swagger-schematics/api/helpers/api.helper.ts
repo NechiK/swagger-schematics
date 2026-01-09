@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
-import { getApiMethodName, getApiResponseSymbol } from "../../types/utils/api";
+import { getApiMethodName, getApiResponseSymbol, getSuccessResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams } from "../../types/utils/params";
@@ -135,7 +135,12 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
                 requestMethod: operationKey,
                 bodyParam,
                 responseTypeSymbol,
-                response: operation.responses['200']
+                response: getSuccessResponse(operation.responses),
+                // Operation metadata
+                deprecated: operation.deprecated,
+                summary: operation.summary,
+                description: operation.description,
+                operationId: operation.operationId
             };
         }));
 

@@ -3,8 +3,19 @@ import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
 import { TOperation, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
 import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
 import { TTypeWithImport, transformType } from './transform-type';
+import { IResponse, TResponse } from '../../interfaces/version_3_1/response.interface';
 
-export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string) {
+/**
+ * Gets the method name for an API operation
+ * Priority: operationId -> path-based generation
+ */
+export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string): string {
+    // Prefer operationId if available (per OpenAPI spec recommendation)
+    if (apiMethod.operationId) {
+        return camelize(apiMethod.operationId);
+    }
+    
+    // Fall back to path-based name generation
     let parsedMethodName = '';
     switch (apiMethodKey) {
         case 'get':
@@ -23,18 +34,117 @@ export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOpera
     return camelize(parsedMethodName);
 }
 
+/**
+ * Checks if an operation is marked as deprecated
+ */
+export function isOperationDeprecated(apiMethod: TOperation): boolean {
+    return apiMethod.deprecated === true;
+}
+
+/**
+ * Gets the security requirements for an operation
+ */
+export function getOperationSecurity(apiMethod: TOperation): Record<string, string[]>[] | undefined {
+    return apiMethod.security;
+}
+
+/**
+ * Gets the response type from the operation, checking multiple status codes
+ * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
+ */
 export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema): TTypeWithImport {
-    const api200Content = apiMethod.responses[THttpStatusCode.OK]!.content!;
-    const api200ContentJson = api200Content && api200Content['application/json'];
-    if (api200ContentJson) {
-        if (api200ContentJson.schema) {
-            return transformType(api200ContentJson.schema, swaggerData);
-        } else {
-            return ['void'];
+    const responses = apiMethod.responses;
+    
+    // Priority order for success responses
+    const successCodes = [
+        THttpStatusCode.OK,       // 200
+        THttpStatusCode.Created,  // 201
+        THttpStatusCode.Accepted, // 202
+        THttpStatusCode.NoContent // 204
+    ];
+    
+    // Try specific success codes first
+    for (const code of successCodes) {
+        const response = responses[code];
+        if (response) {
+            // 204 No Content should return void
+            if (code === THttpStatusCode.NoContent) {
+                return ['void'];
+            }
+            const result = extractResponseType(response, swaggerData);
+            if (result) return result;
         }
-    } else {
-        return ['void'];
     }
+    
+    // Try wildcard 2XX
+    const response2XX = (responses as any)['2XX'];
+    if (response2XX) {
+        const result = extractResponseType(response2XX, swaggerData);
+        if (result) return result;
+    }
+    
+    // Try default response
+    const defaultResponse = (responses as any)['default'];
+    if (defaultResponse) {
+        const result = extractResponseType(defaultResponse, swaggerData);
+        if (result) return result;
+    }
+    
+    return ['void'];
+}
+
+/**
+ * Extracts the type from a response object
+ */
+function extractResponseType(response: any, swaggerData: ISwaggerSchema): TTypeWithImport | null {
+    if (!response.content) {
+        return null;
+    }
+    
+    // Try application/json first, then other content types
+    const contentTypes = ['application/json', 'text/plain', '*/*'];
+    
+    for (const contentType of contentTypes) {
+        const content = response.content[contentType];
+        if (content?.schema) {
+            return transformType(content.schema, swaggerData);
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Gets the success response object from responses
+ * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
+ */
+export function getSuccessResponse(responses: TResponse): IResponse | undefined {
+    // Priority order for success responses
+    const successCodes = [
+        THttpStatusCode.OK,       // 200
+        THttpStatusCode.Created,  // 201
+        THttpStatusCode.Accepted, // 202
+        THttpStatusCode.NoContent // 204
+    ];
+    
+    // Try specific success codes first
+    for (const code of successCodes) {
+        if (responses[code]) {
+            return responses[code];
+        }
+    }
+    
+    // Try wildcard 2XX
+    if ((responses as any)['2XX']) {
+        return (responses as any)['2XX'];
+    }
+    
+    // Try default response
+    if ((responses as any)['default']) {
+        return (responses as any)['default'];
+    }
+    
+    return undefined;
 }
 
 type TOperationPredictionProperties = 'summary' | 'description';

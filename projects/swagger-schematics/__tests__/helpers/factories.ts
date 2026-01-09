@@ -11,7 +11,8 @@ import {
   ISchemaString,
   ISchemaObject,
   ISchemaArray,
-  ISchemaOther,
+  ISchemaBoolean,
+  ISchemaNumber,
   ISchemaProperties
 } from '../../interfaces/version_3_1/swagger.interface';
 import { IRef } from '../../interfaces/version_3_1/ref.interface';
@@ -56,7 +57,7 @@ export const createQueryParam = (
   schema: options.schema ?? (type === 'integer' 
     ? { type: 'integer', format: options.format ?? 'int32', default: options.defaultValue } as ISchemaInteger
     : type === 'boolean'
-      ? { type: 'boolean' } as ISchemaOther
+      ? { type: 'boolean' } as ISchemaBoolean
       : { type: 'string' } as ISchemaString)
 });
 
@@ -122,7 +123,7 @@ export const createJsonRequestBody = (config: RequestBodyConfig = {}): IRequestB
 
 export const createFormDataRequestBody = (
   properties: Record<string, unknown>,
-  encoding?: Record<string, unknown>
+  encoding?: Record<string, { style?: 'form' }>
 ): IRequestBody => ({
   content: {
     'multipart/form-data': {
@@ -174,7 +175,7 @@ export const createResponse = (config: ResponseConfig = {}): TResponse => {
         } as ISchemaArray;
       }
     } else if (config.type === 'boolean') {
-      schema = { type: 'boolean' } as ISchemaOther;
+      schema = { type: 'boolean' } as ISchemaBoolean;
     } else if (config.type === 'integer') {
       schema = { type: 'integer', format: 'int32' } as ISchemaInteger;
     } else {
@@ -365,7 +366,7 @@ export const createObjectSchema = (
         type: 'boolean',
         ...(value.nullable ? { nullable: true } : {}),
         ...(value.description ? { description: value.description } : {})
-      } as ISchemaOther;
+      } as ISchemaBoolean;
     } else if (value.type === 'array' && value.items?.type) {
       schemaProperties[key] = {
         type: 'array',

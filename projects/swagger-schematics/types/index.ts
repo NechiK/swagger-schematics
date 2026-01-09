@@ -9,7 +9,8 @@ import {
 import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
-import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
+import {TSchemaByType, ISwaggerSchema, TSchemaWithType} from "../interfaces/version_3_1/swagger.interface";
+import { isComposition } from "./utils/transform-type";
 import axios, {AxiosResponse} from "axios";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
@@ -39,22 +40,33 @@ export default function(options: SwaggerSchema): Rule {
       }
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(openApiSchematicsConfig.swaggerSchemaUrl as string);
-      const schemas = swagger.data.components.schemas;
+      const schemas = swagger.data.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
-        let typedSchema;
-        if ('$ref' in schemas[schemaKey]) {
-            typedSchema = schemas[schemaKey] as IRef;
+        const schema = schemas[schemaKey];
+        
+        // Skip $ref schemas
+        if ('$ref' in schema) {
             return;
-        } else {
-            typedSchema = schemas[schemaKey] as TSchemaByType;
-            const schemaType = typedSchema.type === 'integer' && typedSchema.hasOwnProperty('enum') ? 'enum' : 'interface'
-            return {
-                name: schemaKey,
-                type: schemaType,
-                data: swagger.data.components.schemas[schemaKey]
-            } as TSwaggerSchematicsSchema;
         }
+        
+        const typedSchema = schema as TSchemaByType;
+        
+        // Skip composition schemas for now (allOf, oneOf, anyOf, not)
+        // They will be handled differently in the future
+        if (isComposition(typedSchema)) {
+            return;
+        }
+        
+        // Check if it's an enum (integer or string with enum values)
+        const isEnum = 'enum' in typedSchema && Array.isArray((typedSchema as any).enum);
+        const schemaType = isEnum ? 'enum' : 'interface';
+        
+        return {
+            name: schemaKey,
+            type: schemaType,
+            data: schemas[schemaKey]
+        } as TSwaggerSchematicsSchema;
       }).filter(schema => !!schema) as TSwaggerSchematicsSchema[];
 
       const interfaceTemplates = url('./templates/interface');

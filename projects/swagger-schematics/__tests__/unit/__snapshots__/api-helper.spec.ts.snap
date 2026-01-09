@@ -11,7 +11,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiUrl": "\${id}",
         "bodyParam": null,
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "id: number",
@@ -43,6 +46,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": "Gets Claim",
       },
       {
         "apiMethodName": "updateClaimById",
@@ -67,7 +71,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "IClaimDetailDTO",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "id: number",
@@ -99,6 +106,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": "Updates Claim",
       },
       {
         "apiMethodName": "getServiceActionsByClaimId",
@@ -107,7 +115,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiUrl": "\${claimId}/serviceActions",
         "bodyParam": null,
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "claimId: number",
@@ -139,6 +150,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": undefined,
       },
       {
         "apiMethodName": "createClaim",
@@ -181,7 +193,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "object",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [
           {
@@ -224,6 +239,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "void",
+        "summary": "Create claim",
       },
       {
         "apiMethodName": "createClaimByIdNote",
@@ -248,7 +264,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "ICreateNoteDTO",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "id: number",
@@ -280,6 +299,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "IClaimNoteViewDTO",
+        "summary": "Creates Claim",
       },
       {
         "apiMethodName": "updateClaimStatus",
@@ -305,7 +325,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "number",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [],
         "requestMethod": "put",
@@ -313,6 +336,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "void",
+        "summary": "Update claim status",
       },
       {
         "apiMethodName": "postClaimAll",
@@ -337,7 +361,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "ICompanySearchDTO",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [],
         "requestMethod": "post",
@@ -352,6 +379,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": undefined,
       },
       {
         "apiMethodName": "postClaimIds",
@@ -376,7 +404,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "ICompanySearchDTO",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [],
         "requestMethod": "post",
@@ -395,6 +426,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "number[]",
+        "summary": undefined,
       },
       {
         "apiMethodName": "updateClaimByIdReactivate",
@@ -403,7 +435,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiUrl": "\${id}/reactivate",
         "bodyParam": null,
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "id: number",
@@ -428,6 +463,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "void",
+        "summary": "Update claim by id reactivate",
       },
       {
         "apiMethodName": "deleteClaimDeletemany",
@@ -456,7 +492,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "number[]",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [],
         "requestMethod": "delete",
@@ -471,6 +510,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "boolean",
+        "summary": "Delete multiple entities",
       },
       {
         "apiMethodName": "getClaimServiceactions",
@@ -479,7 +519,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiUrl": "serviceactions",
         "bodyParam": null,
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "serviceActionId: number",
@@ -515,6 +558,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "number[]",
+        "summary": "Get service actions",
       },
       {
         "apiMethodName": "getClaimServiceactionsByServiceActionId",
@@ -523,7 +567,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiUrl": "serviceactions/\${serviceActionId}",
         "bodyParam": null,
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [
           {
             "functionSymbol": "serviceActionId: number",
@@ -559,6 +606,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "number[]",
+        "summary": "Get service actions",
       },
       {
         "apiMethodName": "getClaimBystatus",
@@ -567,7 +615,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiUrl": "bystatus",
         "bodyParam": null,
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [
           {
@@ -616,6 +667,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "IClaimDetailDTO[]",
+        "summary": "Get claims by status",
       },
       {
         "apiMethodName": "updateClaimNoteById",
@@ -640,7 +692,10 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "typeSymbol": "ICreateNoteDTO",
         },
         "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
         "headerParams": [],
+        "operationId": undefined,
         "pathParams": [],
         "queryParams": [],
         "requestMethod": "put",
@@ -648,6 +703,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           "description": "Success",
         },
         "responseTypeSymbol": "void",
+        "summary": "Update note by id",
       },
     ],
     "importRefs": [

@@ -67,7 +67,7 @@ export interface IParsedApiItem {
      */
     cookieParams: IParsedParam<ICookieParam>[];
     
-    /** Generated name of the API method based on apiUrl */
+    /** Generated name of the API method based on apiUrl or operationId */
     apiMethodName: string;
     
     /** 
@@ -99,6 +99,29 @@ export interface IParsedApiItem {
     
     /** The response object associated with this API item. */
     response: any;
+    
+    /** 
+     * Whether the operation is deprecated.
+     * Used to add @deprecated JSDoc tag in generated code.
+     */
+    deprecated?: boolean;
+    
+    /**
+     * The operation's summary from the OpenAPI spec.
+     * Used for JSDoc comments.
+     */
+    summary?: string;
+    
+    /**
+     * The operation's description from the OpenAPI spec.
+     * Used for JSDoc comments.
+     */
+    description?: string;
+    
+    /**
+     * The original operationId from the OpenAPI spec.
+     */
+    operationId?: string;
 }
 
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema): {
@@ -116,7 +139,20 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 
     if (operation.parameters) {
         operation.parameters.forEach(apiParam => {
-            const [typeSymbol, importRef] = transformType(apiParam.schema, swagger);
+            // Handle schema or content (schema takes precedence)
+            let typeSymbol: string = 'any';
+            let importRef: IImportRef | undefined;
+            
+            if (apiParam.schema) {
+                [typeSymbol, importRef] = transformType(apiParam.schema, swagger);
+            } else if (apiParam.content) {
+                // If content is provided instead of schema, try to extract type from it
+                const contentType = Object.keys(apiParam.content)[0];
+                const content = apiParam.content[contentType as keyof typeof apiParam.content];
+                if (content?.schema) {
+                    [typeSymbol, importRef] = transformType(content.schema, swagger);
+                }
+            }
 
             if (importRef) {
                 importRefs.push(importRef);
@@ -179,7 +215,18 @@ export function getApiCallParams(params: {
 }
 
 export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema): string {
-    const [typeSymbol] = transformType(param.schema, swagger);
+    let typeSymbol = 'any';
+    
+    if (param.schema) {
+        [typeSymbol] = transformType(param.schema, swagger);
+    } else if (param.content) {
+        const contentType = Object.keys(param.content)[0];
+        const content = param.content[contentType as keyof typeof param.content];
+        if (content?.schema) {
+            [typeSymbol] = transformType(content.schema, swagger);
+        }
+    }
+    
     return `${param.name}${param.required ? '' : '?'}: ${typeSymbol}`;
 }
 

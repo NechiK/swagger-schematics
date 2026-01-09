@@ -2,19 +2,38 @@ import { TParam } from "./params.interface";
 import { IRef } from "./ref.interface";
 import { IRequestBody } from "./request.interface";
 import { TResponse } from "./response.interface";
-import { IServer } from "./swagger.interface";
+import { IServer, IExternalDocs, TCallback } from "./swagger.interface";
+
+// Security requirement object
+export interface ISecurityRequirement {
+    [securitySchemeName: string]: string[];
+}
 
 export interface IOperationBase {
+    // Identification
+    operationId?: string;
     tags?: string[];
+    
+    // Documentation
     summary?: string;
     description?: string;
+    externalDocs?: IExternalDocs;
+    
+    // Parameters and responses
     parameters?: Array<TParam>;
     responses: TResponse;
-    callbacks?: Record<string, any>;
+    
+    // Callbacks (webhooks)
+    callbacks?: Record<string, TCallback | IRef>;
+    
+    // Status
     deprecated?: boolean;
+    
+    // Security (overrides top-level security)
+    security?: ISecurityRequirement[];
+    
+    // Servers (overrides path-level and top-level servers)
     servers?: IServer[];
-    // TODO: Add support for security
-    // security?: Record<string, string[]>;
 }
 
 export interface IPostOperation extends IOperationBase {

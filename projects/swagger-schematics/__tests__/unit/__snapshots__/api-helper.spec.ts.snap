@@ -705,6 +705,101 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "responseTypeSymbol": "void",
         "summary": "Update note by id",
       },
+      {
+        "apiMethodName": "deleteClaimSingleById",
+        "apiMethodParams": "id: number",
+        "apiMethodType": "delete",
+        "apiUrl": "single/\${id}",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "id: number",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "delete",
+        "response": {
+          "description": "Success",
+        },
+        "responseTypeSymbol": "void",
+        "summary": "Deletes Claim",
+      },
+      {
+        "apiMethodName": "deleteClaimByFilter",
+        "apiMethodParams": "{ status, force }: { status: string; force: boolean }",
+        "apiMethodType": "delete",
+        "apiUrl": "by-filter",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [
+          {
+            "functionSymbol": "status: string",
+            "interpolationSymbol": "\${status}",
+            "objectSymbol": "status",
+            "originalParam": {
+              "description": undefined,
+              "in": "query",
+              "name": "status",
+              "required": true,
+              "schema": {
+                "type": "string",
+              },
+            },
+            "typeSymbol": "string",
+          },
+          {
+            "functionSymbol": "force?: boolean",
+            "interpolationSymbol": "\${force}",
+            "objectSymbol": "force",
+            "originalParam": {
+              "description": undefined,
+              "in": "query",
+              "name": "force",
+              "required": false,
+              "schema": {
+                "type": "boolean",
+              },
+            },
+            "typeSymbol": "boolean",
+          },
+        ],
+        "requestMethod": "delete",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "boolean",
+        "summary": "Delete claims by filter",
+      },
     ],
     "importRefs": [
       {

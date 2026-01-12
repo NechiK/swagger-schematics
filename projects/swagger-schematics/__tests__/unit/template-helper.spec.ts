@@ -107,6 +107,26 @@ describe('Template Helper - apiToTemplate', () => {
       const template = apiToTemplate(apiMethod!);
       expect(template).toMatchSnapshot();
     });
+
+    it('should generate DELETE by ID template (no body)', () => {
+      const apiMethod = parsedSchema[MOCK_GROUP].apiList.find(
+        api => api.apiMethodName === 'deleteClaimSingleById'
+      );
+      expect(apiMethod).toBeDefined();
+
+      const template = apiToTemplate(apiMethod!);
+      expect(template).toMatchSnapshot();
+    });
+
+    it('should generate DELETE with query params template (params as second arg)', () => {
+      const apiMethod = parsedSchema[MOCK_GROUP].apiList.find(
+        api => api.apiMethodName === 'deleteClaimByFilter'
+      );
+      expect(apiMethod).toBeDefined();
+
+      const template = apiToTemplate(apiMethod!);
+      expect(template).toMatchSnapshot();
+    });
   });
 });
 

@@ -16,8 +16,10 @@
       "es2019"
     ],
     "types": [
-      "jasmine",
       "node"
-    ],
-  }
+    ]
+  },
+  "exclude": [
+    "__tests__/**/*"
+  ]
 }

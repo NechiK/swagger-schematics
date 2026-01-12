@@ -23,9 +23,12 @@ export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOpera
             break;
         case 'post':
             parsedMethodName = parsePostRequestName(apiMethod, apiMethodKey, apiPathKey);
-            break
+            break;
         case 'put':
             parsedMethodName = parsePutRequestName(apiMethod, apiMethodKey, apiPathKey);
+            break;
+        case 'delete':
+            parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, apiPathKey);
             break;
         default:
             parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
@@ -168,6 +171,9 @@ function parseMethodName(apiMethod: TOperation, apiMethodKey: string, apiPathKey
 function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
     const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/{id}
     const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/{id}/dataName
+    const getSubresourceMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/subresource
+    const getSubresourceByParamMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/subresource/{param}
+    
     if (getModelByParamNameMatch) {
         const paramName = capitalize(getModelByParamNameMatch[3]);
         return `${apiMethodKey}By${paramName}`;
@@ -176,8 +182,17 @@ function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPat
         const paramName = capitalize(getGetModelDataParamNameMatch[3]);
         const dataName = capitalize(getGetModelDataParamNameMatch[4]);
         return `${apiMethodKey}${dataName}By${paramName.toLowerCase().includes(modelName.toLowerCase()) ? '' : modelName}${paramName}`;
+    } else if (getSubresourceByParamMatch) {
+        const modelName = capitalize(getSubresourceByParamMatch[2]);
+        const subresource = capitalize(getSubresourceByParamMatch[3]);
+        const paramName = capitalize(getSubresourceByParamMatch[4]);
+        return `${apiMethodKey}${modelName}${subresource}By${paramName}`;
+    } else if (getSubresourceMatch) {
+        const modelName = capitalize(getSubresourceMatch[2]);
+        const subresource = capitalize(getSubresourceMatch[3]);
+        return `${apiMethodKey}${modelName}${subresource}`;
     } else {
-        return parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
+        return parseDefaultMethodName(apiMethodKey, apiPathKey);
     }
 }
 
@@ -187,6 +202,10 @@ function parsePostRequestName(apiMethod: TOperation, apiMethodKey: string, apiPa
 
 function parsePutRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
     return parseMethodName(apiMethod, apiMethodKey, apiPathKey, ['update', 'edit']);
+}
+
+function parseDeleteRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
+    return parseMethodName(apiMethod, apiMethodKey, apiPathKey, ['delete', 'remove']);
 }
 
 function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string) {
@@ -201,17 +220,19 @@ function parseDefaultMethodName(methodPrefix: string, apiPathKey: string) {
     if (segmentsWithParams) {
         return [methodPrefix, ...segments.map(urlSegment => {
             const isParam = urlSegment.match(/\{(.*)}/);
-            const isApi = urlSegment.match(/^api/);
+            const isApi = urlSegment.match(/^api/i);
             if (isApi) {
                 return '';
             } else if (isParam) {
                 return camelize(`By ${isParam[1]}`);
             } else {
-                return urlSegment;
+                return capitalize(urlSegment);
             }
         })].join(' ');
     } else {
-        return [methodPrefix, ...segments.filter(urlSegment =>
-            !urlSegment.match(/\{.*}/) && !urlSegment.match(/^api/))].join(' ');
+        return [methodPrefix, ...segments
+            .filter(urlSegment => !urlSegment.match(/\{.*}/) && !urlSegment.match(/^api/i))
+            .map(urlSegment => capitalize(urlSegment))
+        ].join(' ');
     }
 }

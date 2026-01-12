@@ -19,7 +19,7 @@ import {
   PUT_MODEL_WITH_EMPTY_BODY,
   PUT_WITH_PATH_PARAM_FROM_BODY
 } from './operations/put.fixtures';
-import { DELETE_MANY_ARRAY_OF_IDS } from './operations/delete.fixtures';
+import { DELETE_MANY_ARRAY_OF_IDS, DELETE_BY_ID, DELETE_WITH_QUERY_PARAMS } from './operations/delete.fixtures';
 import { MODEL_SCHEMAS } from './schemas/models.fixtures';
 import { ENUM_SCHEMAS } from './schemas/enums.fixtures';
 
@@ -74,6 +74,12 @@ const API_PATHS: Record<TMockApiPath, IPath> = {
   },
   '/api/Claim/note/{id}': {
     ...PUT_WITH_PATH_PARAM_FROM_BODY
+  },
+  '/api/Claim/single/{id}': {
+    ...DELETE_BY_ID
+  },
+  '/api/Claim/by-filter': {
+    ...DELETE_WITH_QUERY_PARAMS
   }
 };
 

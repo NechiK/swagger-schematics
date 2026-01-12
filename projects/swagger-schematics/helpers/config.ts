@@ -24,7 +24,17 @@ export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerAp
         throw new Error(`Swagger schema URL wasn't provided`);
     }
     
-    openApiSchematicsConfig.path = openApiSchematicsConfig.path || '';
+    // Normalize path to be absolute within the virtual tree
+    let path = openApiSchematicsConfig.path || '';
+    // Remove leading ./ if present
+    if (path.startsWith('./')) {
+        path = path.slice(2);
+    }
+    // Ensure path starts with /
+    if (path && !path.startsWith('/')) {
+        path = '/' + path;
+    }
+    openApiSchematicsConfig.path = path;
     
     return openApiSchematicsConfig;
 };

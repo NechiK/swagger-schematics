@@ -77,6 +77,14 @@ export class ClaimApiService extends ApiBaseService {
     return this.httpClient.put<void>(this.getUrl(\`note/\${body.id}\`), body);
   }
 
+  deleteClaimSingleById(id: number): Observable<void> {
+    return this.httpClient.delete<void>(this.getUrl(\`single/\${id}\`));
+  }
+
+  deleteClaimByFilter({ status, force }: { status: string; force: boolean }): Observable<boolean> {
+    return this.httpClient.delete<boolean>(this.getUrl('by-filter'), { params: { status, force } });
+  }
+
 
 }
 "

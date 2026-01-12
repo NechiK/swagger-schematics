@@ -14,15 +14,26 @@ export function apiItemToHttpClientMethodCallParams(apiItem: IParsedApiItem): st
         `this.getUrl(${itemApiUrl})`
     ];
 
+    const hasQueryParams = apiItem.queryParams.length > 0;
+    const queryParamsStr = hasQueryParams
+        ? `params: { ${apiItem.queryParams.map(param => param.objectSymbol).join(', ')} }`
+        : '';
+
     if (['post', 'put'].includes(apiItem.apiMethodType)) {
         apiCallParams.push(apiItem.bodyParam ? apiItem.bodyParam.objectSymbol : '{}');
+        if (hasQueryParams) {
+            apiCallParams.push(`{ ${queryParamsStr} }`);
+        }
     } else if (['delete'].includes(apiItem.apiMethodType)) {
-        apiCallParams.push(apiItem.bodyParam ? `{ ${apiItem.bodyParam.objectSymbol} }` : '{}');
-    }
-
-    if (apiItem.queryParams.length > 0) {
-        const queryParams = apiItem.queryParams.map(param => `${param.objectSymbol}`).join(', ');
-        apiCallParams.push(`{ params: { ${queryParams} } }`);
+        // DELETE uses options object for both body and params
+        const bodyStr = apiItem.bodyParam ? apiItem.bodyParam.objectSymbol : '';
+        if (bodyStr || hasQueryParams) {
+            const options = [bodyStr, queryParamsStr].filter(Boolean).join(', ');
+            apiCallParams.push(`{ ${options} }`);
+        }
+    } else if (hasQueryParams) {
+        // GET and other methods
+        apiCallParams.push(`{ ${queryParamsStr} }`);
     }
 
     return apiCallParams.join(', ');

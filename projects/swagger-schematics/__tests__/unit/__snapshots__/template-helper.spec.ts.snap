@@ -1,8 +1,20 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`Template Helper - apiToTemplate DELETE Operations should generate DELETE by ID template (no body) 1`] = `
+"deleteClaimSingleById(id: number): Observable<void> {
+    return this.httpClient.delete<void>(this.getUrl(\`single/\${id}\`));
+  }"
+`;
+
 exports[`Template Helper - apiToTemplate DELETE Operations should generate DELETE many array of IDs template 1`] = `
 "deleteClaimDeletemany(body: number[]): Observable<boolean> {
     return this.httpClient.delete<boolean>(this.getUrl('deletemany'), { body });
+  }"
+`;
+
+exports[`Template Helper - apiToTemplate DELETE Operations should generate DELETE with query params template (params as second arg) 1`] = `
+"deleteClaimByFilter({ status, force }: { status: string; force: boolean }): Observable<boolean> {
+    return this.httpClient.delete<boolean>(this.getUrl('by-filter'), { params: { status, force } });
   }"
 `;
 

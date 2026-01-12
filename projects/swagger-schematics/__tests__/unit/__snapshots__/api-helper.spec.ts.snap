@@ -1,0 +1,834 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`API Helper - transformSwaggerSchema Full parsed schema structure should match snapshot 1`] = `
+{
+  "Claim": {
+    "apiList": [
+      {
+        "apiMethodName": "getById",
+        "apiMethodParams": "id: number",
+        "apiMethodType": "get",
+        "apiUrl": "\${id}",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "id: number",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "get",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimDetailDTO",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": "Gets Claim",
+      },
+      {
+        "apiMethodName": "updateClaimById",
+        "apiMethodParams": "id: number, body: IClaimDetailDTO",
+        "apiMethodType": "put",
+        "apiUrl": "\${id}",
+        "bodyParam": {
+          "functionSymbol": "body: IClaimDetailDTO",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimDetailDTO",
+                },
+              },
+            },
+            "description": "",
+            "required": true,
+          },
+          "typeSymbol": "IClaimDetailDTO",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "id: number",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "put",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimDetailDTO",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": "Updates Claim",
+      },
+      {
+        "apiMethodName": "getServiceActionsByClaimId",
+        "apiMethodParams": "claimId: number",
+        "apiMethodType": "get",
+        "apiUrl": "\${claimId}/serviceActions",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "claimId: number",
+            "interpolationSymbol": "\${claimId}",
+            "objectSymbol": "claimId",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "claimId",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "get",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimDetailDTO",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": undefined,
+      },
+      {
+        "apiMethodName": "createClaim",
+        "apiMethodParams": "{ width, height }: { width: number; height: number }, body: object",
+        "apiMethodType": "post",
+        "apiUrl": "",
+        "bodyParam": {
+          "functionSymbol": "body: object",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "multipart/form-data": {
+                "encoding": {
+                  "formfiles": {
+                    "style": "form",
+                  },
+                  "model": {
+                    "style": "form",
+                  },
+                },
+                "schema": {
+                  "properties": {
+                    "formfiles": {
+                      "items": {
+                        "format": "binary",
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "model": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+          },
+          "typeSymbol": "object",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [
+          {
+            "functionSymbol": "width?: number",
+            "interpolationSymbol": "\${width}",
+            "objectSymbol": "width",
+            "originalParam": {
+              "description": "Desired width of image for viewer",
+              "in": "query",
+              "name": "width",
+              "required": false,
+              "schema": {
+                "default": 1280,
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+          {
+            "functionSymbol": "height?: number",
+            "interpolationSymbol": "\${height}",
+            "objectSymbol": "height",
+            "originalParam": {
+              "description": "Desired height of image for viewer",
+              "in": "query",
+              "name": "height",
+              "required": false,
+              "schema": {
+                "default": 800,
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "requestMethod": "post",
+        "response": {
+          "description": "Success",
+        },
+        "responseTypeSymbol": "void",
+        "summary": "Create claim",
+      },
+      {
+        "apiMethodName": "createClaimByIdNote",
+        "apiMethodParams": "id: number, body: ICreateNoteDTO",
+        "apiMethodType": "post",
+        "apiUrl": "\${id}/note",
+        "bodyParam": {
+          "functionSymbol": "body: ICreateNoteDTO",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNoteDTO",
+                },
+              },
+            },
+            "description": "",
+            "required": true,
+          },
+          "typeSymbol": "ICreateNoteDTO",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "id: number",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "post",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimNoteViewDTO",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "IClaimNoteViewDTO",
+        "summary": "Creates Claim",
+      },
+      {
+        "apiMethodName": "updateClaimStatus",
+        "apiMethodParams": "body: number",
+        "apiMethodType": "put",
+        "apiUrl": "status",
+        "bodyParam": {
+          "functionSymbol": "body: number",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "int32",
+                  "type": "integer",
+                },
+              },
+            },
+            "description": "Id of claim",
+            "required": true,
+          },
+          "typeSymbol": "number",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [],
+        "requestMethod": "put",
+        "response": {
+          "description": "Success",
+        },
+        "responseTypeSymbol": "void",
+        "summary": "Update claim status",
+      },
+      {
+        "apiMethodName": "postClaimAll",
+        "apiMethodParams": "body: ICompanySearchDTO",
+        "apiMethodType": "post",
+        "apiUrl": "all",
+        "bodyParam": {
+          "functionSymbol": "body: ICompanySearchDTO",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanySearchDTO",
+                },
+              },
+            },
+            "description": "",
+            "required": true,
+          },
+          "typeSymbol": "ICompanySearchDTO",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [],
+        "requestMethod": "post",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimDetailDTO",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "IClaimDetailDTO",
+        "summary": undefined,
+      },
+      {
+        "apiMethodName": "postClaimIds",
+        "apiMethodParams": "body: ICompanySearchDTO",
+        "apiMethodType": "post",
+        "apiUrl": "ids",
+        "bodyParam": {
+          "functionSymbol": "body: ICompanySearchDTO",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanySearchDTO",
+                },
+              },
+            },
+            "description": "Paging, sorting and filtering settings",
+            "required": true,
+          },
+          "typeSymbol": "ICompanySearchDTO",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [],
+        "requestMethod": "post",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "format": "int32",
+                  "type": "integer",
+                },
+                "type": "array",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "number[]",
+        "summary": undefined,
+      },
+      {
+        "apiMethodName": "updateClaimByIdReactivate",
+        "apiMethodParams": "id: number",
+        "apiMethodType": "put",
+        "apiUrl": "\${id}/reactivate",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "id: number",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "put",
+        "response": {
+          "description": "Success",
+        },
+        "responseTypeSymbol": "void",
+        "summary": "Update claim by id reactivate",
+      },
+      {
+        "apiMethodName": "deleteClaimDeletemany",
+        "apiMethodParams": "body: number[]",
+        "apiMethodType": "delete",
+        "apiUrl": "deletemany",
+        "bodyParam": {
+          "functionSymbol": "body: number[]",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "format": "int32",
+                    "type": "integer",
+                  },
+                  "type": "array",
+                },
+              },
+            },
+            "description": "Ids of entities to delete",
+            "required": true,
+          },
+          "typeSymbol": "number[]",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [],
+        "requestMethod": "delete",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "boolean",
+        "summary": "Delete multiple entities",
+      },
+      {
+        "apiMethodName": "getClaimServiceactions",
+        "apiMethodParams": "serviceActionId: number",
+        "apiMethodType": "get",
+        "apiUrl": "serviceactions",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "serviceActionId: number",
+            "interpolationSymbol": "\${serviceActionId}",
+            "objectSymbol": "serviceActionId",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "serviceActionId",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "get",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "format": "int32",
+                  "type": "integer",
+                },
+                "type": "array",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "number[]",
+        "summary": "Get service actions",
+      },
+      {
+        "apiMethodName": "getClaimServiceactionsByServiceActionId",
+        "apiMethodParams": "serviceActionId: number",
+        "apiMethodType": "get",
+        "apiUrl": "serviceactions/\${serviceActionId}",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "serviceActionId: number",
+            "interpolationSymbol": "\${serviceActionId}",
+            "objectSymbol": "serviceActionId",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "serviceActionId",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "get",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "format": "int32",
+                  "type": "integer",
+                },
+                "type": "array",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "number[]",
+        "summary": "Get service actions",
+      },
+      {
+        "apiMethodName": "getClaimBystatus",
+        "apiMethodParams": "{ id, status }: { id: string; status: TClaimStatuses }",
+        "apiMethodType": "get",
+        "apiUrl": "bystatus",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [
+          {
+            "functionSymbol": "id: string",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "query",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+              },
+            },
+            "typeSymbol": "string",
+          },
+          {
+            "functionSymbol": "status: TClaimStatuses",
+            "interpolationSymbol": "\${status}",
+            "objectSymbol": "status",
+            "originalParam": {
+              "description": "",
+              "in": "query",
+              "name": "status",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/ClaimStatuses",
+              },
+            },
+            "typeSymbol": "TClaimStatuses",
+          },
+        ],
+        "requestMethod": "get",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/ClaimDetailDTO",
+                },
+                "type": "array",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "IClaimDetailDTO[]",
+        "summary": "Get claims by status",
+      },
+      {
+        "apiMethodName": "updateClaimNoteById",
+        "apiMethodParams": "body: ICreateNoteDTO",
+        "apiMethodType": "put",
+        "apiUrl": "note/\${body.id}",
+        "bodyParam": {
+          "functionSymbol": "body: ICreateNoteDTO",
+          "interpolationSymbol": "\${body}",
+          "objectSymbol": "body",
+          "originalParam": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNoteDTO",
+                },
+              },
+            },
+            "description": "Note data with id",
+            "required": true,
+          },
+          "typeSymbol": "ICreateNoteDTO",
+        },
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [],
+        "requestMethod": "put",
+        "response": {
+          "description": "Success",
+        },
+        "responseTypeSymbol": "void",
+        "summary": "Update note by id",
+      },
+      {
+        "apiMethodName": "deleteClaimSingleById",
+        "apiMethodParams": "id: number",
+        "apiMethodType": "delete",
+        "apiUrl": "single/\${id}",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [
+          {
+            "functionSymbol": "id: number",
+            "interpolationSymbol": "\${id}",
+            "objectSymbol": "id",
+            "originalParam": {
+              "description": undefined,
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "format": "int32",
+                "type": "integer",
+              },
+            },
+            "typeSymbol": "number",
+          },
+        ],
+        "queryParams": [],
+        "requestMethod": "delete",
+        "response": {
+          "description": "Success",
+        },
+        "responseTypeSymbol": "void",
+        "summary": "Deletes Claim",
+      },
+      {
+        "apiMethodName": "deleteClaimByFilter",
+        "apiMethodParams": "{ status, force }: { status: string; force: boolean }",
+        "apiMethodType": "delete",
+        "apiUrl": "by-filter",
+        "bodyParam": null,
+        "cookieParams": [],
+        "deprecated": undefined,
+        "description": undefined,
+        "headerParams": [],
+        "operationId": undefined,
+        "pathParams": [],
+        "queryParams": [
+          {
+            "functionSymbol": "status: string",
+            "interpolationSymbol": "\${status}",
+            "objectSymbol": "status",
+            "originalParam": {
+              "description": undefined,
+              "in": "query",
+              "name": "status",
+              "required": true,
+              "schema": {
+                "type": "string",
+              },
+            },
+            "typeSymbol": "string",
+          },
+          {
+            "functionSymbol": "force?: boolean",
+            "interpolationSymbol": "\${force}",
+            "objectSymbol": "force",
+            "originalParam": {
+              "description": undefined,
+              "in": "query",
+              "name": "force",
+              "required": false,
+              "schema": {
+                "type": "boolean",
+              },
+            },
+            "typeSymbol": "boolean",
+          },
+        ],
+        "requestMethod": "delete",
+        "response": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean",
+              },
+            },
+          },
+          "description": "Success",
+        },
+        "responseTypeSymbol": "boolean",
+        "summary": "Delete claims by filter",
+      },
+    ],
+    "importRefs": [
+      {
+        "fileName": "claim-detail-dto",
+        "importSymbol": "IClaimDetailDTO",
+        "type": "interface",
+      },
+      {
+        "fileName": "claim-note-view-dto",
+        "importSymbol": "IClaimNoteViewDTO",
+        "type": "interface",
+      },
+      {
+        "fileName": "create-note-dto",
+        "importSymbol": "ICreateNoteDTO",
+        "type": "interface",
+      },
+      {
+        "fileName": "company-search-dto",
+        "importSymbol": "ICompanySearchDTO",
+        "type": "interface",
+      },
+      {
+        "fileName": "claim-statuses",
+        "importSymbol": "TClaimStatuses",
+        "type": "enum",
+      },
+    ],
+    "name": "Claim",
+  },
+}
+`;

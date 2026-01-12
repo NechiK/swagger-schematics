@@ -7,10 +7,15 @@
       "jest",
       "node"
     ],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@fixtures/*": ["./__tests__/__fixtures__/*"],
+      "@helpers/*": ["./__tests__/helpers/*"]
+    }
   },
   "include": [
-    "**/*.spec.ts",
+    "__tests__/**/*.ts",
     "**/*.d.ts"
   ]
 }

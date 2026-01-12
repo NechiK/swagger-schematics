@@ -5,8 +5,7 @@
   "properties": {
     "path": {
       "type": "string",
-      "format": "path",
-      "description": "The path at which to create the store files, relative to the current workspace.",
+      "description": "The path at which to create the files, relative to the current workspace.",
       "visible": false
     },
     "project": {

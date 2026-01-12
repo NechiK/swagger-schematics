@@ -1,6 +1,6 @@
 {
   "name": "swagger-schematics",
-  "version": "1.0.0-alpha.13",
+  "version": "1.0.0-alpha.14",
   "description": "Schematics types and API generator via Swagger scheme",
   "scripts": {
     "prebuild": "dtsgen --out schema.d.ts **/schema.json",
@@ -8,7 +8,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:api:helper": "jest api.spec.ts"
+    "test:unit": "jest __tests__/unit",
+    "test:integration": "jest __tests__/integration",
+    "test:update-snapshots": "jest --updateSnapshot"
   },
   "schematics": "./collection.json",
   "keywords": [

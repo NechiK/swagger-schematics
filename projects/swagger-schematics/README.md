@@ -50,10 +50,22 @@ You can create an `openapi-schematics.json` file in the root of your project to 
   "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
   "path": "/src/store/api",
   "framework": "react-rtk",
-  "rtkBaseApiPath": "@/store/api/baseApi",
+  "baseApiPath": "th-common/store/api-base.ts",
   "scopeEndpointsWithTags": true
 }
 ```
+
+The `baseApiPath` is resolved using tsconfig path aliases when available. For example, if your tsconfig has:
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@th-common/*": ["th-common/*"]
+    }
+  }
+}
+```
+The generated import will be: `import { api as baseApi } from '@th-common/store/api-base'`
 
 ### Example with type mapping
 
@@ -74,24 +86,17 @@ If your backend uses custom types that should map to TypeScript primitives (e.g.
 
 ### Available options
 
-| Name                        | Type    | Schematics | Description                                                                                                              |
-|-----------------------------|---------|------------|--------------------------------------------------------------------------------------------------------------------------|
-| `swaggerSchemaUrl`          | string  | api, types | URL of the Swagger/OpenAPI schema (required)                                                                             |
-| `path`                      | string  | api, types | Path where generated files will be created, relative to the workspace root                                               |
-| `baseApiServicesPath`       | string  | api        | Path for base API files (if not specified, `path` will be used)                                                          |
-| `project`                   | string  | types      | Generate in a specific Angular CLI workspace project                                                                     |
-| `apiPathKey`                | string  | api        | Filter API paths by a specific key/prefix                                                                                |
-| `apiServiceTemplatePath`    | string  | api        | Custom template path for API service generation                                                                          |
-| `apiCrudServiceTemplatePath`| string  | api        | Custom template path for CRUD API service generation                                                                     |
-| `framework`                 | string  | api        | Target framework: `"angular"` (default) or `"react-rtk"`                                                                 |
-| `rtkBaseApiPath`            | string  | api        | Import path for RTK base API (e.g., `"@/store/api/baseApi"`). Required for `react-rtk` framework                         |
-| `scopeEndpointsWithTags`    | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs   |
-| `typeMapping`               | object  | api, types | Map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)                              |
+| Name                     | Type    | Schematics | Description                                                                                                                                                      |
+|--------------------------|---------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `swaggerSchemaUrl`       | string  | api, types | URL of the Swagger/OpenAPI schema (required)                                                                                                                     |
+| `path`                   | string  | api, types | Path where generated files will be created, relative to the workspace root                                                                                       |
+| `baseApiPath`            | string  | api        | Path for base API file. For Angular: defaults to `path`. For RTK: defaults to `th-common/store/api-base.ts`. Supports tsconfig path alias resolution for imports |
+| `project`                | string  | types      | Generate in a specific Angular CLI workspace project                                                                                                             |
+| `apiPathKey`             | string  | api        | Filter API paths by a specific key/prefix                                                                                                                        |
+| `apiServiceTemplatePath` | string  | api        | Custom template path for API service generation                                                                                                                  |
+| `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
+| `framework`              | string  | api        | Target framework: `"angular"` (default) or `"react-rtk"`                                                                                                         |
+| `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
+| `typeMapping`            | object  | api, types | Map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)                                                                      |
 
-
-## CLI Options
-
-| Name             | Type   | Description                                                     |
-|------------------|--------|-----------------------------------------------------------------|
-| `usePredictions` | string | Analyze method summary and try to predict method name or prefix |
-| `path`           | string | Path to folder where to generate files                          |
+All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.

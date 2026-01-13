@@ -3,6 +3,7 @@
 exports[`RTK Query Schematics Integration File Generation should generate expected RTK files 1`] = `
 [
   "/.editorconfig",
+  "/tsconfig.json",
   "/test-output/claim.api.ts",
   "/test-output/interfaces/company-search-dto.interface.ts",
   "/test-output/interfaces/claim-detail-dto.interface.ts",
@@ -11,12 +12,13 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
   "/test-output/interfaces/claim-note-view-dto.interface.ts",
   "/test-output/enums/claim-statuses.enum.ts",
   "/test-output/enums/claim-type.enum.ts",
+  "/th-common/store/api-base.ts",
 ]
 `;
 
 exports[`RTK Query Schematics Integration RTK API Slice Generation should generate full RTK API slice 1`] = `
 "
-import { api as baseApi } from '@/store/api/baseApi';
+import { api as baseApi } from '@th-common/store/api-base';
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
 import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
 import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
@@ -36,7 +38,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ id, body }) => ({
         url: \`/\${id}\`,
         method: 'PUT',
-        body: body,
+        body,
       }),
     }),
     getServiceActionsByClaimId: builder.query<IClaimDetailDTO, { claimId: number }>({
@@ -49,7 +51,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ width, height, body }) => ({
         url: '/',
         method: 'POST',
-        body: body,
+        body,
         params: { width, height },
       }),
     }),
@@ -57,28 +59,28 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ id, body }) => ({
         url: \`/\${id}/note\`,
         method: 'POST',
-        body: body,
+        body,
       }),
     }),
     updateClaimStatus: builder.mutation<void, { body: number }>({
       query: ({ body }) => ({
         url: '/status',
         method: 'PUT',
-        body: body,
+        body,
       }),
     }),
     postClaimAll: builder.mutation<IClaimDetailDTO, { body: ICompanySearchDTO }>({
       query: ({ body }) => ({
         url: '/all',
         method: 'POST',
-        body: body,
+        body,
       }),
     }),
     postClaimIds: builder.mutation<number[], { body: ICompanySearchDTO }>({
       query: ({ body }) => ({
         url: '/ids',
         method: 'POST',
-        body: body,
+        body,
       }),
     }),
     updateClaimByIdReactivate: builder.mutation<void, { id: number }>({
@@ -91,7 +93,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ body }) => ({
         url: '/deletemany',
         method: 'DELETE',
-        body: body,
+        body,
       }),
     }),
     getClaimServiceactions: builder.query<number[], { serviceActionId: number }>({
@@ -117,7 +119,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ body }) => ({
         url: \`/note/\${body.id}\`,
         method: 'PUT',
-        body: body,
+        body,
       }),
     }),
     deleteClaimSingleById: builder.mutation<void, { id: number }>({

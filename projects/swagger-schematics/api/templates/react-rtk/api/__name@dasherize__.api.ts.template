@@ -2,7 +2,7 @@
 // API export name (e.g., "Claim" -> "claimApi", "ReplacementQueue" -> "replacementQueueApi")
 let apiExportName = camelize(name) + 'Api';
 %>
-import { api as baseApi } from '<%= rtkBaseApiPath %>';
+import { api as baseApi } from '<%= rtkBaseApiImportPath %>';
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
 
 export const <%= apiExportName %> = baseApi.injectEndpoints({
@@ -17,7 +17,7 @@ export const <%= apiExportName %> = baseApi.injectEndpoints({
       query: (<%= args %>) => ({
         url: <%= item.apiUrlFormatted %>,
         method: '<%= item.httpMethod %>',
-<% if (item.bodyParam) { %>        body: <%= item.bodyParam.objectSymbol %>,
+<% if (item.bodyParam) { %>        <%= item.bodyParam.objectSymbol %>,
 <% } if (item.queryParams.length > 0) { %>        params: { <%= queryParamsList.join(', ') %> },
 <% } %>      }),
     }),

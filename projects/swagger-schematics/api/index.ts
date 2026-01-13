@@ -1,102 +1,100 @@
 import {
     apply,
-    applyTemplates, chain,
+    applyTemplates,
+    chain,
     MergeStrategy,
     mergeWith,
-    move, Rule, SchematicsException,
+    move,
+    Rule,
+    SchematicsException,
+    Tree,
     url
 } from '@angular-devkit/schematics';
-import {strings} from '@angular-devkit/core';
-import {parseName} from '@schematics/angular/utility/parse-name';
-import {ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
-import axios, {AxiosResponse} from "axios";
+import { strings } from '@angular-devkit/core';
+import { parseName } from '@schematics/angular/utility/parse-name';
+import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
+import axios, { AxiosResponse } from 'axios';
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, TFrameworkType } from '../interfaces/swagger-schematics/framework';
+import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
+import { getRtkBaseApiImportPath } from './helpers/import-path.helper';
+import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 
 export default function(options: SwaggerApiSchema) {
-  return async () => {
-    const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
+    return async (tree: Tree) => {
+        const config = getOpenapiSchematicsConfig(options);
 
-    if (!openApiSchematicsConfig.path) {
-        throw new SchematicsException(`Path for API services is not defined in the configuration.`);
-    }
+        if (!config.path) {
+            throw new SchematicsException(`Path for API services is not defined in the configuration.`);
+        }
 
-      const framework = openApiSchematicsConfig.framework || 'angular';
-      const frameworkConfig = FRAMEWORK_CONFIGS[framework as TFrameworkType];
+        if (!config.framework) {
+            throw new SchematicsException(`Framework is not defined in the configuration. Please set 'framework' to 'angular' or 'react-rtk'.`);
+        }
 
-      const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(openApiSchematicsConfig.swaggerSchemaUrl as string);
+        const framework = config.framework;
+        const frameworkConfig = FRAMEWORK_CONFIGS[framework as TFrameworkType];
 
-      const parsedApiSchemas = transformSwaggerSchema(swagger.data, {
-          typeMapping: openApiSchematicsConfig.typeMapping
-      });
+        const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(config.swaggerSchemaUrl as string);
 
-      // Select templates based on framework
-      const defaultApiServiceTemplate = frameworkConfig.templates.apiService;
-      const defaultCrudServiceTemplate = frameworkConfig.templates.crudApiService;
+        const parsedApiSchemas = transformSwaggerSchema(swagger.data, {
+            typeMapping: config.typeMapping
+        });
 
-      const apiServiceTemplates = url(openApiSchematicsConfig.apiServiceTemplatePath || defaultApiServiceTemplate);
-      const apiCrudServiceTemplates = url(openApiSchematicsConfig.apiCrudServiceTemplatePath || defaultCrudServiceTemplate);
+        // Select templates based on framework
+        const apiServiceTemplates = url(config.apiServiceTemplatePath || frameworkConfig.templates.apiService);
+        const baseApiTemplates = url(config.baseApiTemplatePath || frameworkConfig.templates.baseApi);
 
-      let finalRule: Rule | undefined;
+        let finalRule: Rule | undefined;
 
-      Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
-          let itemSource;
-          const parsed = parseName(openApiSchematicsConfig.path!, apiSchemaKey);
-          
-          // Common template context
-          const templateContext = {
-              ...openApiSchematicsConfig,
-              ...strings,
-              transformRefsToImport,
-              name: apiSchemaKey,
-              apiList: parsedApiSchemas[apiSchemaKey].apiList,
-              importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
-          };
+        Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
+            const parsed = parseName(config.path!, apiSchemaKey);
+            
+            // Common template context
+            const templateContext: Record<string, unknown> = {
+                ...config,
+                ...strings,
+                transformRefsToImport,
+                name: apiSchemaKey,
+                apiList: parsedApiSchemas[apiSchemaKey].apiList,
+                importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
+            };
 
-          // Add framework-specific helpers
-          if (framework === 'react-rtk') {
-              Object.assign(templateContext, {
-                  scopeEndpointsWithTags: openApiSchematicsConfig.scopeEndpointsWithTags || false,
-                  rtkBaseApiPath: openApiSchematicsConfig.rtkBaseApiPath,
-              });
-          } else {
-              // Angular - no additional helpers needed
-          }
+            // Add framework-specific helpers
+            if (framework === 'react-rtk') {
+                const baseApiPath = config.baseApiPath || DEFAULT_RTK_BASE_API_PATH;
+                const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}.api.ts`;
+                
+                Object.assign(templateContext, {
+                    scopeEndpointsWithTags: config.scopeEndpointsWithTags || false,
+                    rtkBaseApiImportPath: getRtkBaseApiImportPath(tree, apiFilePath, baseApiPath),
+                });
+            } else {
+                Object.assign(templateContext, {
+                    buildHttpCallArgs: buildAngularHttpCallArgs,
+                });
+            }
 
-          itemSource = apply(apiServiceTemplates, [
-              applyTemplates(templateContext),
-              move(parsed.path)
-          ]);
+            const itemSource = apply(apiServiceTemplates, [
+                applyTemplates(templateContext),
+                move(parsed.path)
+            ]);
 
-          if (!!finalRule) {
-              finalRule = chain([finalRule, mergeWith(itemSource, MergeStrategy.Overwrite)]);
-          } else {
-              finalRule = chain([mergeWith(itemSource, MergeStrategy.Overwrite)]);
-          }
-      });
+            finalRule = finalRule
+                ? chain([finalRule, mergeWith(itemSource, MergeStrategy.Overwrite)])
+                : chain([mergeWith(itemSource, MergeStrategy.Overwrite)]);
+        });
 
-      // Only generate base API services for Angular (RTK uses existing baseApi)
-      if (framework === 'angular') {
-          const baseApiServicesPath = openApiSchematicsConfig.baseApiServicesPath || openApiSchematicsConfig.path;
-          if (!baseApiServicesPath) {
-              throw new SchematicsException(`Base API services path is not defined in the configuration.`);
-          }
+        // Generate base API files (skip if they already exist)
+        const baseApiRule = generateBaseApiRule(tree, framework, config, baseApiTemplates);
+        if (baseApiRule) {
+            finalRule = finalRule
+                ? chain([finalRule, baseApiRule])
+                : chain([baseApiRule]);
+        }
 
-          const parsed = parseName(baseApiServicesPath, 'CrudApiBase');
-          const baseApiSource = apply(apiCrudServiceTemplates, [
-              applyTemplates({
-                  ...openApiSchematicsConfig,
-                  ...strings,
-              }),
-              move(parsed.path)
-          ]);
-          if (!!finalRule) {
-              finalRule = chain([finalRule, mergeWith(baseApiSource, MergeStrategy.Overwrite)])
-          }
-      }
-
-      return finalRule;
-  };
+        return finalRule;
+    };
 }

@@ -217,6 +217,14 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
         }];
     }
     
+    // Check if the referenced schema is a primitive wrapper (not an object with properties)
+    // These should be inlined rather than imported
+    if (isPrimitiveWrapper(refPropertySchema)) {
+        const [primitiveType] = transformPrimitives(refPropertySchema as TSchemaWithType);
+        const isNullable = (refPropertySchema as TSchemaWithType).nullable;
+        return [isNullable ? `${primitiveType} | null` : primitiveType];
+    }
+    
     const symbol = transformRefProperty(refPropertySchema, refPropertyKey);
 
     return [symbol, {
@@ -224,6 +232,38 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
         importSymbol: symbol,
         fileName: dasherize(refPropertyKey)
     }];
+}
+
+/**
+ * Check if a schema is a primitive wrapper (type without properties or enum)
+ * These are schemas that define a primitive type, possibly with nullable, format, etc.
+ * but don't define an object structure with properties
+ */
+function isPrimitiveWrapper(schema: TSchemaByType): boolean {
+    // Must have a primitive type
+    if (!('type' in schema)) {
+        return false;
+    }
+    
+    const typedSchema = schema as TSchemaWithType;
+    
+    // Not a primitive wrapper if it's an object with properties
+    if (typedSchema.type === 'object' && 'properties' in schema) {
+        return false;
+    }
+    
+    // Not a primitive wrapper if it's an enum (enums should still be generated as types)
+    if ('enum' in schema) {
+        return false;
+    }
+    
+    // Not a primitive wrapper if it's an array (arrays need special handling)
+    if (typedSchema.type === 'array') {
+        return false;
+    }
+    
+    // Primitive types: integer, number, string, boolean
+    return ['integer', 'number', 'string', 'boolean'].includes(typedSchema.type);
 }
 
 export const transformPrimitives = (property: TSchemaWithType): [string] => {

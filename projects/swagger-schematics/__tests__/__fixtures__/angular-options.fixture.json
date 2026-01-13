@@ -1,0 +1,5 @@
+{
+  "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
+  "path": "/test-output",
+  "framework": "angular"
+}

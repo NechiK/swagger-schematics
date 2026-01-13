@@ -6,24 +6,13 @@ import {
   createTestTree,
   runTypesSchematic,
   runApiSchematic,
-  SchematicOptions
+  RTK_SCHEMATIC_OPTIONS
 } from '../helpers/setup';
 import { SWAGGER_SCHEMA } from '../__fixtures__/swagger/full-schema.fixture';
 
 describe('RTK Query Schematics Integration', () => {
   let tree: UnitTestTree;
   let files: string[];
-
-  const RTK_SCHEMATIC_OPTIONS: SchematicOptions & {
-    framework: string;
-    rtkBaseApiPath: string;
-    scopeEndpointsWithTags?: boolean;
-  } = {
-    swaggerSchemaUrl: 'https://api.example.com/swagger/v1/swagger.json',
-    path: '/test-output',
-    framework: 'react-rtk',
-    rtkBaseApiPath: '@/store/api/baseApi'
-  };
 
   beforeAll(async () => {
     setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
@@ -69,8 +58,10 @@ describe('RTK Query Schematics Integration', () => {
       expect(apiSliceContent).toMatchSnapshot();
     });
 
-    it('should import from base API path', () => {
-      expect(apiSliceContent).toContain(`import { api as baseApi } from '${RTK_SCHEMATIC_OPTIONS.rtkBaseApiPath}'`);
+    it('should import from base API using tsconfig path alias', () => {
+      // Default base API path is 'th-common/store/api-base.ts'
+      // tsconfig has @th-common/* alias, so it uses the alias import
+      expect(apiSliceContent).toContain("import { api as baseApi } from '@th-common/store/api-base'");
     });
 
     it('should export named API const', () => {
@@ -124,7 +115,8 @@ describe('RTK Query Schematics Integration', () => {
       });
 
       it('should include body in mutation', () => {
-        expect(apiSliceContent).toMatch(/body:\s*body/);
+        // Uses shorthand property syntax: `body,` instead of `body: body,`
+        expect(apiSliceContent).toMatch(/body,\n/);
       });
     });
 
@@ -157,6 +149,75 @@ describe('RTK Query Schematics Integration', () => {
     it('should prefix endpoint names with tag name', () => {
       // With scoping, "getById" becomes "claimGetById"
       expect(scopedApiContent).toMatch(/claimGetById:\s*builder\.query/);
+    });
+  });
+
+  describe('Base API Generation', () => {
+    const DEFAULT_BASE_API_PATH = '/th-common/store/api-base.ts';
+
+    it('should generate base API file at default path', () => {
+      expect(files).toContain(DEFAULT_BASE_API_PATH);
+    });
+
+    it('should contain RTK createApi setup', () => {
+      const baseApiContent = tree.readContent(DEFAULT_BASE_API_PATH);
+      expect(baseApiContent).toContain("import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'");
+      expect(baseApiContent).toContain('export const api = createApi');
+      expect(baseApiContent).toContain('reducerPath:');
+      expect(baseApiContent).toContain('baseQuery: fetchBaseQuery');
+    });
+
+    it('should skip base API generation if file already exists', async () => {
+      resetAxiosMocks();
+      setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      // Create a tree with existing base API file
+      let testTree = createTestTree();
+      testTree.create(DEFAULT_BASE_API_PATH, '// Existing base API');
+
+      testTree = await runTypesSchematic(RTK_SCHEMATIC_OPTIONS, testTree);
+      const resultTree = await runApiSchematic(RTK_SCHEMATIC_OPTIONS, testTree);
+
+      // The existing file should NOT be overwritten
+      const baseApiContent = resultTree.readContent(DEFAULT_BASE_API_PATH);
+      expect(baseApiContent).toBe('// Existing base API');
+    });
+
+    it('should generate base API at custom path', async () => {
+      resetAxiosMocks();
+      setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      const customPath = '/custom/path/to/api-base.ts';
+      const customOptions = {
+        ...RTK_SCHEMATIC_OPTIONS,
+        baseApiPath: customPath
+      };
+
+      let testTree = createTestTree();
+      testTree = await runTypesSchematic(customOptions, testTree);
+      const resultTree = await runApiSchematic(customOptions, testTree);
+
+      expect(resultTree.files).toContain(customPath);
+    });
+
+    it('should use tsconfig path alias when base API matches', async () => {
+      resetAxiosMocks();
+      setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      // Use a path that matches the @/* alias (src/*)
+      const aliasPath = 'src/store/api-base.ts';
+      const customOptions = {
+        ...RTK_SCHEMATIC_OPTIONS,
+        baseApiPath: aliasPath
+      };
+
+      let testTree = createTestTree();
+      testTree = await runTypesSchematic(customOptions, testTree);
+      const resultTree = await runApiSchematic(customOptions, testTree);
+
+      const apiContent = resultTree.readContent(`${RTK_SCHEMATIC_OPTIONS.path}/claim.api.ts`);
+      // Should use @/store/api-base instead of relative path
+      expect(apiContent).toContain("import { api as baseApi } from '@/store/api-base'");
     });
   });
 });

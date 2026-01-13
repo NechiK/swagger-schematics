@@ -8,9 +8,9 @@
       "description": "The path at which to create the files, relative to the current workspace.",
       "visible": false
     },
-    "baseApiServicesPath": {
+    "baseApiPath": {
       "type": "string",
-      "description": "Path for base API files (if not specified, the path property will be used)."
+      "description": "Path for base API file. For Angular: defaults to path + '/_api-base.service.ts'. For RTK: defaults to 'th-common/store/api-base.ts'."
     },
     "swaggerSchemaUrl": {
       "type": "string",
@@ -25,13 +25,13 @@
     "apiServiceTemplatePath": {
       "type": "string"
     },
-    "apiCrudServiceTemplatePath": {
-      "type": "string"
+    "baseApiTemplatePath": {
+      "type": "string",
+      "description": "Custom template path for base API generation."
     },
     "framework": {
       "type": "string",
       "description": "Target framework for generated API code.",
-      "default": "angular",
       "enum": ["angular", "react-rtk"],
       "x-prompt": {
         "message": "Which framework would you like to generate API code for?",
@@ -41,10 +41,6 @@
           { "value": "react-rtk", "label": "React RTK Query (API slices)" }
         ]
       }
-    },
-    "rtkBaseApiPath": {
-      "type": "string",
-      "description": "Import path for the RTK base API (e.g., '@/store/api/baseApi'). Required for RTK framework."
     },
     "scopeEndpointsWithTags": {
       "type": "boolean",

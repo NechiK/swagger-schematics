@@ -13,39 +13,13 @@ export class <%= classify(name) %>ApiService extends ApiBaseService {
   constructor() {
     super();
   }
-<% for (let item of apiList) { %>
+<% for (let item of apiList) {
+  let httpCallArgs = buildHttpCallArgs(item);
+%>
   <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
-<% if (item.apiMethodType === 'post' || item.apiMethodType === 'put') {
-     if (item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+<% if (httpCallArgs) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
       this.getUrl(<%= item.apiUrlFormatted %>),
-      <%= item.bodyFormatted %>,
-      { <%= item.queryParamsFormatted %> }
-    );
-<%   } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      <%= item.bodyFormatted %>
-    );
-<%   }
-   } else if (item.apiMethodType === 'delete') {
-     if (item.bodyFormatted && item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      { body: <%= item.bodyFormatted %>, <%= item.queryParamsFormatted %> }
-    );
-<%   } else if (item.bodyFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      { body: <%= item.bodyFormatted %> }
-    );
-<%   } else if (item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      { <%= item.queryParamsFormatted %> }
-    );
-<%   } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
-      this.getUrl(<%= item.apiUrlFormatted %>)
-    );
-<%   }
-   } else if (item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      { <%= item.queryParamsFormatted %> }
+      <%= httpCallArgs %>
     );
 <% } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
       this.getUrl(<%= item.apiUrlFormatted %>)

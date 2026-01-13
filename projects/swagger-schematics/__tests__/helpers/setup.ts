@@ -4,6 +4,7 @@ import { Tree } from '@angular-devkit/schematics';
 import { SchematicTestRunner, UnitTestTree } from '@angular-devkit/schematics/testing';
 import * as path from 'path';
 import { ISwaggerSchema } from '../../interfaces/version_3_1/swagger.interface';
+import { loadFixture, loadJsonFixture } from '../__fixtures__';
 
 // ============================================================================
 // Axios Mock Setup
@@ -33,37 +34,23 @@ export const schematicRunner = new SchematicTestRunner('swagger-schematics', col
 export interface SchematicOptions {
   swaggerSchemaUrl: string;
   path: string;
+  framework: string;
+  baseApiPath?: string;
+  scopeEndpointsWithTags?: boolean;
 }
 
-export const DEFAULT_SCHEMATIC_OPTIONS: SchematicOptions = {
-  swaggerSchemaUrl: 'https://api.example.com/swagger/v1/swagger.json',
-  path: '/test-output'
-};
-
-export const EDITORCONFIG_CONTENT = `
-# Editor configuration, see https://editorconfig.org
-root = true
-
-[*]
-charset = utf-8
-indent_style = space
-indent_size = 2
-insert_final_newline = true
-trim_trailing_whitespace = true
-
-[*.md]
-max_line_length = off
-trim_trailing_whitespace = false
-`;
+export const ANGULAR_SCHEMATIC_OPTIONS: SchematicOptions = loadJsonFixture('angular-options.fixture.json');
+export const RTK_SCHEMATIC_OPTIONS: SchematicOptions = loadJsonFixture('rtk-options.fixture.json');
 
 export const createTestTree = (): UnitTestTree => {
   const tree = new UnitTestTree(Tree.empty());
-  tree.create('.editorconfig', EDITORCONFIG_CONTENT);
+  tree.create('.editorconfig', loadFixture('.editorconfig.fixture'));
+  tree.create('tsconfig.json', JSON.stringify(loadJsonFixture('tsconfig.fixture.json'), null, 2));
   return tree;
 };
 
 export const runTypesSchematic = async (
-  options: SchematicOptions = DEFAULT_SCHEMATIC_OPTIONS,
+  options: SchematicOptions,
   tree?: UnitTestTree
 ): Promise<UnitTestTree> => {
   const inputTree = tree ?? createTestTree();
@@ -71,7 +58,7 @@ export const runTypesSchematic = async (
 };
 
 export const runApiSchematic = async (
-  options: SchematicOptions = DEFAULT_SCHEMATIC_OPTIONS,
+  options: SchematicOptions,
   tree?: UnitTestTree
 ): Promise<UnitTestTree> => {
   const inputTree = tree ?? createTestTree();
@@ -80,7 +67,7 @@ export const runApiSchematic = async (
 
 export const runFullSchematics = async <T extends string>(
   swaggerSchema: ISwaggerSchema<T>,
-  options: SchematicOptions = DEFAULT_SCHEMATIC_OPTIONS
+  options: SchematicOptions
 ): Promise<UnitTestTree> => {
   setupSwaggerMock(options.swaggerSchemaUrl, swaggerSchema);
 

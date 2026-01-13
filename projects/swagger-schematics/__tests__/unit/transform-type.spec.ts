@@ -196,5 +196,59 @@ describe('Transform Type', () => {
       expect(result[0]).toBe('any');
       expect(result[1]).toBeUndefined();
     });
+
+    it('should inline nullable primitive wrapper types', () => {
+      const swagger = createSwaggerSchema({
+        NullableOfDistributionType: { type: 'integer', nullable: true }
+      });
+      const ref: IRef = { $ref: '#/components/schemas/NullableOfDistributionType' };
+
+      const result = parseRefToSymbol(ref, swagger);
+      
+      expect(result[0]).toBe('number | null');
+      expect(result[1]).toBeUndefined(); // No import needed for inlined primitives
+    });
+
+    it('should inline non-nullable primitive wrapper types', () => {
+      const swagger = createSwaggerSchema({
+        CustomInteger: { type: 'integer' },
+        CustomString: { type: 'string' },
+        CustomBoolean: { type: 'boolean' },
+        CustomNumber: { type: 'number' }
+      });
+
+      expect(parseRefToSymbol({ $ref: '#/components/schemas/CustomInteger' }, swagger)[0]).toBe('number');
+      expect(parseRefToSymbol({ $ref: '#/components/schemas/CustomString' }, swagger)[0]).toBe('string');
+      expect(parseRefToSymbol({ $ref: '#/components/schemas/CustomBoolean' }, swagger)[0]).toBe('boolean');
+      expect(parseRefToSymbol({ $ref: '#/components/schemas/CustomNumber' }, swagger)[0]).toBe('number');
+    });
+
+    it('should not inline enums even if they have primitive type', () => {
+      const swagger = createSwaggerSchema({
+        Status: { type: 'string', enum: ['active', 'inactive'] }
+      });
+      const ref: IRef = { $ref: '#/components/schemas/Status' };
+
+      const result = parseRefToSymbol(ref, swagger);
+      
+      expect(result[0]).toBe('TStatus');
+      expect(result[1]).toEqual({
+        type: 'enum',
+        importSymbol: 'TStatus',
+        fileName: 'status'
+      });
+    });
+
+    it('should not inline objects with properties', () => {
+      const swagger = createSwaggerSchema({
+        UserDTO: { type: 'object', properties: { id: { type: 'integer' } } }
+      });
+      const ref: IRef = { $ref: '#/components/schemas/UserDTO' };
+
+      const result = parseRefToSymbol(ref, swagger);
+      
+      expect(result[0]).toBe('IUserDTO');
+      expect(result[1]?.type).toBe('interface');
+    });
   });
 });

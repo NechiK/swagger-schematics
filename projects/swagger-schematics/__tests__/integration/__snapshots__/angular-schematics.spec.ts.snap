@@ -153,6 +153,7 @@ exports[`Schematics Integration Enum Generation should generate ClaimType enum w
 exports[`Schematics Integration File Generation should generate expected files 1`] = `
 [
   "/.editorconfig",
+  "/tsconfig.json",
   "/test-output/claim-api.service.ts",
   "/test-output/_api-base-url.token.ts",
   "/test-output/_api-base.service.ts",

@@ -14,7 +14,7 @@ export interface IFrameworkConfig {
     /** Default template paths for this framework */
     templates: {
         apiService: string;
-        crudApiService: string;
+        baseApi: string;
     };
     /** File extension for generated files */
     fileExtension: string;
@@ -31,7 +31,7 @@ export const FRAMEWORK_CONFIGS: Record<TFrameworkType, IFrameworkConfig> = {
         displayName: 'Angular',
         templates: {
             apiService: './templates/angular/api-service',
-            crudApiService: './templates/angular/crud-api-service',
+            baseApi: './templates/angular/base-api',
         },
         fileExtension: '.service.ts',
         usesInjectable: true,
@@ -41,7 +41,7 @@ export const FRAMEWORK_CONFIGS: Record<TFrameworkType, IFrameworkConfig> = {
         displayName: 'React RTK Query',
         templates: {
             apiService: './templates/react-rtk/api',
-            crudApiService: './templates/react-rtk/crud-api',
+            baseApi: './templates/react-rtk/base-api',
         },
         fileExtension: '.api.ts',
         usesInjectable: false,

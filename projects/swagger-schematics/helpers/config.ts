@@ -30,11 +30,6 @@ export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerAp
     if (!openApiSchematicsConfig.swaggerSchemaUrl) {
         throw new Error(`Swagger schema URL wasn't provided`);
     }
-
-    // Validate RTK-specific requirements
-    if (openApiSchematicsConfig.framework === 'react-rtk' && !openApiSchematicsConfig.rtkBaseApiPath) {
-        throw new Error(`RTK base API path (rtkBaseApiPath) is required when using react-rtk framework`);
-    }
     
     // Normalize path to be absolute within the virtual tree
     let path = openApiSchematicsConfig.path || '';

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0-alpha.20] - 2026-01-13
 
-### Added
+### ✨ Added
 - **React RTK Query support** - New framework option to generate RTK Query API slices
 - `framework` config option to select between `angular` and `react-rtk`
 - `scopeEndpointsWithTags` option for RTK to prefix endpoint names with tag (e.g., `claimGetById`)
@@ -25,16 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apiUrlFormatted` - URL with proper quoting
   - `queryParamsFormatted` - Pre-formatted query params string
   - `bodyFormatted` - Body parameter name
-- Custom templates documentation in README with complete variable reference
+- 📚 Custom templates documentation in README with complete variable reference
 - `loadFixture()` and `loadJsonFixture()` test helpers
 - New test file `types-schematics.spec.ts` with snapshots for types generation
 - Tests for primitive wrapper type inlining
 
-### Fixed
+### 🐛 Fixed
 - Primitive wrapper types (e.g., `NullableOfDistributionType: { type: "integer", nullable: true }`) are now inlined as `number | null` instead of generating a non-existent interface
 
-### Changed
-- **BREAKING**: `framework` config option is now required (no default value)
+### ♻️ Changed
+- ⚠️ **BREAKING**: `framework` config option is now required (no default value)
 - Renamed `crud-api` template folders to `base-api` for both Angular and RTK
 - Simplified Angular API service template using `buildAngularHttpCallArgs` helper
 - Enhanced Swagger schema transformation with new request type and parameter handling
@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test fixtures now loaded from JSON files instead of hardcoded constants
 - Improved utility functions for formatting API URLs and parameters
 
-### Removed
+### 🗑️ Removed
 - `rtkBaseApiPath` config option (replaced by `baseApiPath`)
 - Default value for `framework` config option
 - Old template helper functions and snapshot tests for API methods
@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0-alpha.14] - 2026-01-12
 
-### Fixed
+### 🐛 Fixed
 - DELETE method query params are now correctly placed as second argument (options object) instead of third
 - Added proper `delete` case handler for API method name generation (was falling through to default with warning)
 - Extended GET request name parsing to handle `/api/Model/subresource` and `/api/Model/subresource/{param}` patterns
@@ -63,32 +63,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed overly strict `"format": "path"` validation from schema.json files
 - Path normalization now properly handles relative paths for schematic execution
 
-### Added
+### ✨ Added
 - New test fixtures and cases for DELETE operations:
   - DELETE by ID (no body)
   - DELETE with query params (verifies params as second arg)
 - `parseDeleteRequestName` function for proper DELETE method naming
 
-### Changed
+### ♻️ Changed
 - Path segments are now properly capitalized in default method name generation
 
 ## [1.0.0-alpha.13] - 2026-01-09
 
-### Fixed
+### 🐛 Fixed
 - Enum types used in API parameters are now properly imported in generated services
 - Object destructuring in method parameters now uses commas instead of semicolons (`{ id, status }` instead of `{ id;status }`)
 - PUT/POST methods with path parameters but no separate path param definition now correctly use `body.paramName` in the URL (e.g., `${body.id}` instead of `${id}`)
 
-### Changed
+### ♻️ Changed
 - Migrated test framework from Jasmine to Jest
 - Parameter schema interface now supports `$ref` types (aligned with OpenAPI spec)
 
-### Added
+### ✨ Added
 - New test cases for enum parameter imports and multiple query parameters
 
 ## [1.0.0-alpha.12] - 2026-01-09
 
-### Added
+### ✨ Added
 - Configuration file support via `openapi-schematics.json` in project root
 - New configuration options:
   - `swaggerSchemaUrl` - URL of the Swagger/OpenAPI schema
@@ -99,10 +99,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apiServiceTemplatePath` - custom template for API services
   - `apiCrudServiceTemplatePath` - custom template for CRUD services
 
-### Changed
+### ♻️ Changed
 - Updated README with comprehensive documentation for configuration options
 - CLI arguments now override config file values
 
-### Dependencies
+### 📦 Dependencies
 - Updated @angular-devkit packages to 19.2.15
 - Updated axios to 1.10.0

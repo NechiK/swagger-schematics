@@ -100,3 +100,89 @@ If your backend uses custom types that should map to TypeScript primitives (e.g.
 | `typeMapping`            | object  | api, types | Map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)                                                                      |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.
+
+
+## Custom Templates
+
+You can provide your own EJS templates to fully customize the generated code. Use the `apiServiceTemplatePath` and `baseApiTemplatePath` options to specify paths to your custom templates.
+
+### Example configuration with custom templates
+
+```json
+{
+  "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
+  "path": "/src/app/core",
+  "framework": "angular",
+  "apiServiceTemplatePath": "./templates/custom-api-service",
+  "baseApiTemplatePath": "./templates/custom-base-api"
+}
+```
+
+### Template Variables
+
+The following variables are available in API service templates:
+
+| Variable                  | Type               | Description                                                                                         |
+|---------------------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| `name`                    | string             | The API tag/controller name (e.g., "Claim")                                                         |
+| `path`                    | string             | Output path for generated files                                                                     |
+| `apiList`                 | IParsedApiItem[]   | Array of parsed API operations                                                                      |
+| `importRefs`              | IImportRef[]       | Array of import references for types                                                                |
+| `transformRefsToImport`   | function           | Helper to generate import statements from refs                                                      |
+| `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
+| `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
+| `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |
+
+### IParsedApiItem Properties
+
+Each item in `apiList` has the following properties:
+
+| Property                 | Type     | Description                                                                                          |
+|--------------------------|----------|------------------------------------------------------------------------------------------------------|
+| `apiMethodName`          | string   | Generated method name (e.g., "getById")                                                              |
+| `scopedApiMethodName`    | string   | Method name prefixed with tag (e.g., "claimGetById")                                                 |
+| `apiMethodParams`        | string   | Method parameters as string (e.g., "id: number, body: IRequest")                                     |
+| `apiMethodParamNames`    | string[] | Array of parameter names (e.g., ["id", "body"])                                                      |
+| `apiMethodRequestType`   | string   | Combined request type (e.g., "{ id: number; body: IRequest }")                                       |
+| `apiMethodType`          | string   | HTTP method lowercase (e.g., "get", "post")                                                          |
+| `httpMethod`             | string   | HTTP method uppercase (e.g., "GET", "POST")                                                          |
+| `apiUrl`                 | string   | URL path with interpolation (e.g., "${id}/notes")                                                    |
+| `apiUrlFormatted`        | string   | URL formatted for code (e.g., `` `/${id}/notes` ``)                                                  |
+| `isQuery`                | boolean  | True for GET/HEAD methods                                                                            |
+| `requestMethod`          | string   | HTTP method for httpClient (e.g., "get", "post")                                                     |
+| `responseTypeSymbol`     | string   | Response type (e.g., "IClaimDetailDTO", "void")                                                      |
+| `bodyParam`              | object   | Parsed body parameter or null                                                                        |
+| `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
+| `queryParams`            | array    | Array of parsed query parameters                                                                     |
+| `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
+| `pathParams`             | array    | Array of parsed path parameters                                                                      |
+| `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |
+| `summary`                | string   | Operation summary from OpenAPI spec                                                                  |
+| `description`            | string   | Operation description from OpenAPI spec                                                              |
+| `operationId`            | string   | Original operationId from OpenAPI spec                                                               |
+
+### Example Custom Template (Angular)
+
+```ejs
+import { Injectable } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { Observable } from "rxjs";
+
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
+
+@Injectable({ providedIn: 'root' })
+export class <%= classify(name) %>ApiService {
+  private baseUrl = '/api/<%= name %>';
+
+  constructor(private http: HttpClient) {}
+
+<% for (let item of apiList) { %>
+  /**
+   * <%= item.summary || item.apiMethodName %>
+   */
+  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+    return this.http.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
+  }
+<% } %>
+}
+```

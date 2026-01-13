@@ -1,0 +1,138 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`RTK Query Schematics Integration File Generation should generate expected RTK files 1`] = `
+[
+  "/.editorconfig",
+  "/test-output/claim.api.ts",
+  "/test-output/interfaces/company-search-dto.interface.ts",
+  "/test-output/interfaces/claim-detail-dto.interface.ts",
+  "/test-output/interfaces/id-name-dto.interface.ts",
+  "/test-output/interfaces/create-note-dto.interface.ts",
+  "/test-output/interfaces/claim-note-view-dto.interface.ts",
+  "/test-output/enums/claim-statuses.enum.ts",
+  "/test-output/enums/claim-type.enum.ts",
+]
+`;
+
+exports[`RTK Query Schematics Integration RTK API Slice Generation should generate full RTK API slice 1`] = `
+"
+import { api as baseApi } from '@/store/api/baseApi';
+import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
+import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
+import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
+import { ICompanySearchDTO } from './interfaces/company-search-dto.interface';
+import { TClaimStatuses } from './enums/claim-statuses.enum';
+
+export const claimApi = baseApi.injectEndpoints({
+  overrideExisting: false,
+  endpoints: (builder) => ({
+    getById: builder.query<IClaimDetailDTO, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/\${id}\`,
+        method: 'GET',
+      }),
+    }),
+    updateClaimById: builder.mutation<IClaimDetailDTO, { id: number; body: IClaimDetailDTO }>({
+      query: ({ id, body }) => ({
+        url: \`/\${id}\`,
+        method: 'PUT',
+        body: body,
+      }),
+    }),
+    getServiceActionsByClaimId: builder.query<IClaimDetailDTO, { claimId: number }>({
+      query: ({ claimId }) => ({
+        url: \`/\${claimId}/serviceActions\`,
+        method: 'GET',
+      }),
+    }),
+    createClaim: builder.mutation<void, { width: number; height: number; body: object }>({
+      query: ({ width, height, body }) => ({
+        url: '/',
+        method: 'POST',
+        body: body,
+        params: { width, height },
+      }),
+    }),
+    createClaimByIdNote: builder.mutation<IClaimNoteViewDTO, { id: number; body: ICreateNoteDTO }>({
+      query: ({ id, body }) => ({
+        url: \`/\${id}/note\`,
+        method: 'POST',
+        body: body,
+      }),
+    }),
+    updateClaimStatus: builder.mutation<void, { body: number }>({
+      query: ({ body }) => ({
+        url: '/status',
+        method: 'PUT',
+        body: body,
+      }),
+    }),
+    postClaimAll: builder.mutation<IClaimDetailDTO, { body: ICompanySearchDTO }>({
+      query: ({ body }) => ({
+        url: '/all',
+        method: 'POST',
+        body: body,
+      }),
+    }),
+    postClaimIds: builder.mutation<number[], { body: ICompanySearchDTO }>({
+      query: ({ body }) => ({
+        url: '/ids',
+        method: 'POST',
+        body: body,
+      }),
+    }),
+    updateClaimByIdReactivate: builder.mutation<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/\${id}/reactivate\`,
+        method: 'PUT',
+      }),
+    }),
+    deleteClaimDeletemany: builder.mutation<boolean, { body: number[] }>({
+      query: ({ body }) => ({
+        url: '/deletemany',
+        method: 'DELETE',
+        body: body,
+      }),
+    }),
+    getClaimServiceactions: builder.query<number[], { serviceActionId: number }>({
+      query: ({ serviceActionId }) => ({
+        url: '/serviceactions',
+        method: 'GET',
+      }),
+    }),
+    getClaimServiceactionsByServiceActionId: builder.query<number[], { serviceActionId: number }>({
+      query: ({ serviceActionId }) => ({
+        url: \`/serviceactions/\${serviceActionId}\`,
+        method: 'GET',
+      }),
+    }),
+    getClaimBystatus: builder.query<IClaimDetailDTO[], { id: string; status: TClaimStatuses }>({
+      query: ({ id, status }) => ({
+        url: '/bystatus',
+        method: 'GET',
+        params: { id, status },
+      }),
+    }),
+    updateClaimNoteById: builder.mutation<void, { body: ICreateNoteDTO }>({
+      query: ({ body }) => ({
+        url: \`/note/\${body.id}\`,
+        method: 'PUT',
+        body: body,
+      }),
+    }),
+    deleteClaimSingleById: builder.mutation<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/single/\${id}\`,
+        method: 'DELETE',
+      }),
+    }),
+    deleteClaimByFilter: builder.mutation<boolean, { status: string; force: boolean }>({
+      query: ({ status, force }) => ({
+        url: '/by-filter',
+        method: 'DELETE',
+        params: { status, force },
+      }),
+    }),
+  }),
+});"
+`;

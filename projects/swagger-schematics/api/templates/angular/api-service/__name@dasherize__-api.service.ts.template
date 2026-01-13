@@ -1,0 +1,54 @@
+import { Injectable } from "@angular/core";
+import { ApiBaseService } from "../_api-base.service";
+import { Observable } from "rxjs";
+
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
+
+@Injectable({
+  providedIn: 'root',
+})
+export class <%= classify(name) %>ApiService extends ApiBaseService {
+  endpoint = '<%= name %>';
+
+  constructor() {
+    super();
+  }
+<% for (let item of apiList) { %>
+  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+<% if (item.apiMethodType === 'post' || item.apiMethodType === 'put') {
+     if (item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      <%= item.bodyFormatted %>,
+      { <%= item.queryParamsFormatted %> }
+    );
+<%   } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      <%= item.bodyFormatted %>
+    );
+<%   }
+   } else if (item.apiMethodType === 'delete') {
+     if (item.bodyFormatted && item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      { body: <%= item.bodyFormatted %>, <%= item.queryParamsFormatted %> }
+    );
+<%   } else if (item.bodyFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      { body: <%= item.bodyFormatted %> }
+    );
+<%   } else if (item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      { <%= item.queryParamsFormatted %> }
+    );
+<%   } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>)
+    );
+<%   }
+   } else if (item.queryParamsFormatted) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      { <%= item.queryParamsFormatted %> }
+    );
+<% } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>)
+    );
+<% } %>  }
+<% } %>}

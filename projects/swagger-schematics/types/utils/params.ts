@@ -69,6 +69,13 @@ export interface IParsedApiItem {
     
     /** Generated name of the API method based on apiUrl or operationId */
     apiMethodName: string;
+
+    /**
+     * Scoped API method name prefixed with the tag name.
+     * Useful for RTK Query to avoid naming collisions across APIs.
+     * Example: "claimGetById" for tag "Claim" and method "getById"
+     */
+    scopedApiMethodName: string;
     
     /** 
      * The type of HTTP method used by this API. 
@@ -79,8 +86,16 @@ export interface IParsedApiItem {
     /** 
      * A string representation of the parameters passed to the API method.
      * This could be a serialized form of parameters.
+     * Example: "id: number, body: IRequest"
      */
     apiMethodParams: string;
+
+    /**
+     * Array of parameter names without type annotations.
+     * Useful for destructuring in templates.
+     * Example: ["id", "body"]
+     */
+    apiMethodParamNames: string[];
     
     /** The HTTP request method (e.g., GET, POST, PUT, DELETE). */
     requestMethod: string;
@@ -122,6 +137,41 @@ export interface IParsedApiItem {
      * The original operationId from the OpenAPI spec.
      */
     operationId?: string;
+
+    /**
+     * Combined request type for all parameters.
+     * Example: "{ id: string; body: IRequest }" or "void"
+     */
+    apiMethodRequestType: string;
+
+    /**
+     * Whether this is a query operation (GET/HEAD) vs mutation (POST/PUT/DELETE/etc).
+     */
+    isQuery: boolean;
+
+    /**
+     * HTTP method in uppercase (GET, POST, PUT, DELETE, etc).
+     */
+    httpMethod: string;
+
+    /**
+     * URL formatted with proper quoting.
+     * Uses backticks if contains interpolation, single quotes otherwise.
+     * Example: "'/users'" or "\'/${id}'"
+     */
+    apiUrlFormatted: string;
+
+    /**
+     * Pre-formatted query params string for HTTP options.
+     * Example: "params: { status, force }" or empty string if no query params.
+     */
+    queryParamsFormatted: string;
+
+    /**
+     * Body parameter name or empty object for POST/PUT without body.
+     * Example: "body" or "{}" or empty string for non-body methods.
+     */
+    bodyFormatted: string;
 }
 
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema): {
@@ -202,6 +252,83 @@ export function transformParamsToApiMethodParams(params: {
         params.bodyParam ? params.bodyParam.functionSymbol : ''
     ].filter(item => !!item);
     return methodParams.join(', ');
+}
+
+/**
+ * Extracts just the parameter names (without types) for use in destructuring.
+ * @returns Array of parameter names in order: pathParams, queryParams, bodyParam
+ */
+export function extractApiMethodParamNames(params: {
+    pathParams: IParsedParam<IPathParam>[];
+    queryParams: IParsedParam<IQueryParam>[];
+    bodyParam: IParsedParam<any> | null;
+}): string[] {
+    const names: string[] = [
+        ...params.pathParams.map(param => param.objectSymbol),
+        ...params.queryParams.map(param => param.objectSymbol),
+    ];
+    if (params.bodyParam) {
+        names.push(params.bodyParam.objectSymbol);
+    }
+    return names;
+}
+
+/**
+ * Builds combined request type from all parameters.
+ * Example: "{ id: string; body: IRequest }" or "void"
+ */
+export function buildApiMethodRequestType(params: {
+    pathParams: IParsedParam<IPathParam>[];
+    queryParams: IParsedParam<IQueryParam>[];
+    bodyParam: IParsedParam<any> | null;
+}): string {
+    const typeParts: string[] = [];
+    
+    params.pathParams.forEach(p => {
+        typeParts.push(`${p.objectSymbol}: ${p.typeSymbol}`);
+    });
+    
+    params.queryParams.forEach(p => {
+        typeParts.push(`${p.objectSymbol}: ${p.typeSymbol}`);
+    });
+    
+    if (params.bodyParam) {
+        typeParts.push(`${params.bodyParam.objectSymbol}: ${params.bodyParam.typeSymbol}`);
+    }
+    
+    if (typeParts.length === 0) {
+        return 'void';
+    }
+    
+    return `{ ${typeParts.join('; ')} }`;
+}
+
+/**
+ * Formats URL with proper quoting (backticks for interpolation, single quotes otherwise).
+ */
+export function formatApiUrl(apiUrl: string): string {
+    const hasInterpolation = apiUrl.includes('${');
+    const url = apiUrl.startsWith('/') ? apiUrl : '/' + apiUrl;
+    return hasInterpolation ? `\`${url}\`` : `'${url}'`;
+}
+
+/**
+ * Formats query params for HTTP options object.
+ * Example: "params: { status, force }" or ""
+ */
+export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[]): string {
+    if (queryParams.length === 0) return '';
+    return `params: { ${queryParams.map(p => p.objectSymbol).join(', ')} }`;
+}
+
+/**
+ * Formats body parameter for HTTP calls.
+ * Returns body symbol for methods with body, "{}" for POST/PUT without body, "" otherwise.
+ */
+export function formatBody(bodyParam: IParsedParam<any> | null, methodType: string): string {
+    if (bodyParam) return bodyParam.objectSymbol;
+    if (['post', 'put'].includes(methodType)) return '{}';
+    return '';
 }
 
 export function getApiCallParams(params: {

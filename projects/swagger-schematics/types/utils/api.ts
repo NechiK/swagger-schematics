@@ -2,7 +2,7 @@ import {ISwaggerSchema} from '../../interfaces/version_3_1/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
 import { TOperation, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
 import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
-import { TTypeWithImport, transformType } from './transform-type';
+import { TTypeWithImport, transformType, ITransformTypeOptions } from './transform-type';
 import { IResponse, TResponse } from '../../interfaces/version_3_1/response.interface';
 
 /**
@@ -55,7 +55,7 @@ export function getOperationSecurity(apiMethod: TOperation): Record<string, stri
  * Gets the response type from the operation, checking multiple status codes
  * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
  */
-export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema): TTypeWithImport {
+export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const responses = apiMethod.responses;
     
     // Priority order for success responses
@@ -74,7 +74,7 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
             if (code === THttpStatusCode.NoContent) {
                 return ['void'];
             }
-            const result = extractResponseType(response, swaggerData);
+            const result = extractResponseType(response, swaggerData, options);
             if (result) return result;
         }
     }
@@ -82,14 +82,14 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
     // Try wildcard 2XX
     const response2XX = (responses as any)['2XX'];
     if (response2XX) {
-        const result = extractResponseType(response2XX, swaggerData);
+        const result = extractResponseType(response2XX, swaggerData, options);
         if (result) return result;
     }
     
     // Try default response
     const defaultResponse = (responses as any)['default'];
     if (defaultResponse) {
-        const result = extractResponseType(defaultResponse, swaggerData);
+        const result = extractResponseType(defaultResponse, swaggerData, options);
         if (result) return result;
     }
     
@@ -99,7 +99,7 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
 /**
  * Extracts the type from a response object
  */
-function extractResponseType(response: any, swaggerData: ISwaggerSchema): TTypeWithImport | null {
+function extractResponseType(response: any, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport | null {
     if (!response.content) {
         return null;
     }
@@ -110,7 +110,7 @@ function extractResponseType(response: any, swaggerData: ISwaggerSchema): TTypeW
     for (const contentType of contentTypes) {
         const content = response.content[contentType];
         if (content?.schema) {
-            return transformType(content.schema, swaggerData);
+            return transformType(content.schema, swaggerData, options);
         }
     }
     

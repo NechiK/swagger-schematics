@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformType } from "./transform-type";
+import { IImportRef, transformType, ITransformTypeOptions } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 
 /**
@@ -174,7 +174,7 @@ export interface IParsedApiItem {
     bodyFormatted: string;
 }
 
-export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema): {
+export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     queryParams: IParsedParam<IQueryParam>[];
     pathParams: IParsedParam<IPathParam>[];
     headerParams: IParsedParam<IHeaderParam>[];
@@ -194,13 +194,13 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
             let importRef: IImportRef | undefined;
             
             if (apiParam.schema) {
-                [typeSymbol, importRef] = transformType(apiParam.schema, swagger);
+                [typeSymbol, importRef] = transformType(apiParam.schema, swagger, options);
             } else if (apiParam.content) {
                 // If content is provided instead of schema, try to extract type from it
                 const contentType = Object.keys(apiParam.content)[0];
                 const content = apiParam.content[contentType as keyof typeof apiParam.content];
                 if (content?.schema) {
-                    [typeSymbol, importRef] = transformType(content.schema, swagger);
+                    [typeSymbol, importRef] = transformType(content.schema, swagger, options);
                 }
             }
 
@@ -210,7 +210,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
-                functionSymbol: transformParamToFunctionSymbol(apiParam, swagger),
+                functionSymbol: transformParamToFunctionSymbol(apiParam, swagger, options),
                 interpolationSymbol: `\${${apiParam.name}}`,
                 typeSymbol,
                 objectSymbol: apiParam.name,
@@ -341,16 +341,16 @@ export function getApiCallParams(params: {
     ].join(', ');
 }
 
-export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema): string {
+export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
     let typeSymbol = 'any';
     
     if (param.schema) {
-        [typeSymbol] = transformType(param.schema, swagger);
+        [typeSymbol] = transformType(param.schema, swagger, options);
     } else if (param.content) {
         const contentType = Object.keys(param.content)[0];
         const content = param.content[contentType as keyof typeof param.content];
         if (content?.schema) {
-            [typeSymbol] = transformType(content.schema, swagger);
+            [typeSymbol] = transformType(content.schema, swagger, options);
         }
     }
     

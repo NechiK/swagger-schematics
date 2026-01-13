@@ -4,7 +4,7 @@ import { getApiMethodName, getApiResponseSymbol, getSuccessResponse } from "../.
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatBody } from "../../types/utils/params";
-import { IImportRef } from "../../types/utils/transform-type";
+import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 
 export interface IParsedApiSchema {
@@ -73,7 +73,7 @@ export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][
     }).filter(operation => !!operation) as [TPathOperationKey, TOperation][];
 }
 
-export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedApiSchema => {
+export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: ITransformTypeOptions): IParsedApiSchema => {
     const defaultApiPathKey = '/api/';
 
     const apiPaths = swaggerSchema.paths;
@@ -107,18 +107,18 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
                 headerParams,
                 cookieParams,
                 importRefs: paramImportRefs
-            } = transformOperationParams(operation, swaggerSchema);
+            } = transformOperationParams(operation, swaggerSchema, options);
 
             if (paramImportRefs.length > 0) {
                 apiParsedSchema[apiPrefix].importRefs.push(...paramImportRefs);
             }
 
-            const [responseTypeSymbol, responseTypeImportRef] = getApiResponseSymbol(operation, swaggerSchema);
+            const [responseTypeSymbol, responseTypeImportRef] = getApiResponseSymbol(operation, swaggerSchema, options);
             if (responseTypeImportRef) {
                 apiParsedSchema[apiPrefix].importRefs.push(responseTypeImportRef);
             }
 
-            const [bodyParam, importRef] = transformRequestBody(operation, swaggerSchema);
+            const [bodyParam, importRef] = transformRequestBody(operation, swaggerSchema, options);
             if (importRef) {
                 apiParsedSchema[apiPrefix].importRefs.push(importRef);
             }

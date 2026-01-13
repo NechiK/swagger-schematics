@@ -50,6 +50,13 @@
       "type": "boolean",
       "description": "Whether to scope endpoint names with tags for RTK Query. When true, generates names like 'postsGetAll' instead of 'getAll'. Recommended for APIs with multiple controllers to avoid naming collisions.",
       "default": false
+    },
+    "typeMapping": {
+      "type": "object",
+      "description": "Map custom backend types to TypeScript primitives. Keys are schema names, values are TypeScript types (e.g., { 'SuperDuperInt32': 'number', 'CustomGuid': 'string' }).",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   },
   "required": []

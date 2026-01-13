@@ -28,7 +28,9 @@ export default function(options: SwaggerApiSchema) {
 
       const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(openApiSchematicsConfig.swaggerSchemaUrl as string);
 
-      const parsedApiSchemas = transformSwaggerSchema(swagger.data);
+      const parsedApiSchemas = transformSwaggerSchema(swagger.data, {
+          typeMapping: openApiSchematicsConfig.typeMapping
+      });
 
       // Select templates based on framework
       const defaultApiServiceTemplate = frameworkConfig.templates.apiService;

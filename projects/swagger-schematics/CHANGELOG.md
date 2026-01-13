@@ -52,6 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default value for `framework` config option
 - Old template helper functions and snapshot tests for API methods
 
+### 📦 Dependencies
+- Updated @angular-devkit packages to 20.3.14
+- Updated axios to 1.13.2
+- Updated editorconfig to 3.0.1
+- Updated @types/node to 18.19.130
+- Updated fs-extra to 11.3.3
+- Updated typescript to 5.9.3
+
 
 ## [1.0.0-alpha.14] - 2026-01-12
 

@@ -22,25 +22,25 @@
   "repository": "git@github.com:NechiK/swagger-schematics.git",
   "license": "ISC",
   "dependencies": {
-    "@angular-devkit/core": "19.2.15",
-    "@angular-devkit/schematics": "19.2.15",
-    "@angular-devkit/schematics-cli": "19.2.15",
-    "@schematics/angular": "19.2.15",
-    "axios": "1.10.0",
-    "editorconfig": "2.0.0"
+    "@angular-devkit/core": "20.3.14",
+    "@angular-devkit/schematics": "20.3.14",
+    "@angular-devkit/schematics-cli": "20.3.14",
+    "@schematics/angular": "20.3.14",
+    "axios": "1.13.2",
+    "editorconfig": "3.0.1"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/json-schema": "7.0.15",
-    "@types/node": "18.11.9",
+    "@types/node": "18.19.130",
     "axios-mock-adapter": "2.1.0",
     "codelyzer": "6.0.2",
     "cpx": "1.5.0",
     "dtsgenerator": "3.19.2",
-    "fs-extra": "11.3.0",
+    "fs-extra": "11.3.3",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.6",
     "ts-node": "10.9.2",
-    "typescript": "5.8.3"
+    "typescript": "5.9.3"
   }
 }

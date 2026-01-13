@@ -6,6 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0-alpha.20] - 2026-01-13
+
+### Added
+- **React RTK Query support** - New framework option to generate RTK Query API slices
+- `framework` config option to select between `angular` and `react-rtk`
+- `scopeEndpointsWithTags` option for RTK to prefix endpoint names with tag (e.g., `claimGetById`)
+- `typeMapping` option to map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)
+- RTK base API template generation with skip-if-exists logic
+- `baseApiPath` config option for customizing base API file location
+- tsconfig path alias resolution for RTK base API imports
+- New `IParsedApiItem` properties for templates:
+  - `scopedApiMethodName` - Method name prefixed with tag
+  - `apiMethodParamNames` - Array of parameter names for destructuring
+  - `apiMethodRequestType` - Combined request type for all parameters
+  - `isQuery` - Boolean for GET/HEAD vs mutation methods
+  - `httpMethod` - Uppercase HTTP method
+  - `apiUrlFormatted` - URL with proper quoting
+  - `queryParamsFormatted` - Pre-formatted query params string
+  - `bodyFormatted` - Body parameter name
+- Custom templates documentation in README with complete variable reference
+- `loadFixture()` and `loadJsonFixture()` test helpers
+- New test file `types-schematics.spec.ts` with snapshots for types generation
+- Tests for primitive wrapper type inlining
+
+### Fixed
+- Primitive wrapper types (e.g., `NullableOfDistributionType: { type: "integer", nullable: true }`) are now inlined as `number | null` instead of generating a non-existent interface
+
+### Changed
+- **BREAKING**: `framework` config option is now required (no default value)
+- Renamed `crud-api` template folders to `base-api` for both Angular and RTK
+- Simplified Angular API service template using `buildAngularHttpCallArgs` helper
+- Enhanced Swagger schema transformation with new request type and parameter handling
+- Refactored `api/index.ts` - moved helpers to separate files:
+  - `angular-template.helper.ts` - Angular-specific template helpers
+  - `import-path.helper.ts` - Import path resolution helpers
+  - `base-api-rules.ts` - Base API generation rules
+- Renamed test options: `DEFAULT_SCHEMATIC_OPTIONS` → `ANGULAR_SCHEMATIC_OPTIONS`
+- Renamed `schematics.spec.ts` → `angular-schematics.spec.ts` for consistency
+- Test fixtures now loaded from JSON files instead of hardcoded constants
+- Improved utility functions for formatting API URLs and parameters
+
+### Removed
+- `rtkBaseApiPath` config option (replaced by `baseApiPath`)
+- Default value for `framework` config option
+- Old template helper functions and snapshot tests for API methods
+
+
 ## [1.0.0-alpha.14] - 2026-01-12
 
 ### Fixed

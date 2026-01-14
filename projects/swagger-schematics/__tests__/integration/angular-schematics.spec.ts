@@ -10,6 +10,7 @@ import {
   ANGULAR_SCHEMATIC_OPTIONS
 } from '../helpers/setup';
 import { SWAGGER_SCHEMA, MOCK_GROUP } from '../__fixtures__/swagger/full-schema.fixture';
+import * as path from 'path';
 
 describe('Schematics Integration', () => {
   let tree: UnitTestTree;
@@ -151,6 +152,40 @@ describe('Schematics Integration', () => {
 
       expect(baseServiceContent).toBe('// Existing base service');
       expect(baseUrlTokenContent).toBe('// Existing URL token');
+    });
+  });
+
+  describe('Custom Template Helpers', () => {
+    it('should load custom helpers from templateHelpersPath', async () => {
+      resetAxiosMocks();
+
+      const helpersPath = path.resolve(__dirname, '../__fixtures__/custom-helpers.fixture.js');
+      const optionsWithHelpers = {
+        ...ANGULAR_SCHEMATIC_OPTIONS,
+        templateHelpersPath: helpersPath,
+      };
+
+      setupSwaggerMock(optionsWithHelpers.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      // The schematic should not throw when loading helpers
+      const resultTree = await runFullSchematics(SWAGGER_SCHEMA, optionsWithHelpers);
+      
+      // Verify files were generated (helpers loaded successfully)
+      expect(resultTree.files).toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/claim-api.service.ts`);
+    });
+
+    it('should throw error for invalid templateHelpersPath', async () => {
+      resetAxiosMocks();
+
+      const optionsWithInvalidHelpers = {
+        ...ANGULAR_SCHEMATIC_OPTIONS,
+        templateHelpersPath: '/non/existent/helpers.js',
+      };
+
+      setupSwaggerMock(optionsWithInvalidHelpers.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      await expect(runFullSchematics(SWAGGER_SCHEMA, optionsWithInvalidHelpers))
+        .rejects.toThrow(/Failed to load template helpers/);
     });
   });
 });

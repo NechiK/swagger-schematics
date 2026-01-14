@@ -53,6 +53,10 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "templateHelpersPath": {
+      "type": "string",
+      "description": "Path to a JavaScript file exporting custom helper functions for use in templates. The exported functions and values will be available in the template context."
     }
   },
   "required": []

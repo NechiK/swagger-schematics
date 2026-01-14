@@ -98,6 +98,7 @@ If your backend uses custom types that should map to TypeScript primitives (e.g.
 | `framework`              | string  | api        | Target framework: `"angular"` (default) or `"react-rtk"`                                                                                                         |
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
 | `typeMapping`            | object  | api, types | Map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)                                                                      |
+| `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.
 
@@ -160,6 +161,69 @@ Each item in `apiList` has the following properties:
 | `summary`                | string   | Operation summary from OpenAPI spec                                                                  |
 | `description`            | string   | Operation description from OpenAPI spec                                                              |
 | `operationId`            | string   | Original operationId from OpenAPI spec                                                               |
+
+### Custom Template Helpers
+
+If your custom templates need additional helper functions or constants, you can provide them via the `templateHelpersPath` option. This should point to a JavaScript file that exports functions and values.
+
+#### Configuration
+
+```json
+{
+  "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
+  "path": "/src/app/core",
+  "framework": "angular",
+  "apiServiceTemplatePath": "./templates/custom-api-service",
+  "templateHelpersPath": "./templates/helpers.js"
+}
+```
+
+#### Helper File Example
+
+```js
+// templates/helpers.js
+module.exports = {
+  // Constants
+  API_VERSION: 'v2',
+  BASE_URL: '/api',
+
+  // Helper functions
+  formatEndpointName: (name) => `custom_${name}`,
+  
+  buildJsDoc: (item) => {
+    const lines = ['/**'];
+    if (item.summary) lines.push(` * ${item.summary}`);
+    if (item.description) lines.push(` * ${item.description}`);
+    if (item.deprecated) lines.push(' * @deprecated');
+    lines.push(' */');
+    return lines.join('\n');
+  },
+
+  // Custom type formatting
+  wrapResponseType: (type) => `ApiResponse<${type}>`,
+};
+```
+
+#### Using Helpers in Templates
+
+```ejs
+import { Injectable } from "@angular/core";
+import { ApiResponse } from "./api-response";
+
+@Injectable({ providedIn: 'root' })
+export class <%= classify(name) %>ApiService {
+  private baseUrl = '<%= BASE_URL %>/<%= API_VERSION %>/<%= name %>';
+
+<% for (let item of apiList) { %>
+<%= buildJsDoc(item) %>
+  <%= formatEndpointName(item.apiMethodName) %>(): Observable<<%= wrapResponseType(item.responseTypeSymbol) %>> {
+    return this.http.<%= item.requestMethod %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
+  }
+<% } %>
+}
+```
+
+> **Note:** The helpers file must be a CommonJS module (using `module.exports`). ES modules with `export default` are also supported.
 
 ### Example Custom Template (Angular)
 

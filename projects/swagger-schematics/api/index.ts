@@ -19,8 +19,24 @@ import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, TFrameworkType } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
-import { getRtkBaseApiImportPath } from './helpers/import-path.helper';
+import { getBaseApiImportPath } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
+import * as path from 'path';
+
+/**
+ * Load custom template helpers from a JavaScript file
+ */
+function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
+    try {
+        const absolutePath = path.resolve(process.cwd(), helpersPath);
+        // Clear require cache to ensure fresh load
+        delete require.cache[require.resolve(absolutePath)];
+        const helpers = require(absolutePath);
+        return helpers.default || helpers;
+    } catch (error) {
+        throw new Error(`Failed to load template helpers from '${helpersPath}': ${(error as Error).message}`);
+    }
+}
 
 export default function(options: SwaggerApiSchema) {
     return async (tree: Tree) => {
@@ -52,6 +68,16 @@ export default function(options: SwaggerApiSchema) {
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
             
+            // Determine API file path and base API path
+            const baseApiPath = config.baseApiPath || (framework === 'react-rtk' ? DEFAULT_RTK_BASE_API_PATH : `${config.path}/_api-base.service.ts`);
+            const apiFileExt = framework === 'react-rtk' ? '.api.ts' : '-api.service.ts';
+            const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}${apiFileExt}`;
+
+            // Load custom template helpers if provided
+            const customHelpers = config.templateHelpersPath 
+                ? loadTemplateHelpers(config.templateHelpersPath)
+                : {};
+
             // Common template context
             const templateContext: Record<string, unknown> = {
                 ...config,
@@ -60,18 +86,13 @@ export default function(options: SwaggerApiSchema) {
                 name: apiSchemaKey,
                 apiList: parsedApiSchemas[apiSchemaKey].apiList,
                 importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
+                scopeEndpointsWithTags: config.scopeEndpointsWithTags || false,
+                baseApiImportPath: getBaseApiImportPath(tree, apiFilePath, baseApiPath),
+                ...customHelpers,
             };
 
             // Add framework-specific helpers
-            if (framework === 'react-rtk') {
-                const baseApiPath = config.baseApiPath || DEFAULT_RTK_BASE_API_PATH;
-                const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}.api.ts`;
-                
-                Object.assign(templateContext, {
-                    scopeEndpointsWithTags: config.scopeEndpointsWithTags || false,
-                    rtkBaseApiImportPath: getRtkBaseApiImportPath(tree, apiFilePath, baseApiPath),
-                });
-            } else {
+            if (framework === 'angular') {
                 Object.assign(templateContext, {
                     buildHttpCallArgs: buildAngularHttpCallArgs,
                 });

@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { ApiBaseService } from "../_api-base.service";
+import { ApiBaseService } from "<%= baseApiImportPath %>";
 import { Observable } from "rxjs";
 
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>

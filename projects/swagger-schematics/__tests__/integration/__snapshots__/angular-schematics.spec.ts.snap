@@ -2,7 +2,7 @@
 
 exports[`Schematics Integration API Service Generation should generate full API service 1`] = `
 "import { Injectable } from \\"@angular/core\\";
-import { ApiBaseService } from \\"../_api-base.service\\";
+import { ApiBaseService } from \\"./_api-base.service\\";
 import { Observable } from \\"rxjs\\";
 
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';

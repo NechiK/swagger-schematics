@@ -2,7 +2,7 @@
 // API export name (e.g., "Claim" -> "claimApi", "ReplacementQueue" -> "replacementQueueApi")
 let apiExportName = camelize(name) + 'Api';
 %>
-import { api as baseApi } from '<%= rtkBaseApiImportPath %>';
+import { api as baseApi } from '<%= baseApiImportPath %>';
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
 
 export const <%= apiExportName %> = baseApi.injectEndpoints({

@@ -24,9 +24,9 @@ export function getRelativeImportPath(fromFilePath: string, toFilePath: string):
 }
 
 /**
- * Get import path for RTK base API, using tsconfig path aliases if available
+ * Get import path for base API, using tsconfig path aliases if available
  */
-export function getRtkBaseApiImportPath(
+export function getBaseApiImportPath(
     tree: Tree,
     apiFilePath: string,
     baseApiPath: string

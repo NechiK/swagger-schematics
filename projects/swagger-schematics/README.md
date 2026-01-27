@@ -69,20 +69,33 @@ The generated import will be: `import { api as baseApi } from '@th-common/store/
 
 ### Example with type mapping
 
-If your backend uses custom types that should map to TypeScript primitives (e.g., `SuperDuperInt32` → `number`), you can configure type mappings:
+If your backend uses custom types that should map to TypeScript primitives (e.g., `Int32` → `number`, `Guid` → `string`), you can configure type mappings:
 
 ```json
 {
   "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
   "path": "/src/app/core",
   "typeMapping": {
-    "SuperDuperInt32": "number",
-    "CustomGuid": "string",
+    "Int32": "number",
     "Int64": "number",
-    "Decimal": "number"
+    "Decimal": "number",
+    "Guid": "string"
   }
 }
 ```
+
+You can also map nullable wrapper types to their base types. This is useful when your backend generates separate schemas for nullable versions (e.g., `NullableOfDistributionType` alongside `DistributionType`):
+
+```json
+{
+  "typeMapping": {
+    "NullableOfDistributionType": "DistributionType",
+    "NullableOfUserDTO": "UserDTO"
+  }
+}
+```
+
+When mapping to another schema, the `nullable` property from the original type is preserved, so `NullableOfDistributionType` becomes `TDistributionType | null` with the proper import.
 
 ### Available options
 
@@ -97,7 +110,7 @@ If your backend uses custom types that should map to TypeScript primitives (e.g.
 | `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
 | `framework`              | string  | api        | Target framework: `"angular"` (default) or `"react-rtk"`                                                                                                         |
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
-| `typeMapping`            | object  | api, types | Map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)                                                                      |
+| `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.

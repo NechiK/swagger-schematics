@@ -163,8 +163,91 @@ describe('Transform Type', () => {
 
       // Call without options - should work exactly as before
       const result = transformType({ $ref: '#/components/schemas/UserDTO' }, swagger);
-      
+
       expect(result[0]).toBe('IUserDTO');
+    });
+
+    it('should map nullable wrapper enum to base enum with | null', () => {
+      const swagger = createSwaggerSchema({
+        DistributionType: { type: 'string', enum: ['TypeA', 'TypeB'] },
+        NullableOfDistributionType: { type: 'string', nullable: true, enum: ['TypeA', 'TypeB'] }
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'NullableOfDistributionType': 'DistributionType' }
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/NullableOfDistributionType' },
+        swagger,
+        options
+      );
+
+      expect(result[0]).toBe('TDistributionType | null');
+      expect(result[1]).toEqual({
+        type: 'enum',
+        importSymbol: 'TDistributionType',
+        fileName: 'distribution-type'
+      });
+    });
+
+    it('should map nullable wrapper to base interface with | null', () => {
+      const swagger = createSwaggerSchema({
+        UserDTO: { type: 'object', properties: { id: { type: 'integer' } } },
+        NullableOfUserDTO: { type: 'object', nullable: true, properties: { id: { type: 'integer' } } }
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'NullableOfUserDTO': 'UserDTO' }
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/NullableOfUserDTO' },
+        swagger,
+        options
+      );
+
+      expect(result[0]).toBe('IUserDTO | null');
+      expect(result[1]).toEqual({
+        type: 'interface',
+        importSymbol: 'IUserDTO',
+        fileName: 'user-dto'
+      });
+    });
+
+    it('should map non-nullable wrapper to base schema without | null', () => {
+      const swagger = createSwaggerSchema({
+        DistributionType: { type: 'string', enum: ['TypeA', 'TypeB'] },
+        AliasOfDistributionType: { type: 'string', enum: ['TypeA', 'TypeB'] } // no nullable
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'AliasOfDistributionType': 'DistributionType' }
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/AliasOfDistributionType' },
+        swagger,
+        options
+      );
+
+      expect(result[0]).toBe('TDistributionType');
+      expect(result[1]?.importSymbol).toBe('TDistributionType');
+    });
+
+    it('should preserve nullable when mapping to primitive', () => {
+      const swagger = createSwaggerSchema({
+        NullableInt32: { type: 'integer', nullable: true }
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'NullableInt32': 'number' }
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/NullableInt32' },
+        swagger,
+        options
+      );
+
+      expect(result[0]).toBe('number | null');
+      expect(result[1]).toBeUndefined();
     });
   });
 

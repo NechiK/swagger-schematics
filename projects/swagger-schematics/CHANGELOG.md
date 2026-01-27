@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **React RTK Query support** - New framework option to generate RTK Query API slices
 - `framework` config option to select between `angular` and `react-rtk`
 - `scopeEndpointsWithTags` option for RTK to prefix endpoint names with tag (e.g., `claimGetById`)
-- `typeMapping` option to map custom backend types to TypeScript primitives (e.g., `{ "SuperDuperInt32": "number" }`)
+- `typeMapping` option to map custom backend types to TypeScript primitives or other schemas (e.g., `{ "Guid": "string", "NullableOfDistributionType": "DistributionType" }`). When mapping to another schema, `nullable` from the original type is preserved
 - RTK base API template generation with skip-if-exists logic
 - `baseApiPath` config option for customizing base API file location
 - tsconfig path alias resolution for RTK base API imports

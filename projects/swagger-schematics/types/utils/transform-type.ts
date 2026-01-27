@@ -201,12 +201,38 @@ function transformObjectSchema(schema: ISchemaObject, swagger: ISwaggerSchema, o
 
 export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(property.$ref, swagger);
-    
-    // Check if this type is mapped to a primitive
+
+    // Check if this type is mapped
     if (options?.typeMapping && options.typeMapping[refPropertyKey]) {
-        return [options.typeMapping[refPropertyKey]];
+        const mappedValue = options.typeMapping[refPropertyKey];
+
+        // Check if mapped value is another schema (not a primitive)
+        const { refPropertySchema: mappedSchema, refPropertyKey: mappedKey } =
+            getRefPropertyDefinition(`#/components/schemas/${mappedValue}`, swagger);
+
+        if (mappedSchema) {
+            // Use the mapped schema's type, but preserve nullable from the original schema
+            const originalIsNullable = refPropertySchema
+                ? Boolean((refPropertySchema as TSchemaWithType).nullable)
+                : false;
+
+            const symbol = transformRefProperty(mappedSchema, mappedKey);
+            const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
+
+            return [typeSymbol, {
+                type: isRefPropertyEnum(mappedSchema) ? 'enum' : 'interface',
+                importSymbol: symbol,
+                fileName: dasherize(mappedKey)
+            }];
+        }
+
+        // Mapped to a primitive - preserve nullable from original if available
+        const originalIsNullable = refPropertySchema
+            ? Boolean((refPropertySchema as TSchemaWithType).nullable)
+            : false;
+        return [originalIsNullable ? `${mappedValue} | null` : mappedValue];
     }
-    
+
     // If schema not found, return a generic type based on the ref key
     if (!refPropertySchema) {
         const symbol = `I${refPropertyKey}`;

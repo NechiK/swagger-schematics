@@ -226,8 +226,10 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     }
     
     const symbol = transformRefProperty(refPropertySchema, refPropertyKey);
+    const isNullable = (refPropertySchema as TSchemaWithType).nullable;
+    const typeSymbol = isNullable ? `${symbol} | null` : symbol;
 
-    return [symbol, {
+    return [typeSymbol, {
         type: isRefPropertyEnum(refPropertySchema) ? 'enum' : 'interface',
         importSymbol: symbol,
         fileName: dasherize(refPropertyKey)
@@ -325,4 +327,15 @@ export function isRefPropertyEnum(refProperty: TSchemaByType): boolean {
 
 export function isRef(property: TSchema | TParam): property is IRef {
     return '$ref' in property;
+}
+
+/**
+ * Check if a schema is nullable, resolving $ref if necessary
+ */
+export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean {
+    if (isRef(property)) {
+        const { refPropertySchema } = getRefPropertyDefinition(property.$ref, swagger);
+        return refPropertySchema ? Boolean((refPropertySchema as TSchemaWithType).nullable) : false;
+    }
+    return Boolean((property as TSchemaWithType).nullable);
 }

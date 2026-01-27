@@ -6,9 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.0.0-alpha.20] - 2026-01-13
+## [1.0.0-alpha.20] - 2026-01-27
 
 ### ✨ Added
+- `isNullable()` helper function that resolves `$ref` to check nullability of referenced schemas
 - **React RTK Query support** - New framework option to generate RTK Query API slices
 - `framework` config option to select between `angular` and `react-rtk`
 - `scopeEndpointsWithTags` option for RTK to prefix endpoint names with tag (e.g., `claimGetById`)
@@ -32,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 - Primitive wrapper types (e.g., `NullableOfDistributionType: { type: "integer", nullable: true }`) are now inlined as `number | null` instead of generating a non-existent interface
+- `$ref` pointing to object/enum schemas with `nullable: true` now correctly generates `IType | null` or `TType | null`
+- Property optionality (`?`) now works for `$ref` pointing to nullable schemas (previously only worked for inline schemas)
 
 ### ♻️ Changed
 - ⚠️ **BREAKING**: `framework` config option is now required (no default value)

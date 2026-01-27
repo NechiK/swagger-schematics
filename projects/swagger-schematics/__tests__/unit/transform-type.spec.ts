@@ -1,4 +1,4 @@
-import { transformType, parseRefToSymbol, ITransformTypeOptions } from '../../types/utils/transform-type';
+import { transformType, parseRefToSymbol, isNullable, ITransformTypeOptions } from '../../types/utils/transform-type';
 import { ISwaggerSchema } from '../../interfaces/version_3_1/swagger.interface';
 import { IRef } from '../../interfaces/version_3_1/ref.interface';
 
@@ -246,9 +246,79 @@ describe('Transform Type', () => {
       const ref: IRef = { $ref: '#/components/schemas/UserDTO' };
 
       const result = parseRefToSymbol(ref, swagger);
-      
+
       expect(result[0]).toBe('IUserDTO');
       expect(result[1]?.type).toBe('interface');
+    });
+
+    it('should add | null for nullable object schemas', () => {
+      const swagger = createSwaggerSchema({
+        NullableUser: { type: 'object', nullable: true, properties: { id: { type: 'integer' } } }
+      });
+      const ref: IRef = { $ref: '#/components/schemas/NullableUser' };
+
+      const result = parseRefToSymbol(ref, swagger);
+
+      expect(result[0]).toBe('INullableUser | null');
+      expect(result[1]).toEqual({
+        type: 'interface',
+        importSymbol: 'INullableUser',
+        fileName: 'nullable-user'
+      });
+    });
+
+    it('should add | null for nullable enum schemas', () => {
+      const swagger = createSwaggerSchema({
+        NullableStatus: { type: 'string', nullable: true, enum: ['active', 'inactive'] }
+      });
+      const ref: IRef = { $ref: '#/components/schemas/NullableStatus' };
+
+      const result = parseRefToSymbol(ref, swagger);
+
+      expect(result[0]).toBe('TNullableStatus | null');
+      expect(result[1]).toEqual({
+        type: 'enum',
+        importSymbol: 'TNullableStatus',
+        fileName: 'nullable-status'
+      });
+    });
+  });
+
+  describe('isNullable', () => {
+    it('should return true for inline schema with nullable: true', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(isNullable({ type: 'string', nullable: true }, swagger)).toBe(true);
+      expect(isNullable({ type: 'object', nullable: true, properties: {} }, swagger)).toBe(true);
+    });
+
+    it('should return false for inline schema without nullable', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(isNullable({ type: 'string' }, swagger)).toBe(false);
+      expect(isNullable({ type: 'object', properties: {} }, swagger)).toBe(false);
+    });
+
+    it('should return true for $ref pointing to nullable schema', () => {
+      const swagger = createSwaggerSchema({
+        NullableUser: { type: 'object', nullable: true, properties: {} }
+      });
+
+      expect(isNullable({ $ref: '#/components/schemas/NullableUser' }, swagger)).toBe(true);
+    });
+
+    it('should return false for $ref pointing to non-nullable schema', () => {
+      const swagger = createSwaggerSchema({
+        User: { type: 'object', properties: {} }
+      });
+
+      expect(isNullable({ $ref: '#/components/schemas/User' }, swagger)).toBe(false);
+    });
+
+    it('should return false for $ref pointing to unknown schema', () => {
+      const swagger = createSwaggerSchema({});
+
+      expect(isNullable({ $ref: '#/components/schemas/Unknown' }, swagger)).toBe(false);
     });
   });
 });

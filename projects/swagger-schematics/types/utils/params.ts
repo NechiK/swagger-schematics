@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformType } from "./transform-type";
+import { IImportRef, transformType, ITransformTypeOptions } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 
 /**
@@ -69,6 +69,13 @@ export interface IParsedApiItem {
     
     /** Generated name of the API method based on apiUrl or operationId */
     apiMethodName: string;
+
+    /**
+     * Scoped API method name prefixed with the tag name.
+     * Useful for RTK Query to avoid naming collisions across APIs.
+     * Example: "claimGetById" for tag "Claim" and method "getById"
+     */
+    scopedApiMethodName: string;
     
     /** 
      * The type of HTTP method used by this API. 
@@ -79,8 +86,16 @@ export interface IParsedApiItem {
     /** 
      * A string representation of the parameters passed to the API method.
      * This could be a serialized form of parameters.
+     * Example: "id: number, body: IRequest"
      */
     apiMethodParams: string;
+
+    /**
+     * Array of parameter names without type annotations.
+     * Useful for destructuring in templates.
+     * Example: ["id", "body"]
+     */
+    apiMethodParamNames: string[];
     
     /** The HTTP request method (e.g., GET, POST, PUT, DELETE). */
     requestMethod: string;
@@ -122,9 +137,44 @@ export interface IParsedApiItem {
      * The original operationId from the OpenAPI spec.
      */
     operationId?: string;
+
+    /**
+     * Combined request type for all parameters.
+     * Example: "{ id: string; body: IRequest }" or "void"
+     */
+    apiMethodRequestType: string;
+
+    /**
+     * Whether this is a query operation (GET/HEAD) vs mutation (POST/PUT/DELETE/etc).
+     */
+    isQuery: boolean;
+
+    /**
+     * HTTP method in uppercase (GET, POST, PUT, DELETE, etc).
+     */
+    httpMethod: string;
+
+    /**
+     * URL formatted with proper quoting.
+     * Uses backticks if contains interpolation, single quotes otherwise.
+     * Example: "'/users'" or "\'/${id}'"
+     */
+    apiUrlFormatted: string;
+
+    /**
+     * Pre-formatted query params string for HTTP options.
+     * Example: "params: { status, force }" or empty string if no query params.
+     */
+    queryParamsFormatted: string;
+
+    /**
+     * Body parameter name or empty object for POST/PUT without body.
+     * Example: "body" or "{}" or empty string for non-body methods.
+     */
+    bodyFormatted: string;
 }
 
-export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema): {
+export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     queryParams: IParsedParam<IQueryParam>[];
     pathParams: IParsedParam<IPathParam>[];
     headerParams: IParsedParam<IHeaderParam>[];
@@ -144,13 +194,13 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
             let importRef: IImportRef | undefined;
             
             if (apiParam.schema) {
-                [typeSymbol, importRef] = transformType(apiParam.schema, swagger);
+                [typeSymbol, importRef] = transformType(apiParam.schema, swagger, options);
             } else if (apiParam.content) {
                 // If content is provided instead of schema, try to extract type from it
                 const contentType = Object.keys(apiParam.content)[0];
                 const content = apiParam.content[contentType as keyof typeof apiParam.content];
                 if (content?.schema) {
-                    [typeSymbol, importRef] = transformType(content.schema, swagger);
+                    [typeSymbol, importRef] = transformType(content.schema, swagger, options);
                 }
             }
 
@@ -160,7 +210,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
-                functionSymbol: transformParamToFunctionSymbol(apiParam, swagger),
+                functionSymbol: transformParamToFunctionSymbol(apiParam, swagger, options),
                 interpolationSymbol: `\${${apiParam.name}}`,
                 typeSymbol,
                 objectSymbol: apiParam.name,
@@ -204,6 +254,83 @@ export function transformParamsToApiMethodParams(params: {
     return methodParams.join(', ');
 }
 
+/**
+ * Extracts just the parameter names (without types) for use in destructuring.
+ * @returns Array of parameter names in order: pathParams, queryParams, bodyParam
+ */
+export function extractApiMethodParamNames(params: {
+    pathParams: IParsedParam<IPathParam>[];
+    queryParams: IParsedParam<IQueryParam>[];
+    bodyParam: IParsedParam<any> | null;
+}): string[] {
+    const names: string[] = [
+        ...params.pathParams.map(param => param.objectSymbol),
+        ...params.queryParams.map(param => param.objectSymbol),
+    ];
+    if (params.bodyParam) {
+        names.push(params.bodyParam.objectSymbol);
+    }
+    return names;
+}
+
+/**
+ * Builds combined request type from all parameters.
+ * Example: "{ id: string; body: IRequest }" or "void"
+ */
+export function buildApiMethodRequestType(params: {
+    pathParams: IParsedParam<IPathParam>[];
+    queryParams: IParsedParam<IQueryParam>[];
+    bodyParam: IParsedParam<any> | null;
+}): string {
+    const typeParts: string[] = [];
+    
+    params.pathParams.forEach(p => {
+        typeParts.push(`${p.objectSymbol}: ${p.typeSymbol}`);
+    });
+    
+    params.queryParams.forEach(p => {
+        typeParts.push(`${p.objectSymbol}: ${p.typeSymbol}`);
+    });
+    
+    if (params.bodyParam) {
+        typeParts.push(`${params.bodyParam.objectSymbol}: ${params.bodyParam.typeSymbol}`);
+    }
+    
+    if (typeParts.length === 0) {
+        return 'void';
+    }
+    
+    return `{ ${typeParts.join('; ')} }`;
+}
+
+/**
+ * Formats URL with proper quoting (backticks for interpolation, single quotes otherwise).
+ */
+export function formatApiUrl(apiUrl: string): string {
+    const hasInterpolation = apiUrl.includes('${');
+    const url = apiUrl.startsWith('/') ? apiUrl : '/' + apiUrl;
+    return hasInterpolation ? `\`${url}\`` : `'${url}'`;
+}
+
+/**
+ * Formats query params for HTTP options object.
+ * Example: "params: { status, force }" or ""
+ */
+export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[]): string {
+    if (queryParams.length === 0) return '';
+    return `params: { ${queryParams.map(p => p.objectSymbol).join(', ')} }`;
+}
+
+/**
+ * Formats body parameter for HTTP calls.
+ * Returns body symbol for methods with body, "{}" for POST/PUT without body, "" otherwise.
+ */
+export function formatBody(bodyParam: IParsedParam<any> | null, methodType: string): string {
+    if (bodyParam) return bodyParam.objectSymbol;
+    if (['post', 'put'].includes(methodType)) return '{}';
+    return '';
+}
+
 export function getApiCallParams(params: {
     queryParams: IParsedParam<IQueryParam>[];
     bodyParam: IParsedParam<any> | null;
@@ -214,16 +341,16 @@ export function getApiCallParams(params: {
     ].join(', ');
 }
 
-export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema): string {
+export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
     let typeSymbol = 'any';
     
     if (param.schema) {
-        [typeSymbol] = transformType(param.schema, swagger);
+        [typeSymbol] = transformType(param.schema, swagger, options);
     } else if (param.content) {
         const contentType = Object.keys(param.content)[0];
         const content = param.content[contentType as keyof typeof param.content];
         if (content?.schema) {
-            [typeSymbol] = transformType(content.schema, swagger);
+            [typeSymbol] = transformType(content.schema, swagger, options);
         }
     }
     

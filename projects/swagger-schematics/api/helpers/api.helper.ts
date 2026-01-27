@@ -3,9 +3,9 @@ import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/ve
 import { getApiMethodName, getApiResponseSymbol, getSuccessResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
-import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams } from "../../types/utils/params";
-import { IImportRef } from "../../types/utils/transform-type";
-import { camelize } from "@angular-devkit/core/src/utils/strings";
+import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatBody } from "../../types/utils/params";
+import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
+import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 
 export interface IParsedApiSchema {
     [key: string]: IParsedSchemaItem;
@@ -33,6 +33,25 @@ export interface IParsedSchemaItem {
     importRefs: IImportRef[];
 }
 
+/**
+ * Builds a scoped endpoint name by prefixing with the tag name.
+ * Avoids redundant prefixes (e.g., "usersGetUsers" -> "usersGetUsers" stays, but doesn't double-prefix).
+ * @param apiMethodName - The base method name (e.g., "getById")
+ * @param tagName - The tag/controller name (e.g., "Claim")
+ * @returns The scoped name (e.g., "claimGetById")
+ */
+export const buildScopedApiMethodName = (apiMethodName: string, tagName: string): string => {
+    const prefix = camelize(tagName.replace(/-/g, ' '));
+    const suffix = classify(apiMethodName);
+    // Avoid redundant prefix (e.g., "usersGetUsers" -> "usersGet")
+    const prefixLower = prefix.toLowerCase();
+    const suffixLower = suffix.toLowerCase();
+    if (suffixLower.startsWith(prefixLower) && suffixLower.length > prefixLower.length) {
+        return prefix + suffix.slice(prefix.length);
+    }
+    return prefix + suffix;
+};
+
 export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][] => {
     return Object.keys(path).map((pathKey: string) => {
         if (!PATH_KEYS.includes(pathKey as keyof IPathBase)) {
@@ -54,7 +73,7 @@ export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][
     }).filter(operation => !!operation) as [TPathOperationKey, TOperation][];
 }
 
-export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedApiSchema => {
+export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: ITransformTypeOptions): IParsedApiSchema => {
     const defaultApiPathKey = '/api/';
 
     const apiPaths = swaggerSchema.paths;
@@ -88,18 +107,18 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
                 headerParams,
                 cookieParams,
                 importRefs: paramImportRefs
-            } = transformOperationParams(operation, swaggerSchema);
+            } = transformOperationParams(operation, swaggerSchema, options);
 
             if (paramImportRefs.length > 0) {
                 apiParsedSchema[apiPrefix].importRefs.push(...paramImportRefs);
             }
 
-            const [responseTypeSymbol, responseTypeImportRef] = getApiResponseSymbol(operation, swaggerSchema);
+            const [responseTypeSymbol, responseTypeImportRef] = getApiResponseSymbol(operation, swaggerSchema, options);
             if (responseTypeImportRef) {
                 apiParsedSchema[apiPrefix].importRefs.push(responseTypeImportRef);
             }
 
-            const [bodyParam, importRef] = transformRequestBody(operation, swaggerSchema);
+            const [bodyParam, importRef] = transformRequestBody(operation, swaggerSchema, options);
             if (importRef) {
                 apiParsedSchema[apiPrefix].importRefs.push(importRef);
             }
@@ -119,6 +138,8 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
                 return urlSegment;
             }).join('/');
 
+            const isQuery = ['get', 'head'].includes(operationKey);
+
             return {
                 apiUrl,
                 queryParams,
@@ -126,12 +147,28 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
                 headerParams,
                 cookieParams,
                 apiMethodName,
+                scopedApiMethodName: buildScopedApiMethodName(apiMethodName, apiPrefix),
                 apiMethodType: operationKey,
                 apiMethodParams: transformParamsToApiMethodParams({
                     pathParams,
                     queryParams,
                     bodyParam,
                 }),
+                apiMethodParamNames: extractApiMethodParamNames({
+                    pathParams,
+                    queryParams,
+                    bodyParam,
+                }),
+                apiMethodRequestType: buildApiMethodRequestType({
+                    pathParams,
+                    queryParams,
+                    bodyParam,
+                }),
+                isQuery,
+                httpMethod: operationKey.toUpperCase(),
+                apiUrlFormatted: formatApiUrl(apiUrl),
+                queryParamsFormatted: formatQueryParams(queryParams),
+                bodyFormatted: formatBody(bodyParam, operationKey),
                 requestMethod: operationKey,
                 bodyParam,
                 responseTypeSymbol,
@@ -149,7 +186,8 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema): IParsedAp
 
     // Remove import duplicates
     Object.keys(transformedSwaggerSchema).forEach(apiKey => {
-        transformedSwaggerSchema[apiKey].importRefs = removeImportDuplicates(transformedSwaggerSchema[apiKey].importRefs);
+        const schema = transformedSwaggerSchema[apiKey];
+        schema.importRefs = removeImportDuplicates(schema.importRefs);
     });
 
     return transformedSwaggerSchema;

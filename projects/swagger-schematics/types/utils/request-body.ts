@@ -1,7 +1,7 @@
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { TOperationWithRequestBody } from "../../interfaces/version_3_1/operation.interface";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
-import { IImportRef, transformType } from "./transform-type";
+import { IImportRef, transformType, ITransformTypeOptions } from "./transform-type";
 import { IParsedParam } from "./params";
 import { IContent, IMediaType, TKnownContentType } from "../../interfaces/version_3_1/content.interface";
 
@@ -16,7 +16,7 @@ const CONTENT_TYPE_PRIORITY: TKnownContentType[] = [
     '*/*'
 ];
 
-export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>): [IParsedParam<any> | null, IImportRef | undefined] {
+export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>, options?: ITransformTypeOptions): [IParsedParam<any> | null, IImportRef | undefined] {
     const apiRequestBody = operation.requestBody;
     let typeSymbol: string | undefined;
     let importRef: IImportRef | undefined;
@@ -24,7 +24,7 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
 
     if (apiRequestBody) {
         if ('$ref' in apiRequestBody) {
-            [typeSymbol, importRef] = transformType(apiRequestBody, swaggerData);
+            [typeSymbol, importRef] = transformType(apiRequestBody, swaggerData, options);
         } else {
             const typedApiRequestBody = apiRequestBody as IRequestBody;
             const content = typedApiRequestBody.content;
@@ -33,7 +33,7 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
             const mediaType = findMediaType(content);
             
             if (mediaType?.schema) {
-                [typeSymbol, importRef] = transformType(mediaType.schema, swaggerData);
+                [typeSymbol, importRef] = transformType(mediaType.schema, swaggerData, options);
             } else {
                 typeSymbol = 'any';
             }

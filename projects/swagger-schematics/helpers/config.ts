@@ -4,11 +4,17 @@ const openApiConfigFilePath = 'openapi-schematics.json';
 
 type swaggerSchemaKeys = keyof SwaggerApiSchema;
 
+/** Default configuration values */
+const DEFAULT_CONFIG: Partial<SwaggerApiSchema> = {
+    framework: 'angular',
+    scopeEndpointsWithTags: false,
+};
+
 export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerApiSchema => {
     const optionKeys = Object.keys(options) as swaggerSchemaKeys[];
     const filteredOptions = optionKeys.reduce((acc, key) => {
         if (options[key] !== undefined && options[key] !== null) {
-            acc[key] = options[key];
+            (acc as Record<string, unknown>)[key] = options[key];
         }
         return acc;
     }, {} as SwaggerApiSchema);
@@ -16,6 +22,7 @@ export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerAp
     const config = fs.existsSync(openApiConfigFilePath) ? fs.readFileSync(openApiConfigFilePath, 'utf-8') : '{}';
     
     const openApiSchematicsConfig: SwaggerApiSchema = {
+        ...DEFAULT_CONFIG,
         ...JSON.parse(config),
         ...filteredOptions
     };

@@ -8,9 +8,9 @@
       "description": "The path at which to create the files, relative to the current workspace.",
       "visible": false
     },
-    "baseApiServicesPath": {
+    "baseApiPath": {
       "type": "string",
-      "description": "Path for base API files (if not specified, the path property will be used)."
+      "description": "Path for base API file. For Angular: defaults to path + '/_api-base.service.ts'. For RTK: defaults to 'th-common/store/api-base.ts'."
     },
     "swaggerSchemaUrl": {
       "type": "string",
@@ -25,8 +25,38 @@
     "apiServiceTemplatePath": {
       "type": "string"
     },
-    "apiCrudServiceTemplatePath": {
-      "type": "string"
+    "baseApiTemplatePath": {
+      "type": "string",
+      "description": "Custom template path for base API generation."
+    },
+    "framework": {
+      "type": "string",
+      "description": "Target framework for generated API code.",
+      "enum": ["angular", "react-rtk"],
+      "x-prompt": {
+        "message": "Which framework would you like to generate API code for?",
+        "type": "list",
+        "items": [
+          { "value": "angular", "label": "Angular (HttpClient services)" },
+          { "value": "react-rtk", "label": "React RTK Query (API slices)" }
+        ]
+      }
+    },
+    "scopeEndpointsWithTags": {
+      "type": "boolean",
+      "description": "Whether to scope endpoint names with tags for RTK Query. When true, generates names like 'postsGetAll' instead of 'getAll'. Recommended for APIs with multiple controllers to avoid naming collisions.",
+      "default": false
+    },
+    "typeMapping": {
+      "type": "object",
+      "description": "Map custom backend types to TypeScript primitives. Keys are schema names, values are TypeScript types (e.g., { 'SuperDuperInt32': 'number', 'CustomGuid': 'string' }).",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "templateHelpersPath": {
+      "type": "string",
+      "description": "Path to a JavaScript file exporting custom helper functions for use in templates. The exported functions and values will be available in the template context."
     }
   },
   "required": []

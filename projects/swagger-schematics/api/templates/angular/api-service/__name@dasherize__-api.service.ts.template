@@ -1,0 +1,28 @@
+import { Injectable } from "@angular/core";
+import { ApiBaseService } from "<%= baseApiImportPath %>";
+import { Observable } from "rxjs";
+
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
+
+@Injectable({
+  providedIn: 'root',
+})
+export class <%= classify(name) %>ApiService extends ApiBaseService {
+  endpoint = '<%= name %>';
+
+  constructor() {
+    super();
+  }
+<% for (let item of apiList) {
+  let httpCallArgs = buildHttpCallArgs(item);
+%>
+  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+<% if (httpCallArgs) { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>),
+      <%= httpCallArgs %>
+    );
+<% } else { %>    return this.httpClient.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(
+      this.getUrl(<%= item.apiUrlFormatted %>)
+    );
+<% } %>  }
+<% } %>}

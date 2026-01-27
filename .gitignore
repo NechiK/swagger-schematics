@@ -2,6 +2,7 @@
 projects/**/*.js
 projects/**/*.js.map
 projects/**/*.d.ts
+!projects/**/__tests__/__fixtures__/*.js
 
 # compiled output
 dist

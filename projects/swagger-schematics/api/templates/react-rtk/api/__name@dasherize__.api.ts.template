@@ -1,0 +1,25 @@
+<%
+// API export name (e.g., "Claim" -> "claimApi", "ReplacementQueue" -> "replacementQueueApi")
+let apiExportName = camelize(name) + 'Api';
+%>
+import { api as baseApi } from '<%= baseApiImportPath %>';
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
+
+export const <%= apiExportName %> = baseApi.injectEndpoints({
+  overrideExisting: false,
+  endpoints: (builder) => ({
+<% for (let item of apiList) {
+  let args = item.apiMethodParamNames.length > 0 ? '{ ' + item.apiMethodParamNames.join(', ') + ' }' : '';
+  let builderMethod = item.isQuery ? 'builder.query' : 'builder.mutation';
+  let endpointName = scopeEndpointsWithTags ? item.scopedApiMethodName : item.apiMethodName;
+  let queryParamsList = item.queryParams.map(p => p.objectSymbol);
+%>    <%= endpointName %>: <%= builderMethod %><<%= item.responseTypeSymbol %>, <%= item.apiMethodRequestType %>>({
+      query: (<%= args %>) => ({
+        url: <%= item.apiUrlFormatted %>,
+        method: '<%= item.httpMethod %>',
+<% if (item.bodyParam) { %>        <%= item.bodyParam.objectSymbol %>,
+<% } if (item.queryParams.length > 0) { %>        params: { <%= queryParamsList.join(', ') %> },
+<% } %>      }),
+    }),
+<% } %>  }),
+});

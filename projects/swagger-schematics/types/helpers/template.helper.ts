@@ -1,6 +1,6 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
-import { IImportRef, transformType } from "../utils/transform-type";
-import { ISchemaProperties, ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
+import { IImportRef, isNullable, transformType } from "../utils/transform-type";
+import { ISchemaProperties, ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 
 export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema): {
     propertiesContent: Array<[string, string]>;
@@ -16,8 +16,7 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
             refs.push(importRef);
         }
 
-        const propertyAsSchema = property as TSchemaByType;
-        transformed.push([`${propertyKey}${propertyAsSchema.nullable ? '?' : ''}`, typeSymbol]);
+        transformed.push([`${propertyKey}${isNullable(property, swagger) ? '?' : ''}`, typeSymbol]);
     }
 
     return {

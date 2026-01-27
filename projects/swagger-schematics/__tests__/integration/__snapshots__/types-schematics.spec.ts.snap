@@ -1,0 +1,76 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Types Schematics Integration Enum Generation should generate ClaimStatuses enum without names 1`] = `
+"export enum TClaimStatuses {
+  1 = 1,
+  2 = 2,
+  3 = 3,
+  99 = 99
+}
+"
+`;
+
+exports[`Types Schematics Integration Enum Generation should generate ClaimType enum with x-enum-varnames 1`] = `
+"export enum TClaimType {
+  MS = 1,
+  PP = 2
+}
+"
+`;
+
+exports[`Types Schematics Integration File Generation should generate expected type files 1`] = `
+[
+  "/.editorconfig",
+  "/tsconfig.json",
+  "/test-output/interfaces/company-search-dto.interface.ts",
+  "/test-output/interfaces/claim-detail-dto.interface.ts",
+  "/test-output/interfaces/id-name-dto.interface.ts",
+  "/test-output/interfaces/create-note-dto.interface.ts",
+  "/test-output/interfaces/claim-note-view-dto.interface.ts",
+  "/test-output/enums/claim-statuses.enum.ts",
+  "/test-output/enums/claim-type.enum.ts",
+]
+`;
+
+exports[`Types Schematics Integration Interface Generation should generate ClaimDetailDTO interface 1`] = `
+"import { IIdNameDTO } from './id-name-dto.interface';
+import { TClaimStatuses } from '../enums/claim-statuses.enum';
+
+export interface IClaimDetailDTO {
+  id: number;
+  problemType: IIdNameDTO;
+  causeType: IIdNameDTO;
+  claimStatus: TClaimStatuses;
+  crmRefId?: string;
+}
+"
+`;
+
+exports[`Types Schematics Integration Interface Generation should generate ClaimNoteViewDTO interface 1`] = `
+"
+
+export interface IClaimNoteViewDTO {
+  note: string;
+}
+"
+`;
+
+exports[`Types Schematics Integration Interface Generation should generate CreateNoteDTO interface 1`] = `
+"
+
+export interface ICreateNoteDTO {
+  note: string;
+}
+"
+`;
+
+exports[`Types Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
+"
+
+export interface IIdNameDTO {
+  id: number;
+  name?: string;
+  displayName?: string;
+}
+"
+`;

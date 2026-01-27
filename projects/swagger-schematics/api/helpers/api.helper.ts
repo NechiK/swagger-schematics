@@ -43,10 +43,13 @@ export interface IParsedSchemaItem {
 export const buildScopedApiMethodName = (apiMethodName: string, tagName: string): string => {
     const prefix = camelize(tagName.replace(/-/g, ' '));
     const suffix = classify(apiMethodName);
+    
     // Avoid redundant prefix (e.g., "usersGetUsers" -> "usersGet")
-    const prefixLower = prefix.toLowerCase();
-    const suffixLower = suffix.toLowerCase();
-    if (suffixLower.startsWith(prefixLower) && suffixLower.length > prefixLower.length) {
+    // Extract the portion of suffix that could match the prefix (same length as prefix)
+    const suffixPrefix = suffix.slice(0, prefix.length);
+    
+    // Compare case-insensitively, then slice at the consistent position
+    if (suffixPrefix.toLowerCase() === prefix.toLowerCase() && suffix.length > prefix.length) {
         return prefix + suffix.slice(prefix.length);
     }
     return prefix + suffix;

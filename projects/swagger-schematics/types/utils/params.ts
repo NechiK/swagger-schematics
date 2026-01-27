@@ -323,7 +323,11 @@ export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[]): str
 
 /**
  * Formats body parameter for HTTP calls.
- * Returns body symbol for methods with body, "{}" for POST/PUT without body, "" otherwise.
+ * @param bodyParam - The parsed body parameter, or null if no body
+ * @param methodType - HTTP method (get, post, put, delete, etc.)
+ * @returns Body symbol for methods with body, "{}" for POST/PUT without body, 
+ *          or empty string for GET/DELETE/etc. without body.
+ *          Template authors: use truthy check (e.g., `if (bodyFormatted)`) to determine presence.
  */
 export function formatBody(bodyParam: IParsedParam<any> | null, methodType: string): string {
     if (bodyParam) return bodyParam.objectSymbol;

@@ -3,8 +3,9 @@ import { IParsedApiItem } from '../../types/utils/params';
 /**
  * Build Angular HttpClient call arguments (everything after the URL)
  * Handles the different argument patterns for GET, POST, PUT, DELETE
+ * Returns an array of argument strings for flexible template formatting
  */
-export function buildAngularHttpCallArgs(item: IParsedApiItem): string {
+export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
     const { apiMethodType, bodyFormatted, queryParamsFormatted } = item;
     const parts: string[] = [];
 
@@ -33,5 +34,5 @@ export function buildAngularHttpCallArgs(item: IParsedApiItem): string {
         }
     }
 
-    return parts.join(',\n      ');
+    return parts;
 }

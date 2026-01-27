@@ -6,16 +6,16 @@ import { API_BASE_URL } from './_api-base-url.token';
 export abstract class ApiBaseService {
   protected readonly httpClient = inject(HttpClient);
   protected readonly apiBaseUrl = inject(API_BASE_URL);
-  protected readonly apiUrl = new URL('api', this.apiBaseUrl);
   abstract readonly endpoint: string;
 
-  constructor() {
-    if (!this.apiBaseUrl) {
-      throw new Error('API_BASE_URL is not provided');
-    }
-  }
-
   getUrl(url: string = ''): string {
-    return `${this.apiUrl}/${this.endpoint}${url ? `/${url}` : ''}`;
+    const path = ['api', this.endpoint, url]
+      .filter(Boolean)
+      .join('/')
+      .replace(/\/+/g, '/');
+
+    return this.apiBaseUrl
+      ? `${this.apiBaseUrl.replace(/\/$/, '')}/${path}`
+      : `/${path}`;
   }
 }

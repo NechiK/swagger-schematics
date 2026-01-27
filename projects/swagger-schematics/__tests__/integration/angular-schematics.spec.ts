@@ -134,6 +134,13 @@ describe('Schematics Integration', () => {
       expect(files).toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base-url.token.ts`);
     });
 
+    it('should generate getUrl method that normalizes path slashes', () => {
+      const baseServiceContent = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base.service.ts`);
+      // Verify the getUrl method normalizes multiple slashes
+      expect(baseServiceContent).toContain(".replace(/\\/+/g, '/')");
+      expect(baseServiceContent).toContain('getUrl(url: string =');
+    });
+
     it('should skip base API generation if files already exist', async () => {
       resetAxiosMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
@@ -152,6 +159,48 @@ describe('Schematics Integration', () => {
 
       expect(baseServiceContent).toBe('// Existing base service');
       expect(baseUrlTokenContent).toBe('// Existing URL token');
+    });
+
+    it('should generate only missing token file when service already exists', async () => {
+      resetAxiosMocks();
+      setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      // Create a tree with only the service file existing
+      let testTree = createTestTree();
+      testTree.create(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base.service.ts`, '// Existing base service');
+
+      testTree = await runTypesSchematic(ANGULAR_SCHEMATIC_OPTIONS, testTree);
+      const resultTree = await runApiSchematic(ANGULAR_SCHEMATIC_OPTIONS, testTree);
+
+      // The existing service file should NOT be overwritten
+      const baseServiceContent = resultTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base.service.ts`);
+      expect(baseServiceContent).toBe('// Existing base service');
+
+      // The missing token file SHOULD be generated
+      const baseUrlTokenContent = resultTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base-url.token.ts`);
+      expect(baseUrlTokenContent).toContain('API_BASE_URL');
+      expect(baseUrlTokenContent).toContain('InjectionToken');
+    });
+
+    it('should generate only missing service file when token already exists', async () => {
+      resetAxiosMocks();
+      setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
+
+      // Create a tree with only the token file existing
+      let testTree = createTestTree();
+      testTree.create(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base-url.token.ts`, '// Existing URL token');
+
+      testTree = await runTypesSchematic(ANGULAR_SCHEMATIC_OPTIONS, testTree);
+      const resultTree = await runApiSchematic(ANGULAR_SCHEMATIC_OPTIONS, testTree);
+
+      // The existing token file should NOT be overwritten
+      const baseUrlTokenContent = resultTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base-url.token.ts`);
+      expect(baseUrlTokenContent).toBe('// Existing URL token');
+
+      // The missing service file SHOULD be generated
+      const baseServiceContent = resultTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/_api-base.service.ts`);
+      expect(baseServiceContent).toContain('ApiBaseService');
+      expect(baseServiceContent).toContain('HttpClient');
     });
   });
 
@@ -185,7 +234,7 @@ describe('Schematics Integration', () => {
       setupSwaggerMock(optionsWithInvalidHelpers.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       await expect(runFullSchematics(SWAGGER_SCHEMA, optionsWithInvalidHelpers))
-        .rejects.toThrow(/Failed to load template helpers/);
+        .rejects.toThrow(/Template helpers file not found/);
     });
   });
 });

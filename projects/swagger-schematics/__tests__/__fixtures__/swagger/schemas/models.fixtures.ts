@@ -80,6 +80,65 @@ export const CLAIM_NOTE_VIEW_DTO_SCHEMA: TSchemaByType = createObjectSchema(
   { description: 'Add a note to a claim', required: ['note'] }
 );
 
+export const TYPE_MAPPING_TEST_DTO_SCHEMA: TSchemaByType = createObjectSchema(
+  {
+    id: { type: 'integer', format: 'int32' },
+    distributionType: { $ref: '#/components/schemas/NullableOfDistributionType' }
+  },
+  { description: 'DTO for testing typeMapping' }
+);
+
+// ============================================================================
+// Composition Schemas (allOf, oneOf, anyOf)
+// ============================================================================
+
+export const BASE_ENTITY_SCHEMA: TSchemaByType = createObjectSchema(
+  {
+    id: { type: 'integer', format: 'int32' },
+    createdAt: { type: 'string', format: 'date-time' }
+  },
+  { description: 'Base entity with common fields' }
+);
+
+export const AUDITABLE_ENTITY_SCHEMA: TSchemaByType = createObjectSchema(
+  {
+    updatedAt: { type: 'string', format: 'date-time', nullable: true },
+    updatedBy: { type: 'string', nullable: true }
+  },
+  { description: 'Auditable fields' }
+);
+
+// allOf - intersection type (combines BaseEntity & AuditableEntity & specific fields)
+export const FULL_CLAIM_DTO_SCHEMA: TSchemaByType = {
+  allOf: [
+    { $ref: '#/components/schemas/BaseEntity' },
+    { $ref: '#/components/schemas/AuditableEntity' },
+    {
+      type: 'object',
+      properties: {
+        claimNumber: { type: 'string' },
+        status: { type: 'string' }
+      }
+    }
+  ]
+} as TSchemaByType;
+
+// oneOf - discriminated union type
+export const NOTIFICATION_SCHEMA: TSchemaByType = {
+  oneOf: [
+    { $ref: '#/components/schemas/IdNameDTO' },
+    { $ref: '#/components/schemas/ClaimDetailDTO' }
+  ]
+} as TSchemaByType;
+
+// anyOf - union type
+export const SEARCH_RESULT_SCHEMA: TSchemaByType = {
+  anyOf: [
+    { $ref: '#/components/schemas/IdNameDTO' },
+    { $ref: '#/components/schemas/CreateNoteDTO' }
+  ]
+} as TSchemaByType;
+
 // ============================================================================
 // All Models (Combined Export)
 // ============================================================================
@@ -89,5 +148,12 @@ export const MODEL_SCHEMAS: Record<string, TSchemaByType> = {
   ClaimDetailDTO: CLAIM_DETAIL_DTO_SCHEMA,
   IdNameDTO: ID_NAME_DTO_SCHEMA,
   CreateNoteDTO: CREATE_NOTE_DTO_SCHEMA,
-  ClaimNoteViewDTO: CLAIM_NOTE_VIEW_DTO_SCHEMA
+  ClaimNoteViewDTO: CLAIM_NOTE_VIEW_DTO_SCHEMA,
+  TypeMappingTestDTO: TYPE_MAPPING_TEST_DTO_SCHEMA,
+  // Composition schemas
+  BaseEntity: BASE_ENTITY_SCHEMA,
+  AuditableEntity: AUDITABLE_ENTITY_SCHEMA,
+  FullClaimDTO: FULL_CLAIM_DTO_SCHEMA,
+  Notification: NOTIFICATION_SCHEMA,
+  SearchResult: SEARCH_RESULT_SCHEMA
 };

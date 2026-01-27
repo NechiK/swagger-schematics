@@ -1,5 +1,5 @@
 import '../helpers/matchers';
-import { IParsedApiSchema, transformSwaggerSchema } from '../../api/helpers/api.helper';
+import { IParsedApiSchema, transformSwaggerSchema, buildScopedApiMethodName } from '../../api/helpers/api.helper';
 import { SWAGGER_SCHEMA, MOCK_GROUP } from '../__fixtures__/swagger/full-schema.fixture';
 
 describe('API Helper - transformSwaggerSchema', () => {
@@ -82,5 +82,50 @@ describe('API Helper - transformSwaggerSchema', () => {
       // Snapshot of the full parsed structure for regression testing
       expect(parsedSchema).toMatchSnapshot();
     });
+  });
+});
+
+describe('buildScopedApiMethodName', () => {
+  it('should prefix method name with camelized tag name', () => {
+    expect(buildScopedApiMethodName('getById', 'Claim')).toBe('claimGetById');
+    expect(buildScopedApiMethodName('create', 'User')).toBe('userCreate');
+  });
+
+  it('should handle hyphenated tag names', () => {
+    expect(buildScopedApiMethodName('getAll', 'user-profile')).toBe('userProfileGetAll');
+    expect(buildScopedApiMethodName('update', 'api-settings')).toBe('apiSettingsUpdate');
+  });
+
+  it('should avoid redundant prefix when suffix starts with prefix (case-insensitive)', () => {
+    // "UsersGet" starts with "users" (case-insensitive), should become "usersGet"
+    expect(buildScopedApiMethodName('UsersGet', 'users')).toBe('usersGet');
+    expect(buildScopedApiMethodName('usersGet', 'users')).toBe('usersGet');
+    // classify('USERSGET') = 'USERSGET', so remaining part after prefix removal is 'GET'
+    expect(buildScopedApiMethodName('USERSGET', 'users')).toBe('usersGET');
+  });
+
+  it('should handle mixed case correctly when removing redundant prefix', () => {
+    // The suffix "UsersGetAll" starts with "Users" which matches "users" case-insensitively
+    expect(buildScopedApiMethodName('UsersGetAll', 'users')).toBe('usersGetAll');
+    expect(buildScopedApiMethodName('ClaimGet', 'claim')).toBe('claimGet');
+    expect(buildScopedApiMethodName('CLAIMGet', 'claim')).toBe('claimGet');
+  });
+
+  it('should not remove prefix when suffix does not start with it', () => {
+    expect(buildScopedApiMethodName('getById', 'users')).toBe('usersGetById');
+    expect(buildScopedApiMethodName('create', 'claim')).toBe('claimCreate');
+  });
+
+  it('should not remove prefix when suffix equals prefix exactly', () => {
+    // When suffix is exactly the prefix (after classification), keep both
+    expect(buildScopedApiMethodName('users', 'users')).toBe('usersUsers');
+    expect(buildScopedApiMethodName('claim', 'claim')).toBe('claimClaim');
+  });
+
+  it('should handle partial prefix matches correctly', () => {
+    // "UserGet" does NOT start with "users" (missing 's'), should not remove
+    expect(buildScopedApiMethodName('UserGet', 'users')).toBe('usersUserGet');
+    // "Use" does NOT start with "users", should not remove
+    expect(buildScopedApiMethodName('UseData', 'users')).toBe('usersUseData');
   });
 });

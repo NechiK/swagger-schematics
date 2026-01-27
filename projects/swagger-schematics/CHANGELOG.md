@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0-alpha.30] - 2026-01-27
+
+### ✨ Added
+- **Composition schema support** - `allOf`, `oneOf`, and `anyOf` schemas now generate TypeScript type aliases:
+  - `allOf` → intersection type (`TMyType = TypeA & TypeB`)
+  - `oneOf` / `anyOf` → union type (`TMyType = TypeA | TypeB`)
+  - Type aliases use `T` prefix (consistent with enums), generated as `.type.ts` files
+  - `not` schemas are skipped (no good TypeScript equivalent)
+- New `transformCompositionSchema()` helper for transforming composition schemas
+- Tests for composition schema generation
+- Tests for partial base API file existence (Angular)
+- Tests for interface/enum update behavior (verifying `MergeStrategy.Overwrite`)
+- Tests for `buildScopedApiMethodName` function
+- Tests for `typeMapping` primitive type validation
+
+### 🐛 Fixed
+- `framework` prompt no longer appears when `framework` is set in config file (removed `x-prompt` from schema since config is loaded after prompting phase)
+- Improved `getUrl` method in Angular base service to handle all URL edge cases:
+  - Normalizes multiple slashes in path
+  - Supports empty `apiBaseUrl` for relative paths (Electron apps, same-origin APIs)
+  - Handles base URLs with or without trailing slashes
+  - Preserves path segments in base URL (e.g., `https://example.com/v1/internal`)
+- `typeMapping` now works correctly in types schematic (interface generation) - mapping one enum/interface to another now updates both the type symbol and import
+- **Angular base API generation** now correctly handles partial file existence:
+  - Previously only skipped generation if BOTH files existed
+  - Now generates only the missing file(s) when one exists and the other doesn't
+  - Uses `filter` rule to exclude existing files from template source
+- **`typeMapping` validation** - Primitive type names (`string`, `number`, `boolean`, etc.) are no longer accidentally resolved as schema references even if a schema with that name exists
+- **`buildScopedApiMethodName`** - Fixed case-insensitive comparison consistency by extracting and comparing the same portion being sliced
+- **`isPrimitiveWrapper`** - Now correctly excludes composition schemas (`allOf`, `oneOf`, `anyOf`, `not`) from being identified as primitive wrappers
+
+### ♻️ Changed
+- Removed `MergeStrategy.AllowCreationConflict` from base API generation (no longer needed with proper filtering)
+- Added `ISwaggerSchematicsTypeAliasSchema` interface for type alias schemas
+
+
 ## [1.0.0-alpha.20] - 2026-01-27
 
 ### ✨ Added

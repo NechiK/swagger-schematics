@@ -6,7 +6,6 @@ type swaggerSchemaKeys = keyof SwaggerApiSchema;
 
 /** Default configuration values */
 const DEFAULT_CONFIG: Partial<SwaggerApiSchema> = {
-    framework: 'angular',
     scopeEndpointsWithTags: false,
 };
 

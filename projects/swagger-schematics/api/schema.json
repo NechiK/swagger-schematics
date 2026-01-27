@@ -31,16 +31,8 @@
     },
     "framework": {
       "type": "string",
-      "description": "Target framework for generated API code.",
-      "enum": ["angular", "react-rtk"],
-      "x-prompt": {
-        "message": "Which framework would you like to generate API code for?",
-        "type": "list",
-        "items": [
-          { "value": "angular", "label": "Angular (HttpClient services)" },
-          { "value": "react-rtk", "label": "React RTK Query (API slices)" }
-        ]
-      }
+      "description": "Target framework for generated API code: 'angular' or 'react-rtk'.",
+      "enum": ["angular", "react-rtk"]
     },
     "scopeEndpointsWithTags": {
       "type": "boolean",

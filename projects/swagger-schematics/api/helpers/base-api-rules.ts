@@ -1,7 +1,7 @@
 import {
     apply,
     applyTemplates,
-    MergeStrategy,
+    filter,
     mergeWith,
     move,
     noop,
@@ -35,6 +35,7 @@ export function generateBaseApiRule(
 
 /**
  * Generate Angular base API services (api-base.service.ts and api-base-url.token.ts)
+ * Only generates files that don't already exist.
  */
 function generateAngularBaseApiRule(
     tree: Tree,
@@ -48,20 +49,35 @@ function generateAngularBaseApiRule(
 
     const parsed = parseName(basePath, 'ApiBase');
     
-    // Check if base API files already exist
+    // Check which base API files already exist
     const apiBaseServicePath = `${parsed.path}/_api-base.service.ts`;
     const apiBaseUrlTokenPath = `${parsed.path}/_api-base-url.token.ts`;
     
     const apiBaseServiceExists = tree.exists(apiBaseServicePath);
     const apiBaseUrlTokenExists = tree.exists(apiBaseUrlTokenPath);
     
-    // If both files exist, skip generation
+    // If both files exist, skip generation entirely
     if (apiBaseServiceExists && apiBaseUrlTokenExists) {
         return noop();
     }
 
-    // Generate base API files
+    // Build a set of existing file names to filter out (with .template suffix for template matching)
+    const existingTemplateFiles = new Set<string>();
+    if (apiBaseServiceExists) {
+        existingTemplateFiles.add('_api-base.service.ts.template');
+    }
+    if (apiBaseUrlTokenExists) {
+        existingTemplateFiles.add('_api-base-url.token.ts.template');
+    }
+
+    // Generate only the missing base API files
     const baseApiSource = apply(baseApiTemplates, [
+        // Filter out templates for files that already exist
+        // Note: filter runs BEFORE applyTemplates, so paths still have .template suffix
+        filter(path => {
+            const fileName = path.split('/').pop() || '';
+            return !existingTemplateFiles.has(fileName);
+        }),
         applyTemplates({
             ...config,
             ...strings,
@@ -69,11 +85,12 @@ function generateAngularBaseApiRule(
         move(parsed.path)
     ]);
 
-    return mergeWith(baseApiSource, MergeStrategy.AllowCreationConflict);
+    return mergeWith(baseApiSource);
 }
 
 /**
  * Generate RTK base API (api-base.ts)
+ * Only generates the file if it doesn't already exist.
  */
 function generateRtkBaseApiRule(
     tree: Tree,
@@ -94,7 +111,7 @@ function generateRtkBaseApiRule(
     
     const parsed = parseName(dirPath, fileName.replace('.ts', ''));
 
-    // Generate base API file
+    // Generate base API file (file is guaranteed not to exist at this point)
     const baseApiSource = apply(baseApiTemplates, [
         applyTemplates({
             ...config,
@@ -103,5 +120,5 @@ function generateRtkBaseApiRule(
         move(parsed.path)
     ]);
 
-    return mergeWith(baseApiSource, MergeStrategy.AllowCreationConflict);
+    return mergeWith(baseApiSource);
 }

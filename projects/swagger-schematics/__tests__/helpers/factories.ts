@@ -388,14 +388,15 @@ export const createObjectSchema = (
 };
 
 export const createEnumSchema = (
-  values: number[],
-  options: { varnames?: string[] } = {}
-): ISchemaInteger => ({
-  type: 'integer',
-  format: 'int32',
+  values: (number | string)[],
+  options: { varnames?: string[]; type?: 'integer' | 'string'; nullable?: boolean } = {}
+): TSchemaByType => ({
+  type: options.type ?? 'integer',
+  ...(options.type !== 'string' ? { format: 'int32' } : {}),
   enum: values,
-  ...(options.varnames ? { 'x-enum-varnames': options.varnames } : {})
-});
+  ...(options.varnames ? { 'x-enum-varnames': options.varnames } : {}),
+  ...(options.nullable ? { nullable: true } : {})
+} as TSchemaByType);
 
 // ============================================================================
 // Full Swagger Schema Factory

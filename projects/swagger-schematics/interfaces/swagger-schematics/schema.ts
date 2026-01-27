@@ -1,4 +1,4 @@
-import { ISchemaProperties } from "../version_3_1/swagger.interface";
+import { ISchemaProperties, TSchemaByType } from "../version_3_1/swagger.interface";
 
 export interface ISwaggerSchematicsBaseSchema {
     name: string;
@@ -21,4 +21,10 @@ export interface ISwaggerSchematicsInterfaceSchema extends ISwaggerSchematicsBas
     };
 }
 
-export type TSwaggerSchematicsSchema = ISwaggerSchematicsEnumSchema | ISwaggerSchematicsInterfaceSchema;
+export interface ISwaggerSchematicsTypeAliasSchema extends ISwaggerSchematicsBaseSchema {
+    name: string;
+    type: 'type-alias';
+    data: TSchemaByType;
+}
+
+export type TSwaggerSchematicsSchema = ISwaggerSchematicsEnumSchema | ISwaggerSchematicsInterfaceSchema | ISwaggerSchematicsTypeAliasSchema;

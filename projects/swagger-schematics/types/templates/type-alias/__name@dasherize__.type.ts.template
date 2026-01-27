@@ -1,0 +1,3 @@
+<%= transformRefsToImport(importRefs, optionsPath, sourcePath) %>
+
+export type T<%= classify(name) %> = <%= typeExpression %>;

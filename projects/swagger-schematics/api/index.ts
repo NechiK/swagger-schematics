@@ -23,12 +23,20 @@ import { getBaseApiImportPath } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import * as path from 'path';
 
+import { existsSync } from 'fs';
+
 /**
  * Load custom template helpers from a JavaScript file
  */
 function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
+    const absolutePath = path.resolve(process.cwd(), helpersPath);
+    
+    // Check if file exists first
+    if (!existsSync(absolutePath)) {
+        throw new Error(`Template helpers file not found: '${absolutePath}'`);
+    }
+    
     try {
-        const absolutePath = path.resolve(process.cwd(), helpersPath);
         // Clear require cache to ensure fresh load
         delete require.cache[require.resolve(absolutePath)];
         const helpers = require(absolutePath);

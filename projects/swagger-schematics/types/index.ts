@@ -10,13 +10,13 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema, TSchemaWithType} from "../interfaces/version_3_1/swagger.interface";
-import { isComposition } from "./utils/transform-type";
+import { isComposition, isNot } from "./utils/transform-type";
 import axios, {AxiosResponse} from "axios";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { IRef } from '../interfaces/version_3_1/ref.interface';
 import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
-import { removeImportDuplicates, transformProperties } from './helpers/template.helper';
+import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 
 export default function(options: SwaggerSchema): Rule {
@@ -52,10 +52,17 @@ export default function(options: SwaggerSchema): Rule {
         
         const typedSchema = schema as TSchemaByType;
         
-        // Skip composition schemas for now (allOf, oneOf, anyOf, not)
-        // They will be handled differently in the future
+        // Handle composition schemas (allOf, oneOf, anyOf)
+        // Skip 'not' schemas as they don't have a good TypeScript equivalent
         if (isComposition(typedSchema)) {
-            return;
+            if (isNot(typedSchema)) {
+                return; // Skip 'not' schemas
+            }
+            return {
+                name: schemaKey,
+                type: 'type-alias' as const,
+                data: schemas[schemaKey]
+            } as TSwaggerSchematicsSchema;
         }
         
         // Check if it's an enum (integer or string with enum values)
@@ -71,6 +78,7 @@ export default function(options: SwaggerSchema): Rule {
 
       const interfaceTemplates = url('./templates/interface');
       const enumTemplates = url('./templates/enum');
+      const typeAliasTemplates = url('./templates/type-alias');
 
       let finalRule: Rule | undefined;
       parsedSchemas.forEach(schemaData => {
@@ -94,10 +102,37 @@ export default function(options: SwaggerSchema): Rule {
                   }),
                   move(parsed.path)
               ]);
+          } else if (schemaData.type === 'type-alias') {
+              // Handle composition schemas (allOf, oneOf, anyOf)
+              const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
+              const { typeExpression, importRefs: compositionRefs } = transformCompositionSchema(
+                  schemaData.data as TSchemaByType,
+                  swagger.data,
+                  { typeMapping: openApiSchematicsConfig.typeMapping }
+              );
+              // Filter out self-references
+              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`);
+              itemSource = apply(typeAliasTemplates, [
+                  applyTemplates({
+                      ...openApiSchematicsConfig,
+                      ...strings,
+                      ...templateHelpers,
+                      name: parsed.name,
+                      path: parsed.path,
+                      optionsPath: openApiSchematicsConfig.path,
+                      sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
+                      typeExpression,
+                      importRefs,
+                      indentSize
+                  }),
+                  move(parsed.path)
+              ]);
           } else {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
-            const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger.data);
+            const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger.data, {
+                typeMapping: openApiSchematicsConfig.typeMapping
+            });
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
             const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));
             itemSource = apply(interfaceTemplates, [

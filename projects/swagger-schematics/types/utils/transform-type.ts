@@ -199,6 +199,33 @@ function transformObjectSchema(schema: ISchemaObject, swagger: ISwaggerSchema, o
     return ['object'];
 }
 
+/**
+ * Known TypeScript primitive types that should never be resolved as schema references
+ */
+const PRIMITIVE_TYPE_NAMES = new Set([
+    'string', 'number', 'boolean', 'object', 'any', 'unknown', 'void', 'null', 'undefined',
+    'never', 'bigint', 'symbol'
+]);
+
+/**
+ * Check if a mapped value looks like a schema reference (not a primitive)
+ * Schema references typically:
+ * - Start with a capital letter (PascalCase)
+ * - Are not primitive type names
+ */
+function isLikelySchemaReference(value: string): boolean {
+    // Primitive types are never schema references
+    if (PRIMITIVE_TYPE_NAMES.has(value.toLowerCase())) {
+        return false;
+    }
+    
+    // Schema names typically start with a capital letter (PascalCase convention)
+    // If it starts with lowercase and isn't a primitive, it's likely a custom primitive alias
+    const startsWithCapital = /^[A-Z]/.test(value);
+    
+    return startsWithCapital;
+}
+
 export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(property.$ref, swagger);
 
@@ -206,27 +233,30 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     if (options?.typeMapping && options.typeMapping[refPropertyKey]) {
         const mappedValue = options.typeMapping[refPropertyKey];
 
-        // Check if mapped value is another schema (not a primitive)
-        const { refPropertySchema: mappedSchema, refPropertyKey: mappedKey } =
-            getRefPropertyDefinition(`#/components/schemas/${mappedValue}`, swagger);
+        // Only attempt schema resolution if the mapped value looks like a schema reference
+        // This prevents primitive types from accidentally matching schema names
+        if (isLikelySchemaReference(mappedValue)) {
+            const { refPropertySchema: mappedSchema, refPropertyKey: mappedKey } =
+                getRefPropertyDefinition(`#/components/schemas/${mappedValue}`, swagger);
 
-        if (mappedSchema) {
-            // Use the mapped schema's type, but preserve nullable from the original schema
-            const originalIsNullable = refPropertySchema
-                ? Boolean((refPropertySchema as TSchemaWithType).nullable)
-                : false;
+            if (mappedSchema) {
+                // Use the mapped schema's type, but preserve nullable from the original schema
+                const originalIsNullable = refPropertySchema
+                    ? Boolean((refPropertySchema as TSchemaWithType).nullable)
+                    : false;
 
-            const symbol = transformRefProperty(mappedSchema, mappedKey);
-            const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
+                const symbol = transformRefProperty(mappedSchema, mappedKey);
+                const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
 
-            return [typeSymbol, {
-                type: isRefPropertyEnum(mappedSchema) ? 'enum' : 'interface',
-                importSymbol: symbol,
-                fileName: dasherize(mappedKey)
-            }];
+                return [typeSymbol, {
+                    type: isRefPropertyEnum(mappedSchema) ? 'enum' : 'interface',
+                    importSymbol: symbol,
+                    fileName: dasherize(mappedKey)
+                }];
+            }
         }
 
-        // Mapped to a primitive - preserve nullable from original if available
+        // Mapped to a primitive or the schema wasn't found - preserve nullable from original if available
         const originalIsNullable = refPropertySchema
             ? Boolean((refPropertySchema as TSchemaWithType).nullable)
             : false;
@@ -270,6 +300,12 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
 function isPrimitiveWrapper(schema: TSchemaByType): boolean {
     // Must have a primitive type
     if (!('type' in schema)) {
+        return false;
+    }
+    
+    // Not a primitive wrapper if it uses composition (allOf, oneOf, anyOf, not)
+    // A schema can have both 'type' and composition, and composition takes precedence
+    if (isComposition(schema)) {
         return false;
     }
     

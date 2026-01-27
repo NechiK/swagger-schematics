@@ -40,8 +40,9 @@ export function getBaseApiImportPath(
         if (aliasPath) {
             return aliasPath;
         }
-    } catch {
-        // Ignore errors, fall back to relative path
+    } catch (error) {
+        // Log warning for debugging - tsconfig errors won't break generation
+        console.warn(`Warning: Could not load tsconfig.json for path alias resolution: ${(error as Error).message}. Using relative imports.`);
     }
     
     // Fall back to relative import

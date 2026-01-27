@@ -10,8 +10,16 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
   "/test-output/interfaces/id-name-dto.interface.ts",
   "/test-output/interfaces/create-note-dto.interface.ts",
   "/test-output/interfaces/claim-note-view-dto.interface.ts",
+  "/test-output/interfaces/type-mapping-test-dto.interface.ts",
+  "/test-output/interfaces/base-entity.interface.ts",
+  "/test-output/interfaces/auditable-entity.interface.ts",
+  "/test-output/interfaces/full-claim-dto.type.ts",
+  "/test-output/interfaces/notification.type.ts",
+  "/test-output/interfaces/search-result.type.ts",
   "/test-output/enums/claim-statuses.enum.ts",
   "/test-output/enums/claim-type.enum.ts",
+  "/test-output/enums/distribution-type.enum.ts",
+  "/test-output/enums/nullable-of-distribution-type.enum.ts",
   "/th-common/store/api-base.ts",
 ]
 `;

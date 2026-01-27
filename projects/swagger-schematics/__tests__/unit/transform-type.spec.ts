@@ -249,6 +249,101 @@ describe('Transform Type', () => {
       expect(result[0]).toBe('number | null');
       expect(result[1]).toBeUndefined();
     });
+
+    it('should not resolve primitive type names as schema references even if schema exists', () => {
+      // Edge case: schema named "String" exists, but mapping to 'string' should treat it as primitive
+      const swagger = createSwaggerSchema({
+        MyType: { type: 'object' },
+        String: { type: 'object', properties: { value: { type: 'string' } } }
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'MyType': 'string' }
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/MyType' },
+        swagger,
+        options
+      );
+
+      // Should be primitive 'string', not 'IString' interface
+      expect(result[0]).toBe('string');
+      expect(result[1]).toBeUndefined();
+    });
+
+    it('should not resolve lowercase custom type aliases as schema references', () => {
+      const swagger = createSwaggerSchema({
+        MyGuid: { type: 'object' },
+        guid: { type: 'object', properties: {} } // lowercase schema that shouldn't match
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'MyGuid': 'guid' } // lowercase mapping
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/MyGuid' },
+        swagger,
+        options
+      );
+
+      // Should treat 'guid' as a custom primitive alias, not resolve to 'Iguid'
+      expect(result[0]).toBe('guid');
+      expect(result[1]).toBeUndefined();
+    });
+
+    it('should resolve PascalCase mapped values as schema references when schema exists', () => {
+      const swagger = createSwaggerSchema({
+        NullableUserDTO: { type: 'object', nullable: true, properties: { id: { type: 'integer' } } },
+        UserDTO: { type: 'object', properties: { id: { type: 'integer' } } }
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: { 'NullableUserDTO': 'UserDTO' }
+      };
+
+      const result = transformType(
+        { $ref: '#/components/schemas/NullableUserDTO' },
+        swagger,
+        options
+      );
+
+      // Should resolve to the mapped schema with nullable preserved from original
+      expect(result[0]).toBe('IUserDTO | null');
+      expect(result[1]).toEqual({
+        type: 'interface',
+        importSymbol: 'IUserDTO',
+        fileName: 'user-dto'
+      });
+    });
+
+    it('should handle all TypeScript primitive type names correctly', () => {
+      const swagger = createSwaggerSchema({
+        Type1: { type: 'object' },
+        Type2: { type: 'object' },
+        Type3: { type: 'object' },
+        Type4: { type: 'object' },
+        Type5: { type: 'object' },
+        // Schemas with primitive names (edge case)
+        Number: { type: 'object', properties: {} },
+        Boolean: { type: 'object', properties: {} },
+        Any: { type: 'object', properties: {} }
+      });
+      const options: ITransformTypeOptions = {
+        typeMapping: {
+          'Type1': 'number',
+          'Type2': 'boolean',
+          'Type3': 'any',
+          'Type4': 'unknown',
+          'Type5': 'void'
+        }
+      };
+
+      // All should be treated as primitives, not resolved to schemas
+      expect(transformType({ $ref: '#/components/schemas/Type1' }, swagger, options)[0]).toBe('number');
+      expect(transformType({ $ref: '#/components/schemas/Type2' }, swagger, options)[0]).toBe('boolean');
+      expect(transformType({ $ref: '#/components/schemas/Type3' }, swagger, options)[0]).toBe('any');
+      expect(transformType({ $ref: '#/components/schemas/Type4' }, swagger, options)[0]).toBe('unknown');
+      expect(transformType({ $ref: '#/components/schemas/Type5' }, swagger, options)[0]).toBe('void');
+    });
   });
 
   describe('parseRefToSymbol', () => {
@@ -332,6 +427,30 @@ describe('Transform Type', () => {
 
       expect(result[0]).toBe('IUserDTO');
       expect(result[1]?.type).toBe('interface');
+    });
+
+    it('should not inline schemas with composition even if they have a primitive type', () => {
+      // A schema that has both 'type' and 'allOf' should not be treated as primitive wrapper
+      const swagger = createSwaggerSchema({
+        ComposedString: { 
+          type: 'string', 
+          allOf: [{ $ref: '#/components/schemas/BaseType' }] 
+        },
+        ComposedWithOneOf: {
+          type: 'integer',
+          oneOf: [{ type: 'integer' }, { type: 'string' }]
+        },
+        BaseType: { type: 'object', properties: {} }
+      });
+
+      // Should NOT be inlined as primitive, should be treated as interface
+      const result1 = parseRefToSymbol({ $ref: '#/components/schemas/ComposedString' }, swagger);
+      expect(result1[0]).toBe('IComposedString');
+      expect(result1[1]?.type).toBe('interface');
+
+      const result2 = parseRefToSymbol({ $ref: '#/components/schemas/ComposedWithOneOf' }, swagger);
+      expect(result2[0]).toBe('IComposedWithOneOf');
+      expect(result2[1]?.type).toBe('interface');
     });
 
     it('should add | null for nullable object schemas', () => {

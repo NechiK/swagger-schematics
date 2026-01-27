@@ -22,22 +22,48 @@ function readFileContent(filePath: string, tree?: Tree): string {
 }
 
 /**
+ * Parse tsconfig JSON content with error handling
+ */
+function parseTsConfig(filePath: string, content: string): Record<string, any> {
+  const result = parseConfigFileTextToJson(filePath, content);
+  
+  if (result.error) {
+    const errorMessage = result.error.messageText;
+    const message = typeof errorMessage === 'string' 
+      ? errorMessage 
+      : errorMessage.messageText;
+    throw new Error(`Invalid tsconfig at '${filePath}': ${message}`);
+  }
+  
+  if (!result.config) {
+    throw new Error(`Failed to parse tsconfig at '${filePath}': No configuration found`);
+  }
+  
+  return result.config;
+}
+
+/**
  * Load tsconfig.json and parse path aliases
  * @param tsConfigPath - Path to tsconfig.json
  * @param tree - Optional schematic tree for reading from virtual filesystem
  */
 export function loadTsConfig(tsConfigPath: string, tree?: Tree): TsConfigResult {
   const configFileContent = readFileContent(tsConfigPath, tree);
-  let configJson = parseConfigFileTextToJson(tsConfigPath, configFileContent).config;
+  let configJson = parseTsConfig(tsConfigPath, configFileContent);
 
   if (configJson.extends) {
     const extendsPath = path.resolve(path.dirname(tsConfigPath), configJson.extends);
     const extendsConfigContent = readFileContent(extendsPath, tree);
-    const extendsConfigJson = parseConfigFileTextToJson(extendsPath, extendsConfigContent).config;
+    const extendsConfigJson = parseTsConfig(extendsPath, extendsConfigContent);
     
+    // Deep merge compilerOptions to preserve options from both configs
     configJson = {
       ...extendsConfigJson,
       ...configJson,
+      compilerOptions: {
+        ...extendsConfigJson.compilerOptions,
+        ...configJson.compilerOptions,
+      },
     };
   }
 
@@ -55,15 +81,17 @@ export function loadTsConfig(tsConfigPath: string, tree?: Tree): TsConfigResult 
  */
 export function resolvePathToAlias(filePath: string, paths: Record<string, string[]>): string | null {
   for (const [aliasPattern, targetPaths] of Object.entries(paths)) {
-    // Get the target directory (e.g., "src/*" -> "src/")
-    const targetPath = targetPaths[0];
-    const targetPrefix = targetPath.replace('*', '');
-    
-    // Check if the file path starts with the target prefix
-    if (filePath.startsWith(targetPrefix)) {
-      // Replace the target prefix with the alias (e.g., "src/stores/..." -> "@/stores/...")
-      const aliasPrefix = aliasPattern.replace('*', '');
-      return aliasPrefix + filePath.substring(targetPrefix.length);
+    // Iterate through all target paths (tsconfig supports multiple fallback paths)
+    for (const targetPath of targetPaths) {
+      // Get the target directory (e.g., "src/*" -> "src/")
+      const targetPrefix = targetPath.replace('*', '');
+      
+      // Check if the file path starts with the target prefix
+      if (filePath.startsWith(targetPrefix)) {
+        // Replace the target prefix with the alias (e.g., "src/stores/..." -> "@/stores/...")
+        const aliasPrefix = aliasPattern.replace('*', '');
+        return aliasPrefix + filePath.substring(targetPrefix.length);
+      }
     }
   }
 

@@ -11,11 +11,22 @@ export const CLAIM_TYPE_ENUM_SCHEMA: TSchemaByType = createEnumSchema([1, 2], {
   varnames: ['MS', 'PP']
 });
 
+export const DISTRIBUTION_TYPE_ENUM_SCHEMA: TSchemaByType = createEnumSchema(['TypeA', 'TypeB'], {
+  type: 'string'
+});
+
+export const NULLABLE_OF_DISTRIBUTION_TYPE_ENUM_SCHEMA: TSchemaByType = createEnumSchema(['TypeA', 'TypeB'], {
+  type: 'string',
+  nullable: true
+});
+
 // ============================================================================
 // All Enums (Combined Export)
 // ============================================================================
 
 export const ENUM_SCHEMAS: Record<string, TSchemaByType> = {
   ClaimStatuses: CLAIM_STATUSES_ENUM_SCHEMA,
-  ClaimType: CLAIM_TYPE_ENUM_SCHEMA
+  ClaimType: CLAIM_TYPE_ENUM_SCHEMA,
+  DistributionType: DISTRIBUTION_TYPE_ENUM_SCHEMA,
+  NullableOfDistributionType: NULLABLE_OF_DISTRIBUTION_TYPE_ENUM_SCHEMA
 };

@@ -5,6 +5,9 @@ exports[`Schematics Integration API Service Generation should generate full API 
 import { ApiBaseService } from \\"./_api-base.service\\";
 import { Observable } from \\"rxjs\\";
 
+import { omitBy, isNil } from 'lodash-es';
+
+
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
 import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
 import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
@@ -126,6 +129,13 @@ export class ClaimApiService extends ApiBaseService {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
       { params: { status, force } }
+    );
+  }
+
+  getClaimSearch({ name, status, priority }: { name: string; status?: string | null; priority?: number | null }): Observable<IClaimDetailDTO[]> {
+    return this.httpClient.get<IClaimDetailDTO[]>(
+      this.getUrl('/search'),
+      { params: omitBy({ name, status, priority }, isNil) }
     );
   }
 }

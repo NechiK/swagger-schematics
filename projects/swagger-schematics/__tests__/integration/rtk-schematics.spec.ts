@@ -125,6 +125,17 @@ describe('RTK Query Schematics Integration', () => {
         expect(apiSliceContent).toMatch(/params:\s*\{/);
       });
     });
+
+    describe('Nullable Query Parameters', () => {
+      it('should import omitBy and isNil from lodash-es', () => {
+        expect(apiSliceContent).toContain("import { omitBy, isNil } from 'lodash-es'");
+      });
+
+      it('should wrap nullable params in omitBy', () => {
+        expect(apiSliceContent).toContain('params: omitBy({');
+        expect(apiSliceContent).toContain('}, isNil)');
+      });
+    });
   });
 
   describe('Scoped Endpoints', () => {

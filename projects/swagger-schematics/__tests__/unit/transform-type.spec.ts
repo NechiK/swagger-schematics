@@ -522,5 +522,27 @@ describe('Transform Type', () => {
 
       expect(isNullable({ $ref: '#/components/schemas/Unknown' }, swagger)).toBe(false);
     });
+
+    it('should return true for inline schema with default: null', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(isNullable({ type: 'string', default: null } as any, swagger)).toBe(true);
+      expect(isNullable({ type: 'integer', format: 'int32', default: null } as any, swagger)).toBe(true);
+    });
+
+    it('should return true for $ref pointing to schema with default: null', () => {
+      const swagger = createSwaggerSchema({
+        DefaultNullUser: { type: 'object', default: null, properties: {} }
+      });
+
+      expect(isNullable({ $ref: '#/components/schemas/DefaultNullUser' }, swagger)).toBe(true);
+    });
+
+    it('should return false for schema with non-null default', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(isNullable({ type: 'string', default: '' } as any, swagger)).toBe(false);
+      expect(isNullable({ type: 'integer', format: 'int32', default: 0 } as any, swagger)).toBe(false);
+    });
   });
 });

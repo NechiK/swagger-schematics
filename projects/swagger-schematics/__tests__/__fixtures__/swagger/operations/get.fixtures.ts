@@ -51,3 +51,18 @@ export const GET_BY_STATUS_WITH_ENUM_PARAM: IPathOperations = createGetOperation
   ],
   responses: createResponse({ type: 'array', itemsRef: 'ClaimDetailDTO' })
 });
+
+// ============================================================================
+// GET with Nullable Query Parameters (default: null)
+// ============================================================================
+
+export const GET_WITH_NULLABLE_QUERY_PARAMS: IPathOperations = createGetOperation({
+  tags: ['Claim'],
+  summary: 'Search claims with optional filters',
+  parameters: [
+    createQueryParam('name', 'string', { required: true }),
+    createQueryParam('status', 'string', { schema: { type: 'string', default: null } as any }),
+    createQueryParam('priority', 'integer', { schema: { type: 'integer', format: 'int32', default: null } as any })
+  ],
+  responses: createResponse({ type: 'array', itemsRef: 'ClaimDetailDTO' })
+});

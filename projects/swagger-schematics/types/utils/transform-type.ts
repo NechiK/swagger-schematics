@@ -5,6 +5,7 @@ import {
     TSchema, 
     TSchemaByType,
     TSchemaWithType,
+    ISchemaBase,
     ISchemaAllOf,
     ISchemaOneOf,
     ISchemaAnyOf,
@@ -392,12 +393,16 @@ export function isRef(property: TSchema | TParam): property is IRef {
 }
 
 /**
- * Check if a schema is nullable, resolving $ref if necessary
+ * Check if a schema is nullable, resolving $ref if necessary.
+ * A schema is considered nullable if it has `nullable: true` or `default: null`.
  */
 export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean {
     if (isRef(property)) {
         const { refPropertySchema } = getRefPropertyDefinition(property.$ref, swagger);
-        return refPropertySchema ? Boolean((refPropertySchema as TSchemaWithType).nullable) : false;
+        if (!refPropertySchema) {
+            return false;
+        }
+        return Boolean((refPropertySchema as TSchemaWithType).nullable) || (refPropertySchema as ISchemaBase).default === null;
     }
-    return Boolean((property as TSchemaWithType).nullable);
+    return Boolean((property as TSchemaWithType).nullable) || (property as ISchemaBase).default === null;
 }

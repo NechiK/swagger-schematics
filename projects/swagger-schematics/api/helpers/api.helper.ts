@@ -4,7 +4,7 @@ import { getApiMethodName, getApiResponseSymbol, getSuccessResponse } from "../.
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatBody } from "../../types/utils/params";
-import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
+import { IImportRef, ITransformTypeOptions, isNullable } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 
 export interface IParsedApiSchema {
@@ -143,6 +143,11 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
             const isQuery = ['get', 'head'].includes(operationKey);
 
+            const hasNullableQueryParams = queryParams.some(p => {
+                const param = p.originalParam;
+                return param.schema ? isNullable(param.schema, swaggerSchema) : false;
+            });
+
             return {
                 apiUrl,
                 queryParams,
@@ -170,7 +175,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 isQuery,
                 httpMethod: operationKey.toUpperCase(),
                 apiUrlFormatted: formatApiUrl(apiUrl),
-                queryParamsFormatted: formatQueryParams(queryParams),
+                queryParamsFormatted: formatQueryParams(queryParams, hasNullableQueryParams),
                 bodyFormatted: formatBody(bodyParam, operationKey),
                 requestMethod: operationKey,
                 bodyParam,
@@ -180,7 +185,8 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 deprecated: operation.deprecated,
                 summary: operation.summary,
                 description: operation.description,
-                operationId: operation.operationId
+                operationId: operation.operationId,
+                hasNullableQueryParams,
             };
         }));
 

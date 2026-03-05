@@ -5,7 +5,8 @@ import {
   GET_CHILD_BY_PARENT_ID,
   GET_SERVICE_ACTIONS,
   GET_SERVICE_ACTIONS_BY_ID,
-  GET_BY_STATUS_WITH_ENUM_PARAM
+  GET_BY_STATUS_WITH_ENUM_PARAM,
+  GET_WITH_NULLABLE_QUERY_PARAMS
 } from './operations/get.fixtures';
 import {
   POST_MODEL_FORM_DATA,
@@ -80,6 +81,9 @@ const API_PATHS: Record<TMockApiPath, IPath> = {
   },
   '/api/Claim/by-filter': {
     ...DELETE_WITH_QUERY_PARAMS
+  },
+  '/api/Claim/search': {
+    ...GET_WITH_NULLABLE_QUERY_PARAMS
   }
 };
 

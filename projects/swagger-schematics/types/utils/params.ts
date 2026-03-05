@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformType, ITransformTypeOptions } from "./transform-type";
+import { IImportRef, transformType, ITransformTypeOptions, isNullable } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 
 /**
@@ -172,6 +172,12 @@ export interface IParsedApiItem {
      * Example: "body" or "{}" or empty string for non-body methods.
      */
     bodyFormatted: string;
+
+    /**
+     * Whether any query parameter is nullable (has nullable: true or default: null).
+     * When true, params should be wrapped in omitBy(params, isNil) to strip null/undefined values.
+     */
+    hasNullableQueryParams: boolean;
 }
 
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
@@ -195,12 +201,18 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
             
             if (apiParam.schema) {
                 [typeSymbol, importRef] = transformType(apiParam.schema, swagger, options);
+                if (isNullable(apiParam.schema, swagger) && !typeSymbol.includes('| null')) {
+                    typeSymbol += ' | null';
+                }
             } else if (apiParam.content) {
                 // If content is provided instead of schema, try to extract type from it
                 const contentType = Object.keys(apiParam.content)[0];
                 const content = apiParam.content[contentType as keyof typeof apiParam.content];
                 if (content?.schema) {
                     [typeSymbol, importRef] = transformType(content.schema, swagger, options);
+                    if (isNullable(content.schema, swagger) && !typeSymbol.includes('| null')) {
+                        typeSymbol += ' | null';
+                    }
                 }
             }
 
@@ -315,10 +327,14 @@ export function formatApiUrl(apiUrl: string): string {
 /**
  * Formats query params for HTTP options object.
  * Example: "params: { status, force }" or ""
+ * When hasNullable is true, wraps in omitBy to strip null/undefined values.
  */
-export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[]): string {
+export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasNullable?: boolean): string {
     if (queryParams.length === 0) return '';
-    return `params: { ${queryParams.map(p => p.objectSymbol).join(', ')} }`;
+    const paramsObj = `{ ${queryParams.map(p => p.objectSymbol).join(', ')} }`;
+    return hasNullable
+        ? `params: omitBy(${paramsObj}, isNil)`
+        : `params: ${paramsObj}`;
 }
 
 /**
@@ -347,23 +363,36 @@ export function getApiCallParams(params: {
 
 export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
     let typeSymbol = 'any';
+    let isParamNullable = false;
     
     if (param.schema) {
         [typeSymbol] = transformType(param.schema, swagger, options);
+        isParamNullable = isNullable(param.schema, swagger);
+        if (isParamNullable && !typeSymbol.includes('| null')) {
+            typeSymbol += ' | null';
+        }
     } else if (param.content) {
         const contentType = Object.keys(param.content)[0];
         const content = param.content[contentType as keyof typeof param.content];
         if (content?.schema) {
             [typeSymbol] = transformType(content.schema, swagger, options);
+            isParamNullable = isNullable(content.schema, swagger);
+            if (isParamNullable && !typeSymbol.includes('| null')) {
+                typeSymbol += ' | null';
+            }
         }
     }
     
-    return `${param.name}${param.required ? '' : '?'}: ${typeSymbol}`;
+    const isOptional = !param.required || isParamNullable;
+    return `${param.name}${isOptional ? '?' : ''}: ${typeSymbol}`;
 }
 
 export function transformParamsToObject(params: IParsedParam<TParam>[]): string {
     if (params.length === 0) {
         return '';
     }
-    return `{ ${params.map(param => `${param.objectSymbol}`).join(', ')} }: { ${params.map(param => `${param.objectSymbol}: ${param.typeSymbol}`).join('; ')} }`;
+    return `{ ${params.map(param => `${param.objectSymbol}`).join(', ')} }: { ${params.map(param => {
+        const isOptional = param.typeSymbol.includes('| null');
+        return `${param.objectSymbol}${isOptional ? '?' : ''}: ${param.typeSymbol}`;
+    }).join('; ')} }`;
 }

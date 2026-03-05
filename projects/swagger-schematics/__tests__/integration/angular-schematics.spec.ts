@@ -123,6 +123,22 @@ describe('Schematics Integration', () => {
         expect(apiServiceContent).toContain('deleteClaimDeletemany(body: number[]): Observable<boolean>');
       });
     });
+
+    describe('Nullable Query Parameters', () => {
+      it('should import omitBy and isNil from lodash-es', () => {
+        expect(apiServiceContent).toContain("import { omitBy, isNil } from 'lodash-es'");
+      });
+
+      it('should generate method with nullable param types', () => {
+        expect(apiServiceContent).toContain(
+          'getClaimSearch({ name, status, priority }: { name: string; status?: string | null; priority?: number | null }): Observable<IClaimDetailDTO[]>'
+        );
+      });
+
+      it('should wrap params in omitBy for nullable query params', () => {
+        expect(apiServiceContent).toContain('params: omitBy({ name, status, priority }, isNil)');
+      });
+    });
   });
 
   describe('Base API Generation', () => {

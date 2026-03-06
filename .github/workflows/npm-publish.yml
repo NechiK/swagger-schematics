@@ -21,11 +21,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run npm publish script
-        run: npm run publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_SWAGGER_SCHEMATICS_SECRET }}
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        working-directory: projects/swagger-schematics

@@ -32,3 +32,5 @@ jobs:
       - name: Publish
         run: npm publish --provenance --access public
         working-directory: projects/swagger-schematics
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_SWAGGER_SCHEMATICS_SECRET }}

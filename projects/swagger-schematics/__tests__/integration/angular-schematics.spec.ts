@@ -2,7 +2,7 @@ import '../helpers/matchers';
 import { UnitTestTree } from '@angular-devkit/schematics/testing';
 import {
   setupSwaggerMock,
-  resetAxiosMocks,
+  resetFetchMocks,
   runFullSchematics,
   createTestTree,
   runTypesSchematic,
@@ -22,7 +22,7 @@ describe('Schematics Integration', () => {
   });
 
   afterAll(() => {
-    resetAxiosMocks();
+    resetFetchMocks();
   });
 
   describe('File Generation', () => {
@@ -158,7 +158,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should skip base API generation if files already exist', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with existing base API files
@@ -178,7 +178,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should generate only missing token file when service already exists', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with only the service file existing
@@ -199,7 +199,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should generate only missing service file when token already exists', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with only the token file existing
@@ -222,7 +222,7 @@ describe('Schematics Integration', () => {
 
   describe('Custom Template Helpers', () => {
     it('should load custom helpers from templateHelpersPath', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
 
       const helpersPath = path.resolve(__dirname, '../__fixtures__/custom-helpers.fixture.js');
       const optionsWithHelpers = {
@@ -240,7 +240,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should throw error for invalid templateHelpersPath', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
 
       const optionsWithInvalidHelpers = {
         ...ANGULAR_SCHEMATIC_OPTIONS,

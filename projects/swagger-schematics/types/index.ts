@@ -11,7 +11,8 @@ import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema, TSchemaWithType} from "../interfaces/version_3_1/swagger.interface";
 import { isComposition, isNot } from "./utils/transform-type";
-import axios, {AxiosResponse} from "axios";
+import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
+import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { IRef } from '../interfaces/version_3_1/ref.interface';
@@ -39,8 +40,8 @@ export default function(options: SwaggerSchema): Rule {
           }
       }
 
-      const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(openApiSchematicsConfig.swaggerSchemaUrl as string);
-      const schemas = swagger.data.components?.schemas ?? {};
+      const swagger: ISwaggerSchema = await fetchSwaggerSchema(openApiSchematicsConfig.swaggerSchemaUrl as string);
+      const schemas = swagger.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
         const schema = schemas[schemaKey];
@@ -107,7 +108,7 @@ export default function(options: SwaggerSchema): Rule {
               const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
               const { typeExpression, importRefs: compositionRefs } = transformCompositionSchema(
                   schemaData.data as TSchemaByType,
-                  swagger.data,
+                  swagger,
                   { typeMapping: openApiSchematicsConfig.typeMapping }
               );
               // Filter out self-references
@@ -130,7 +131,7 @@ export default function(options: SwaggerSchema): Rule {
           } else {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
-            const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger.data, {
+            const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
                 typeMapping: openApiSchematicsConfig.typeMapping
             });
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);

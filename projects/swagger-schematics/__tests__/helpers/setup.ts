@@ -1,5 +1,3 @@
-import MockAdapter from 'axios-mock-adapter';
-import axios from 'axios';
 import { Tree } from '@angular-devkit/schematics';
 import { SchematicTestRunner, UnitTestTree } from '@angular-devkit/schematics/testing';
 import * as path from 'path';
@@ -7,20 +5,31 @@ import { ISwaggerSchema } from '../../interfaces/version_3_1/swagger.interface';
 import { loadFixture, loadJsonFixture } from '../__fixtures__';
 
 // ============================================================================
-// Axios Mock Setup
+// Fetch Mock Setup
 // ============================================================================
 
-export const mockAxios = new MockAdapter(axios);
+const swaggerMocks = new Map<string, unknown>();
+
+globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
+  const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  const schema = swaggerMocks.get(requestUrl);
+
+  if (schema === undefined) {
+    return { ok: false, status: 404, statusText: 'Not Found' } as Response;
+  }
+
+  return { ok: true, status: 200, statusText: 'OK', json: async () => schema } as Response;
+}) as typeof fetch;
 
 export const setupSwaggerMock = <T extends string>(
   url: string,
   schema: ISwaggerSchema<T>
 ): void => {
-  mockAxios.onGet(url).reply(200, schema);
+  swaggerMocks.set(url, schema);
 };
 
-export const resetAxiosMocks = (): void => {
-  mockAxios.reset();
+export const resetFetchMocks = (): void => {
+  swaggerMocks.clear();
 };
 
 // ============================================================================

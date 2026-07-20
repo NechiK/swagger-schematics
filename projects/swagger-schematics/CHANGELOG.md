@@ -6,6 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0-beta.1] - 2026-07-20
+
+### 🐛 Fixed
+- **String enum generation** - enum members now get quoted string values:
+  - Previously `{ enum: ["Email", "PhoneCall"], type: "string" }` generated invalid TypeScript (`Email = Email`); now generates `Email = 'Email'`
+  - Works with `x-enum-varnames` when the member name differs from the value (`PhoneCall = 'phone-call'`)
+  - Single quotes inside values are escaped; integer enum values remain unquoted
+- **RTK endpoint URLs now include the controller segment** - `url` was previously generated without the controller path (e.g. `` url: `/${id}` ``); now the dasherized controller name is prefixed (e.g. `` url: `/claim/${id}` ``)
+- **`ApiBaseService.getUrl` strips a trailing `/api` segment from `apiBaseUrl`** (case-insensitive, with or without trailing slash) so a configured base URL like `https://host/api` no longer produces `/api/api/...` in request URLs
+
+### ✨ Added
+- Jest configuration in `package.json` - the test suite now runs out of the box (`npm test`); previously the jest config was not committed
+- Tests for string enum generation: quoted values, `x-enum-varnames` with string values, and a guard that integer enums stay unquoted
+- Tests for `ApiBaseService.getUrl` covering all URL variants - the generated service is compiled and executed:
+  - Relative URLs when `apiBaseUrl` is empty, nested segments, repeated-slash normalization
+  - Base URLs with/without trailing slash, ending in `/api` (any case), and with extra path segments
+  - A guard that the generated file compiles without TypeScript diagnostics
+- Changelog writing skill (`.agents/skills/changelog/SKILL.md`) to guide CHANGELOG.md updates
+
+### ♻️ Changed
+- **Swagger schema download now uses Node's built-in `fetch`** instead of `axios` - the schematic no longer has any third-party HTTP dependency; non-2xx responses throw an explicit error with the URL and status
+- **Schema option types are now generated with `json-schema-to-typescript`** (replacing unmaintained `dtsgenerator`):
+  - `SwaggerSchema` / `SwaggerApiSchema` are exported interfaces generated to `types/schema.d.ts` / `api/schema.d.ts` and imported explicitly (previously ambient globals from a root `schema.d.ts`)
+- **npm publish workflow now uses npm Trusted Publishing (OIDC)** - no `NODE_AUTH_TOKEN` secret needed; provenance is generated automatically; runs on Node 24 (LTS) picked up from the new `.nvmrc`; installs with `npm ci` against committed lockfiles
+- **TypeScript configs modernized** ahead of TypeScript 7 (all deprecated options removed):
+  - Build uses `module: node18` (same CommonJS output) instead of `commonjs` + `moduleResolution: node`
+  - Removed deprecated `baseUrl`, `downlevelIteration`, and `importHelpers`
+  - Added package-level `tsconfig.json` so editors resolve jest types in spec files
+- **Reproducible installs** - all dependency versions are exact-pinned (`save-exact=true` in `.npmrc`), lockfiles are committed, and `engines` declares supported Node (`^20.19.0 || ^22.12.0 || >=24.0.0`) and npm (`>=10`)
+
+### 🗑️ Removed
+- `axios` and `axios-mock-adapter` - tests now mock `globalThis.fetch` (test helper `resetAxiosMocks` renamed to `resetFetchMocks`)
+- `dtsgenerator` - replaced by `json-schema-to-typescript`
+- `jasmine` and `@types/jasmine` leftovers (tests run on Jest; the jasmine types conflicted with Jest's globals)
+- `codelyzer`, `cpx`, and a dead `tslint.json` - TSLint-era tooling that was never invoked
+
+### 📦 Dependencies
+- Updated editorconfig to 3.0.2
+- Updated @types/node to 26.1.1
+- Updated fs-extra to 11.3.6
+- Updated jest to 30.4.2 and ts-jest to 29.4.11
+- Added json-schema-to-typescript 15.0.4 (dev)
+- typescript stays at 5.9.3 - ts-jest does not yet support TypeScript 6/7
+
+
+## [1.0.0-alpha.31] - 2026-03-05
+
+### ✨ Added
+- **Nullable query parameter support** in generated API methods (Angular and RTK):
+  - Query params with `nullable: true` or `default: null` now get `| null` in their TypeScript type and are marked optional (`?`) in method signatures and destructured parameter objects
+  - When an operation has nullable query params, the generated `params` object is wrapped in `omitBy({ ... }, isNil)` so `null`/`undefined` values are stripped before the request is sent
+  - `import { omitBy, isNil } from 'lodash-es'` is added to generated Angular services and RTK API files only when at least one endpoint needs it
+- `hasNullableQueryParams` property on `IParsedApiItem` for custom templates
+- Tests for nullable query params: Angular/RTK integration tests, `transformType` unit tests, and a `GET_WITH_NULLABLE_QUERY_PARAMS` fixture
+
+### ♻️ Changed
+- `isNullable()` now also treats schemas with `default: null` as nullable (previously only `nullable: true`), including when resolved through `$ref`
+- `formatQueryParams()` accepts a `hasNullable` flag to control `omitBy` wrapping
+
+
 ## [1.0.0-alpha.30] - 2026-01-27
 
 ### ✨ Added

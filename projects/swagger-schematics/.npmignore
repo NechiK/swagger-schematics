@@ -1,7 +1,7 @@
 node_modules
 mocks
+tsconfig.json
 tsconfig.*.json
-tslint.json
 package-lock.json
 
 # Test files

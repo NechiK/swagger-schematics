@@ -15,17 +15,34 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 18
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            projects/swagger-schematics/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          npm ci --prefix projects/swagger-schematics
 
-      - name: Run npm publish script
-        run: npm run publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_SWAGGER_SCHEMATICS_SECRET }}
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE="${VERSION#*-}"
+            TAG="${PRERELEASE%%.*}"
+          else
+            TAG="latest"
+          fi
+          echo "Publishing $VERSION with tag $TAG"
+          npm publish --access public --tag "$TAG"
+        working-directory: projects/swagger-schematics

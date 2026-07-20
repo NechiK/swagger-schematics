@@ -18,6 +18,22 @@ exports[`Types Schematics Integration Enum Generation should generate ClaimType 
 "
 `;
 
+exports[`Types Schematics Integration Enum Generation should generate string enum with quoted string values 1`] = `
+"export enum TDistributionType {
+  TypeA = 'TypeA',
+  TypeB = 'TypeB'
+}
+"
+`;
+
+exports[`Types Schematics Integration Enum Generation should generate string enum with x-enum-varnames and quoted string values 1`] = `
+"export enum TDeliveryChannel {
+  Email = 'email',
+  PhoneCall = 'phone-call'
+}
+"
+`;
+
 exports[`Types Schematics Integration File Generation should generate expected type files 1`] = `
 [
   "/.editorconfig",
@@ -37,6 +53,7 @@ exports[`Types Schematics Integration File Generation should generate expected t
   "/test-output/enums/claim-type.enum.ts",
   "/test-output/enums/distribution-type.enum.ts",
   "/test-output/enums/nullable-of-distribution-type.enum.ts",
+  "/test-output/enums/delivery-channel.enum.ts",
 ]
 `;
 

@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
         run: |
@@ -32,5 +31,14 @@ jobs:
         run: npm run build
 
       - name: Publish
-        run: npm publish --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE="${VERSION#*-}"
+            TAG="${PRERELEASE%%.*}"
+          else
+            TAG="latest"
+          fi
+          echo "Publishing $VERSION with tag $TAG"
+          npm publish --access public --tag "$TAG"
         working-directory: projects/swagger-schematics

@@ -41,7 +41,10 @@
     "generate"
   ],
   "author": "Maks Nechesonov",
-  "repository": "git@github.com:NechiK/swagger-schematics.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NechiK/swagger-schematics.git"
+  },
   "license": "ISC",
   "engines": {
     "node": "^20.19.0 || ^22.12.0 || >=24.0.0",

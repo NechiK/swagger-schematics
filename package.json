@@ -18,13 +18,11 @@
     "@angular-devkit/schematics": "19.2.15",
     "@angular-devkit/schematics-cli": "19.2.15",
     "@schematics/angular": "19.2.15",
-    "editorconfig": "3.0.2",
-    "axios": "1.18.1"
+    "editorconfig": "3.0.2"
   },
   "devDependencies": {
     "@types/node": "26.1.1",
     "@types/json-schema": "7.0.15",
-    "axios-mock-adapter": "2.1.0",
     "dtsgenerator": "3.19.2",
     "fs-extra": "11.3.6",
     "ts-node": "10.9.2",

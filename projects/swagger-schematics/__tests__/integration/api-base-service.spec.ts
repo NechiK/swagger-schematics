@@ -2,7 +2,7 @@ import * as ts from 'typescript';
 import { UnitTestTree } from '@angular-devkit/schematics/testing';
 import {
   setupSwaggerMock,
-  resetAxiosMocks,
+  resetFetchMocks,
   runApiSchematic,
   createTestTree,
   ANGULAR_SCHEMATIC_OPTIONS
@@ -54,7 +54,7 @@ describe('ApiBaseService getUrl', () => {
   });
 
   afterAll(() => {
-    resetAxiosMocks();
+    resetFetchMocks();
   });
 
   it('should generate compilable TypeScript without diagnostics', () => {

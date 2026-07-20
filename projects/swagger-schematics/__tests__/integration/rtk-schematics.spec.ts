@@ -2,7 +2,7 @@ import '../helpers/matchers';
 import { UnitTestTree } from '@angular-devkit/schematics/testing';
 import {
   setupSwaggerMock,
-  resetAxiosMocks,
+  resetFetchMocks,
   createTestTree,
   runTypesSchematic,
   runApiSchematic,
@@ -24,7 +24,7 @@ describe('RTK Query Schematics Integration', () => {
   });
 
   afterAll(() => {
-    resetAxiosMocks();
+    resetFetchMocks();
   });
 
   describe('File Generation', () => {
@@ -148,7 +148,7 @@ describe('RTK Query Schematics Integration', () => {
     };
 
     beforeAll(async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(SCOPED_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       let testTree = createTestTree();
@@ -179,7 +179,7 @@ describe('RTK Query Schematics Integration', () => {
     });
 
     it('should skip base API generation if file already exists', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with existing base API file
@@ -195,7 +195,7 @@ describe('RTK Query Schematics Integration', () => {
     });
 
     it('should generate base API at custom path', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       const customPath = '/custom/path/to/api-base.ts';
@@ -212,7 +212,7 @@ describe('RTK Query Schematics Integration', () => {
     });
 
     it('should use tsconfig path alias when base API matches', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Use a path that matches the @/* alias (src/*)

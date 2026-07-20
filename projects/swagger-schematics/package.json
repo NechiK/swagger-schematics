@@ -52,14 +52,12 @@
     "@angular-devkit/schematics": "20.3.14",
     "@angular-devkit/schematics-cli": "20.3.14",
     "@schematics/angular": "20.3.14",
-    "axios": "1.18.1",
     "editorconfig": "3.0.2"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/json-schema": "7.0.15",
     "@types/node": "26.1.1",
-    "axios-mock-adapter": "2.1.0",
     "dtsgenerator": "3.19.2",
     "fs-extra": "11.3.6",
     "jest": "^30.4.2",

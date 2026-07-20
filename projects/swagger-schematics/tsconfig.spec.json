@@ -1,18 +1,7 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
-  "extends": "../../tsconfig.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../out-tsc/spec",
-    "types": [
-      "jest",
-      "node"
-    ],
-    "esModuleInterop": true,
-    "module": "commonjs",
-    "paths": {
-      "@fixtures/*": ["./__tests__/__fixtures__/*"],
-      "@helpers/*": ["./__tests__/helpers/*"]
-    }
+    "outDir": "../../out-tsc/spec"
   },
   "include": [
     "__tests__/**/*.ts",

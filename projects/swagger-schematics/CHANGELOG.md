@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0-alpha.31] - 2026-03-05
+
+### ✨ Added
+- **Nullable query parameter support** in generated API methods (Angular and RTK):
+  - Query params with `nullable: true` or `default: null` now get `| null` in their TypeScript type and are marked optional (`?`) in method signatures and destructured parameter objects
+  - When an operation has nullable query params, the generated `params` object is wrapped in `omitBy({ ... }, isNil)` so `null`/`undefined` values are stripped before the request is sent
+  - `import { omitBy, isNil } from 'lodash-es'` is added to generated Angular services and RTK API files only when at least one endpoint needs it
+- `hasNullableQueryParams` property on `IParsedApiItem` for custom templates
+- Tests for nullable query params: Angular/RTK integration tests, `transformType` unit tests, and a `GET_WITH_NULLABLE_QUERY_PARAMS` fixture
+
+### ♻️ Changed
+- `isNullable()` now also treats schemas with `default: null` as nullable (previously only `nullable: true`), including when resolved through `$ref`
+- `formatQueryParams()` accepts a `hasNullable` flag to control `omitBy` wrapping
+
+
 ## [1.0.0-alpha.30] - 2026-01-27
 
 ### ✨ Added

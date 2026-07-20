@@ -24,7 +24,9 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          npm ci --prefix projects/swagger-schematics
 
       - name: Build
         run: npm run build

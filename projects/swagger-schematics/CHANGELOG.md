@@ -26,7 +26,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changelog writing skill (`.agents/skills/changelog/SKILL.md`) to guide CHANGELOG.md updates
 
 ### ♻️ Changed
-- npm publish workflow now publishes with provenance and explicit public access, uses the npm registry URL, and sets `NODE_AUTH_TOKEN` for the publish step
+- **Swagger schema download now uses Node's built-in `fetch`** instead of `axios` - the schematic no longer has any third-party HTTP dependency; non-2xx responses throw an explicit error with the URL and status
+- **Schema option types are now generated with `json-schema-to-typescript`** (replacing unmaintained `dtsgenerator`):
+  - `SwaggerSchema` / `SwaggerApiSchema` are exported interfaces generated to `types/schema.d.ts` / `api/schema.d.ts` and imported explicitly (previously ambient globals from a root `schema.d.ts`)
+- **npm publish workflow now uses npm Trusted Publishing (OIDC)** - no `NODE_AUTH_TOKEN` secret needed; provenance is generated automatically; runs on Node 24 (LTS) picked up from the new `.nvmrc`; installs with `npm ci` against committed lockfiles
+- **TypeScript configs modernized** ahead of TypeScript 7 (all deprecated options removed):
+  - Build uses `module: node18` (same CommonJS output) instead of `commonjs` + `moduleResolution: node`
+  - Removed deprecated `baseUrl`, `downlevelIteration`, and `importHelpers`
+  - Added package-level `tsconfig.json` so editors resolve jest types in spec files
+- **Reproducible installs** - all dependency versions are exact-pinned (`save-exact=true` in `.npmrc`), lockfiles are committed, and `engines` declares supported Node (`^20.19.0 || ^22.12.0 || >=24.0.0`) and npm (`>=10`)
+
+### 🗑️ Removed
+- `axios` and `axios-mock-adapter` - tests now mock `globalThis.fetch` (test helper `resetAxiosMocks` renamed to `resetFetchMocks`)
+- `dtsgenerator` - replaced by `json-schema-to-typescript`
+- `jasmine` and `@types/jasmine` leftovers (tests run on Jest; the jasmine types conflicted with Jest's globals)
+- `codelyzer`, `cpx`, and a dead `tslint.json` - TSLint-era tooling that was never invoked
+
+### 📦 Dependencies
+- Updated editorconfig to 3.0.2
+- Updated @types/node to 26.1.1
+- Updated fs-extra to 11.3.6
+- Updated jest to 30.4.2 and ts-jest to 29.4.11
+- Added json-schema-to-typescript 15.0.4 (dev)
+- typescript stays at 5.9.3 - ts-jest does not yet support TypeScript 6/7
 
 
 ## [1.0.0-alpha.31] - 2026-03-05

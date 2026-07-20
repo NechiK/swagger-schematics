@@ -23,7 +23,6 @@
   "devDependencies": {
     "@types/node": "26.1.1",
     "@types/json-schema": "7.0.15",
-    "dtsgenerator": "3.19.2",
     "fs-extra": "11.3.6",
     "ts-node": "10.9.2",
     "typescript": "5.9.3"

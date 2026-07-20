@@ -14,6 +14,7 @@ import { strings } from '@angular-devkit/core';
 import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
+import { SwaggerApiSchema } from './schema';
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';

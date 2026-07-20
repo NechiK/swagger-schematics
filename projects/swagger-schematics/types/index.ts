@@ -12,6 +12,7 @@ import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema, TSchemaWithType} from "../interfaces/version_3_1/swagger.interface";
 import { isComposition, isNot } from "./utils/transform-type";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
+import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { IRef } from '../interfaces/version_3_1/ref.interface';

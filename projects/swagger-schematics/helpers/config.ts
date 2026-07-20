@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { SwaggerApiSchema } from '../api/schema';
 
 const openApiConfigFilePath = 'openapi-schematics.json';
 

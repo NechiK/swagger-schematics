@@ -13,6 +13,28 @@
     "test:update-snapshots": "jest --updateSnapshot"
   },
   "schematics": "./collection.json",
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/__tests__"
+    ],
+    "testMatch": [
+      "**/*.spec.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.spec.json"
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@fixtures/(.*)$": "<rootDir>/__tests__/__fixtures__/$1",
+      "^@helpers/(.*)$": "<rootDir>/__tests__/helpers/$1"
+    }
+  },
   "keywords": [
     "schematics",
     "angular",

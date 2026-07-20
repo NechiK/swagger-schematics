@@ -20,6 +20,11 @@ export const NULLABLE_OF_DISTRIBUTION_TYPE_ENUM_SCHEMA: TSchemaByType = createEn
   nullable: true
 });
 
+export const DELIVERY_CHANNEL_ENUM_SCHEMA: TSchemaByType = createEnumSchema(['email', 'phone-call'], {
+  type: 'string',
+  varnames: ['Email', 'PhoneCall']
+});
+
 // ============================================================================
 // All Enums (Combined Export)
 // ============================================================================
@@ -28,5 +33,6 @@ export const ENUM_SCHEMAS: Record<string, TSchemaByType> = {
   ClaimStatuses: CLAIM_STATUSES_ENUM_SCHEMA,
   ClaimType: CLAIM_TYPE_ENUM_SCHEMA,
   DistributionType: DISTRIBUTION_TYPE_ENUM_SCHEMA,
-  NullableOfDistributionType: NULLABLE_OF_DISTRIBUTION_TYPE_ENUM_SCHEMA
+  NullableOfDistributionType: NULLABLE_OF_DISTRIBUTION_TYPE_ENUM_SCHEMA,
+  DeliveryChannel: DELIVERY_CHANNEL_ENUM_SCHEMA
 };

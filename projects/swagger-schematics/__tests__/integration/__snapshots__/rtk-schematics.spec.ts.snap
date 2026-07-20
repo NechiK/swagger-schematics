@@ -20,6 +20,7 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
   "/test-output/enums/claim-type.enum.ts",
   "/test-output/enums/distribution-type.enum.ts",
   "/test-output/enums/nullable-of-distribution-type.enum.ts",
+  "/test-output/enums/delivery-channel.enum.ts",
   "/th-common/store/api-base.ts",
 ]
 `;

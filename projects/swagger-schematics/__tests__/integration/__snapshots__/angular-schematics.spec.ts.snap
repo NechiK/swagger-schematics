@@ -1,9 +1,9 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`Schematics Integration API Service Generation should generate full API service 1`] = `
-"import { Injectable } from \\"@angular/core\\";
-import { ApiBaseService } from \\"./_api-base.service\\";
-import { Observable } from \\"rxjs\\";
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
 
 import { omitBy, isNil } from 'lodash-es';
 
@@ -182,6 +182,7 @@ exports[`Schematics Integration File Generation should generate expected files 1
   "/test-output/enums/claim-type.enum.ts",
   "/test-output/enums/distribution-type.enum.ts",
   "/test-output/enums/nullable-of-distribution-type.enum.ts",
+  "/test-output/enums/delivery-channel.enum.ts",
 ]
 `;
 

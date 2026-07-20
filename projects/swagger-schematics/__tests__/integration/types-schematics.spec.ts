@@ -49,6 +49,33 @@ describe('Types Schematics Integration', () => {
       const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/claim-type.enum.ts`);
       expect(content).toMatchSnapshot();
     });
+
+    it('should keep integer enum values unquoted', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/claim-type.enum.ts`);
+
+      expect(content).toContain('MS = 1');
+      expect(content).toContain('PP = 2');
+      expect(content).not.toContain("'1'");
+      expect(content).not.toContain("'2'");
+    });
+
+    it('should generate string enum with quoted string values', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/distribution-type.enum.ts`);
+
+      expect(content).toContain('export enum TDistributionType');
+      expect(content).toContain("TypeA = 'TypeA'");
+      expect(content).toContain("TypeB = 'TypeB'");
+      expect(content).toMatchSnapshot();
+    });
+
+    it('should generate string enum with x-enum-varnames and quoted string values', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/delivery-channel.enum.ts`);
+
+      expect(content).toContain('export enum TDeliveryChannel');
+      expect(content).toContain("Email = 'email'");
+      expect(content).toContain("PhoneCall = 'phone-call'");
+      expect(content).toMatchSnapshot();
+    });
   });
 
   describe('Interface Generation', () => {
@@ -148,7 +175,7 @@ describe('Types Schematics Integration', () => {
   describe('Composition Schema Generation', () => {
     it('should generate type alias for allOf schemas', () => {
       const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/full-claim-dto.type.ts`);
-      
+
       // Should be a type alias with T prefix, not interface with I prefix
       expect(content).toContain('export type TFullClaimDTO =');
       // Should be intersection type with &
@@ -160,7 +187,7 @@ describe('Types Schematics Integration', () => {
 
     it('should generate type alias for oneOf schemas', () => {
       const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/notification.type.ts`);
-      
+
       // Should be a type alias with T prefix
       expect(content).toContain('export type TNotification =');
       expect(content).toContain('|');
@@ -171,7 +198,7 @@ describe('Types Schematics Integration', () => {
 
     it('should generate type alias for anyOf schemas', () => {
       const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/search-result.type.ts`);
-      
+
       // Should be a type alias with T prefix
       expect(content).toContain('export type TSearchResult =');
       expect(content).toContain('|');
@@ -190,34 +217,34 @@ describe('Types Schematics Integration', () => {
     beforeAll(async () => {
       resetAxiosMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
-      
+
       const optionsWithTypeMapping = {
         ...ANGULAR_SCHEMATIC_OPTIONS,
         typeMapping: {
           'NullableOfDistributionType': 'DistributionType'
         }
       };
-      
+
       typeMappingTree = await runTypesSchematic(optionsWithTypeMapping, createTestTree());
     });
 
     it('should map NullableOfDistributionType to DistributionType with | null in interface', () => {
       const content = typeMappingTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/type-mapping-test-dto.interface.ts`);
-      
+
       // Should use DistributionType import, not NullableOfDistributionType
       expect(content).toContain("import { TDistributionType }");
       expect(content).toContain("from '../enums/distribution-type.enum'");
-      
+
       // Should NOT import from nullable-of-distribution-type
       expect(content).not.toContain('nullable-of-distribution-type');
-      
+
       // Should have | null for the nullable type
       expect(content).toContain('TDistributionType | null');
     });
 
     it('should use original NullableOfDistributionType import when typeMapping is not set', () => {
       const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/type-mapping-test-dto.interface.ts`);
-      
+
       // Without typeMapping, should use the original NullableOfDistributionType
       expect(content).toContain("import { TNullableOfDistributionType }");
       expect(content).toContain("from '../enums/nullable-of-distribution-type.enum'");

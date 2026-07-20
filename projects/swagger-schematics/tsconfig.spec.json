@@ -8,7 +8,7 @@
       "node"
     ],
     "esModuleInterop": true,
-    "baseUrl": ".",
+    "module": "commonjs",
     "paths": {
       "@fixtures/*": ["./__tests__/__fixtures__/*"],
       "@helpers/*": ["./__tests__/helpers/*"]

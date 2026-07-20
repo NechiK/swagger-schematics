@@ -13,7 +13,8 @@ import {
 import { strings } from '@angular-devkit/core';
 import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
-import axios, { AxiosResponse } from 'axios';
+import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
+import { SwaggerApiSchema } from './schema';
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
@@ -61,9 +62,9 @@ export default function(options: SwaggerApiSchema) {
         const framework = config.framework;
         const frameworkConfig = FRAMEWORK_CONFIGS[framework as TFrameworkType];
 
-        const swagger: AxiosResponse<ISwaggerSchema> = await axios.get(config.swaggerSchemaUrl as string);
+        const swagger: ISwaggerSchema = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
 
-        const parsedApiSchemas = transformSwaggerSchema(swagger.data, {
+        const parsedApiSchemas = transformSwaggerSchema(swagger, {
             typeMapping: config.typeMapping
         });
 

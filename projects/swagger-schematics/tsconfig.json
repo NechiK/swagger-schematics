@@ -1,0 +1,21 @@
+/* Editor/base config for this package — the build uses tsconfig.schematics.json,
+   tests use tsconfig.spec.json (both standalone for tooling, this one for the IDE). */
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "types": [
+      "jest",
+      "node"
+    ],
+    "paths": {
+      "@fixtures/*": ["./__tests__/__fixtures__/*"],
+      "@helpers/*": ["./__tests__/helpers/*"]
+    }
+  },
+  "exclude": [
+    "output",
+    "node_modules"
+  ]
+}

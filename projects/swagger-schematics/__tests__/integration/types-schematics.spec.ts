@@ -2,7 +2,7 @@ import '../helpers/matchers';
 import { UnitTestTree } from '@angular-devkit/schematics/testing';
 import {
   setupSwaggerMock,
-  resetAxiosMocks,
+  resetFetchMocks,
   createTestTree,
   runTypesSchematic,
   ANGULAR_SCHEMATIC_OPTIONS
@@ -20,7 +20,7 @@ describe('Types Schematics Integration', () => {
   });
 
   afterAll(() => {
-    resetAxiosMocks();
+    resetFetchMocks();
   });
 
   describe('File Generation', () => {
@@ -102,7 +102,7 @@ describe('Types Schematics Integration', () => {
 
   describe('File Update Behavior', () => {
     it('should update existing enum files when schema changes', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with an existing enum file with old content
@@ -121,7 +121,7 @@ describe('Types Schematics Integration', () => {
     });
 
     it('should update existing interface files when schema changes', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with an existing interface file with old content
@@ -141,7 +141,7 @@ describe('Types Schematics Integration', () => {
     });
 
     it('should update multiple existing files in a single run', async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       // Create a tree with multiple existing files
@@ -215,7 +215,7 @@ describe('Types Schematics Integration', () => {
     let typeMappingTree: UnitTestTree;
 
     beforeAll(async () => {
-      resetAxiosMocks();
+      resetFetchMocks();
       setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SWAGGER_SCHEMA);
 
       const optionsWithTypeMapping = {

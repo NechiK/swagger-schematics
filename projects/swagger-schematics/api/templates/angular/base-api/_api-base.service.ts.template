@@ -14,8 +14,11 @@ export abstract class ApiBaseService {
       .join('/')
       .replace(/\/+/g, '/');
 
-    return this.apiBaseUrl
-      ? `${this.apiBaseUrl.replace(/\/$/, '')}/${path}`
-      : `/${path}`;
+    if (!this.apiBaseUrl) {
+      return `/${path}`;
+    }
+
+    const baseUrl = this.apiBaseUrl.replace(/\/$/, '').replace(/\/api$/i, '');
+    return `${baseUrl}/${path}`;
   }
 }

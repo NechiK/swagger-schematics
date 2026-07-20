@@ -1,6 +1,6 @@
 {
   "name": "swagger-schematics",
-  "version": "1.0.0-alpha.31",
+  "version": "1.0.0-beta.1",
   "description": "Schematics types and API generator via Swagger scheme",
   "scripts": {
     "prebuild": "dtsgen --out schema.d.ts **/schema.json",
@@ -13,6 +13,28 @@
     "test:update-snapshots": "jest --updateSnapshot"
   },
   "schematics": "./collection.json",
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/__tests__"
+    ],
+    "testMatch": [
+      "**/*.spec.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.spec.json"
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@fixtures/(.*)$": "<rootDir>/__tests__/__fixtures__/$1",
+      "^@helpers/(.*)$": "<rootDir>/__tests__/helpers/$1"
+    }
+  },
   "keywords": [
     "schematics",
     "angular",

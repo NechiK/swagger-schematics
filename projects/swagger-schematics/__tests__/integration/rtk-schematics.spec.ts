@@ -92,26 +92,26 @@ describe('RTK Query Schematics Integration', () => {
 
     describe('Query Endpoints', () => {
       it('should generate GET endpoint as query', () => {
-        expect(apiSliceContent).toMatch(/getById:\s*builder\.query/);
+        expect(apiSliceContent).toMatch(/claimGetById:\s*builder\.query/);
       });
 
       it('should generate query with path parameter', () => {
-        expect(apiSliceContent).toContain("url: `/${id}`");
+        expect(apiSliceContent).toContain("url: `/claim/${id}`");
         expect(apiSliceContent).toContain("method: 'GET'");
       });
     });
 
     describe('Mutation Endpoints', () => {
       it('should generate POST endpoint as mutation', () => {
-        expect(apiSliceContent).toMatch(/createClaimByIdNote:\s*builder\.mutation/);
+        expect(apiSliceContent).toMatch(/claimCreateClaimByIdNote:\s*builder\.mutation/);
       });
 
       it('should generate PUT endpoint as mutation', () => {
-        expect(apiSliceContent).toMatch(/updateClaimById:\s*builder\.mutation/);
+        expect(apiSliceContent).toMatch(/claimUpdateClaimById:\s*builder\.mutation/);
       });
 
       it('should generate DELETE endpoint as mutation', () => {
-        expect(apiSliceContent).toMatch(/deleteClaimDeletemany:\s*builder\.mutation/);
+        expect(apiSliceContent).toMatch(/claimDeleteClaimDeletemany:\s*builder\.mutation/);
       });
 
       it('should include body in mutation', () => {

@@ -20,6 +20,7 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
   "/test-output/enums/claim-type.enum.ts",
   "/test-output/enums/distribution-type.enum.ts",
   "/test-output/enums/nullable-of-distribution-type.enum.ts",
+  "/test-output/enums/delivery-channel.enum.ts",
   "/th-common/store/api-base.ts",
 ]
 `;
@@ -39,116 +40,116 @@ import { TClaimStatuses } from './enums/claim-statuses.enum';
 export const claimApi = baseApi.injectEndpoints({
   overrideExisting: false,
   endpoints: (builder) => ({
-    getById: builder.query<IClaimDetailDTO, { id: number }>({
+    claimGetById: builder.query<IClaimDetailDTO, { id: number }>({
       query: ({ id }) => ({
-        url: \`/\${id}\`,
+        url: \`/claim/\${id}\`,
         method: 'GET',
       }),
     }),
-    updateClaimById: builder.mutation<IClaimDetailDTO, { id: number; body: IClaimDetailDTO }>({
+    claimUpdateClaimById: builder.mutation<IClaimDetailDTO, { id: number; body: IClaimDetailDTO }>({
       query: ({ id, body }) => ({
-        url: \`/\${id}\`,
+        url: \`/claim/\${id}\`,
         method: 'PUT',
         body,
       }),
     }),
-    getServiceActionsByClaimId: builder.query<IClaimDetailDTO, { claimId: number }>({
+    claimGetServiceActionsByClaimId: builder.query<IClaimDetailDTO, { claimId: number }>({
       query: ({ claimId }) => ({
-        url: \`/\${claimId}/serviceActions\`,
+        url: \`/claim/\${claimId}/serviceActions\`,
         method: 'GET',
       }),
     }),
-    createClaim: builder.mutation<void, { width: number; height: number; body: object }>({
+    claimCreateClaim: builder.mutation<void, { width: number; height: number; body: object }>({
       query: ({ width, height, body }) => ({
-        url: '/',
+        url: '/claim',
         method: 'POST',
         body,
         params: { width, height },
       }),
     }),
-    createClaimByIdNote: builder.mutation<IClaimNoteViewDTO, { id: number; body: ICreateNoteDTO }>({
+    claimCreateClaimByIdNote: builder.mutation<IClaimNoteViewDTO, { id: number; body: ICreateNoteDTO }>({
       query: ({ id, body }) => ({
-        url: \`/\${id}/note\`,
+        url: \`/claim/\${id}/note\`,
         method: 'POST',
         body,
       }),
     }),
-    updateClaimStatus: builder.mutation<void, { body: number }>({
+    claimUpdateClaimStatus: builder.mutation<void, { body: number }>({
       query: ({ body }) => ({
-        url: '/status',
+        url: '/claim/status',
         method: 'PUT',
         body,
       }),
     }),
-    postClaimAll: builder.mutation<IClaimDetailDTO, { body: ICompanySearchDTO }>({
+    claimPostClaimAll: builder.mutation<IClaimDetailDTO, { body: ICompanySearchDTO }>({
       query: ({ body }) => ({
-        url: '/all',
+        url: '/claim/all',
         method: 'POST',
         body,
       }),
     }),
-    postClaimIds: builder.mutation<number[], { body: ICompanySearchDTO }>({
+    claimPostClaimIds: builder.mutation<number[], { body: ICompanySearchDTO }>({
       query: ({ body }) => ({
-        url: '/ids',
+        url: '/claim/ids',
         method: 'POST',
         body,
       }),
     }),
-    updateClaimByIdReactivate: builder.mutation<void, { id: number }>({
+    claimUpdateClaimByIdReactivate: builder.mutation<void, { id: number }>({
       query: ({ id }) => ({
-        url: \`/\${id}/reactivate\`,
+        url: \`/claim/\${id}/reactivate\`,
         method: 'PUT',
       }),
     }),
-    deleteClaimDeletemany: builder.mutation<boolean, { body: number[] }>({
+    claimDeleteClaimDeletemany: builder.mutation<boolean, { body: number[] }>({
       query: ({ body }) => ({
-        url: '/deletemany',
+        url: '/claim/deletemany',
         method: 'DELETE',
         body,
       }),
     }),
-    getClaimServiceactions: builder.query<number[], { serviceActionId: number }>({
+    claimGetClaimServiceactions: builder.query<number[], { serviceActionId: number }>({
       query: ({ serviceActionId }) => ({
-        url: '/serviceactions',
+        url: '/claim/serviceactions',
         method: 'GET',
       }),
     }),
-    getClaimServiceactionsByServiceActionId: builder.query<number[], { serviceActionId: number }>({
+    claimGetClaimServiceactionsByServiceActionId: builder.query<number[], { serviceActionId: number }>({
       query: ({ serviceActionId }) => ({
-        url: \`/serviceactions/\${serviceActionId}\`,
+        url: \`/claim/serviceactions/\${serviceActionId}\`,
         method: 'GET',
       }),
     }),
-    getClaimBystatus: builder.query<IClaimDetailDTO[], { id: string; status: TClaimStatuses }>({
+    claimGetClaimBystatus: builder.query<IClaimDetailDTO[], { id: string; status: TClaimStatuses }>({
       query: ({ id, status }) => ({
-        url: '/bystatus',
+        url: '/claim/bystatus',
         method: 'GET',
         params: { id, status },
       }),
     }),
-    updateClaimNoteById: builder.mutation<void, { body: ICreateNoteDTO }>({
+    claimUpdateClaimNoteById: builder.mutation<void, { body: ICreateNoteDTO }>({
       query: ({ body }) => ({
-        url: \`/note/\${body.id}\`,
+        url: \`/claim/note/\${body.id}\`,
         method: 'PUT',
         body,
       }),
     }),
-    deleteClaimSingleById: builder.mutation<void, { id: number }>({
+    claimDeleteClaimSingleById: builder.mutation<void, { id: number }>({
       query: ({ id }) => ({
-        url: \`/single/\${id}\`,
+        url: \`/claim/single/\${id}\`,
         method: 'DELETE',
       }),
     }),
-    deleteClaimByFilter: builder.mutation<boolean, { status: string; force: boolean }>({
+    claimDeleteClaimByFilter: builder.mutation<boolean, { status: string; force: boolean }>({
       query: ({ status, force }) => ({
-        url: '/by-filter',
+        url: '/claim/by-filter',
         method: 'DELETE',
         params: { status, force },
       }),
     }),
-    getClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status: string | null; priority: number | null }>({
+    claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status: string | null; priority: number | null }>({
       query: ({ name, status, priority }) => ({
-        url: '/search',
+        url: '/claim/search',
         method: 'GET',
         params: omitBy({ name, status, priority }, isNil),
       }),

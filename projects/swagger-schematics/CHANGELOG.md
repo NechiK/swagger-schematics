@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0-beta.1] - 2026-07-20
+
+### 🐛 Fixed
+- **String enum generation** - enum members now get quoted string values:
+  - Previously `{ enum: ["Email", "PhoneCall"], type: "string" }` generated invalid TypeScript (`Email = Email`); now generates `Email = 'Email'`
+  - Works with `x-enum-varnames` when the member name differs from the value (`PhoneCall = 'phone-call'`)
+  - Single quotes inside values are escaped; integer enum values remain unquoted
+- **RTK endpoint URLs now include the controller segment** - `url` was previously generated without the controller path (e.g. `` url: `/${id}` ``); now the dasherized controller name is prefixed (e.g. `` url: `/claim/${id}` ``)
+- **`ApiBaseService.getUrl` strips a trailing `/api` segment from `apiBaseUrl`** (case-insensitive, with or without trailing slash) so a configured base URL like `https://host/api` no longer produces `/api/api/...` in request URLs
+
+### ✨ Added
+- Jest configuration in `package.json` - the test suite now runs out of the box (`npm test`); previously the jest config was not committed
+- Tests for string enum generation: quoted values, `x-enum-varnames` with string values, and a guard that integer enums stay unquoted
+- Tests for `ApiBaseService.getUrl` covering all URL variants - the generated service is compiled and executed:
+  - Relative URLs when `apiBaseUrl` is empty, nested segments, repeated-slash normalization
+  - Base URLs with/without trailing slash, ending in `/api` (any case), and with extra path segments
+  - A guard that the generated file compiles without TypeScript diagnostics
+- Changelog writing skill (`.agents/skills/changelog/SKILL.md`) to guide CHANGELOG.md updates
+
+### ♻️ Changed
+- npm publish workflow now publishes with provenance and explicit public access, uses the npm registry URL, and sets `NODE_AUTH_TOKEN` for the publish step
+
+
 ## [1.0.0-alpha.31] - 2026-03-05
 
 ### ✨ Added

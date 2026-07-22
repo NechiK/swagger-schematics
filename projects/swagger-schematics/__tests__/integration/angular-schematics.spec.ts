@@ -264,6 +264,10 @@ describe('Schematics Integration', () => {
       binaryServiceContent = binaryTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/document-api.service.ts`);
     });
 
+    it('should generate the full binary/multipart API service', () => {
+      expect(binaryServiceContent).toMatchSnapshot();
+    });
+
     it('should return Observable<Blob> for binary responses', () => {
       expect(binaryServiceContent).toMatch(/\(documentId: number, \{ thumbnail \}: \{ thumbnail\?: boolean \| null \}\): Observable<Blob>/);
     });

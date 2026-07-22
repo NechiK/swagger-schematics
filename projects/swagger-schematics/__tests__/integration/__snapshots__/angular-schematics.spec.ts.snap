@@ -142,6 +142,50 @@ export class ClaimApiService extends ApiBaseService {
 "
 `;
 
+exports[`Schematics Integration Binary Response Support should generate the full binary/multipart API service 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
+
+import { omitBy, isNil } from 'lodash-es';
+
+
+
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DocumentApiService extends ApiBaseService {
+  endpoint = 'Document';
+
+  constructor() {
+    super();
+  }
+
+  getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
+    return this.httpClient.get<boolean>(
+      this.getUrl('/'),
+      { params: { page, force } }
+    );
+  }
+
+  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
+    return this.httpClient.get(
+      this.getUrl(\`/\${documentId}/download\`),
+      { params: omitBy({ thumbnail }, isNil), responseType: 'blob' }
+    );
+  }
+
+  postDocumentByDocumentIdUpload(documentId: number, body: FormData): Observable<boolean> {
+    return this.httpClient.post<boolean>(
+      this.getUrl(\`/\${documentId}/upload\`),
+      body
+    );
+  }
+}
+"
+`;
+
 exports[`Schematics Integration Enum Generation should generate ClaimStatuses enum without names 1`] = `
 "export enum TClaimStatuses {
   1 = 1,

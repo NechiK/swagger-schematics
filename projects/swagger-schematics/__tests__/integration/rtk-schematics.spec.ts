@@ -246,6 +246,10 @@ describe('RTK Query Schematics Integration', () => {
       binaryApiContent = resultTree.readContent(`${RTK_SCHEMATIC_OPTIONS.path}/document.api.ts`);
     });
 
+    it('should generate the full binary/multipart RTK API', () => {
+      expect(binaryApiContent).toMatchSnapshot();
+    });
+
     it('should type the endpoint response as Blob', () => {
       expect(binaryApiContent).toMatch(/builder\.query<Blob, /);
     });

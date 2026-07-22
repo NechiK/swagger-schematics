@@ -9,16 +9,16 @@ import {
 import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
-import {TSchemaByType, ISwaggerSchema, TSchemaWithType} from "../interfaces/version_3_1/swagger.interface";
+import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import { isComposition, isNot } from "./utils/transform-type";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
-import { IRef } from '../interfaces/version_3_1/ref.interface';
 import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
+import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 
 export default function(options: SwaggerSchema): Rule {
   return async (host: Tree) => {
@@ -160,6 +160,7 @@ export default function(options: SwaggerSchema): Rule {
           }
       });
 
-      return finalRule;
+      const eslintFixRule = createEslintFixRule(openApiSchematicsConfig);
+      return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
   };
 }

@@ -22,6 +22,7 @@ import { FRAMEWORK_CONFIGS, TFrameworkType } from '../interfaces/swagger-schemat
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
 import { getBaseApiImportPath } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
+import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import * as path from 'path';
 
 import { existsSync } from 'fs';
@@ -125,6 +126,7 @@ export default function(options: SwaggerApiSchema) {
                 : chain([baseApiRule]);
         }
 
-        return finalRule;
+        const eslintFixRule = createEslintFixRule(config);
+        return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
     };
 }

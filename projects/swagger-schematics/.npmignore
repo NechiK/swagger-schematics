@@ -2,6 +2,7 @@ node_modules
 mocks
 tsconfig.json
 tsconfig.*.json
+eslint.config.mjs
 package-lock.json
 
 # Test files

@@ -43,7 +43,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
-  createClaim({ width, height }: { width: number; height: number }, body: object): Observable<void> {
+  createClaim({ width, height }: { width?: number; height?: number }, body: FormData): Observable<void> {
     return this.httpClient.post<void>(
       this.getUrl('/'),
       body,
@@ -125,7 +125,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
-  deleteClaimByFilter({ status, force }: { status: string; force: boolean }): Observable<boolean> {
+  deleteClaimByFilter({ status, force }: { status: string; force?: boolean }): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
       { params: { status, force } }

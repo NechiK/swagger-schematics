@@ -281,5 +281,14 @@ describe('Schematics Integration', () => {
     it('should keep query params alongside responseType in options', () => {
       expect(binaryServiceContent).toMatch(/\{ params: omitBy\(\{ thumbnail \}, isNil\), responseType: 'blob' \}/);
     });
+
+    it('should type multipart upload bodies as FormData', () => {
+      expect(binaryServiceContent).toMatch(/\(documentId: number, body: FormData\)/);
+      expect(binaryServiceContent).not.toContain('body: object');
+    });
+
+    it('should mark non-required query params optional and keep required ones mandatory', () => {
+      expect(binaryServiceContent).toContain('{ page, force }: { page?: number; force: boolean }');
+    });
   });
 });

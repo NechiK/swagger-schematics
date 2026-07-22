@@ -59,7 +59,7 @@ export const claimApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
     }),
-    claimCreateClaim: builder.mutation<void, { width: number; height: number; body: object }>({
+    claimCreateClaim: builder.mutation<void, { width?: number; height?: number; body: FormData }>({
       query: ({ width, height, body }) => ({
         url: '/claim',
         method: 'POST',
@@ -140,14 +140,14 @@ export const claimApi = baseApi.injectEndpoints({
         method: 'DELETE',
       }),
     }),
-    claimDeleteClaimByFilter: builder.mutation<boolean, { status: string; force: boolean }>({
+    claimDeleteClaimByFilter: builder.mutation<boolean, { status: string; force?: boolean }>({
       query: ({ status, force }) => ({
         url: '/claim/by-filter',
         method: 'DELETE',
         params: { status, force },
       }),
     }),
-    claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status: string | null; priority: number | null }>({
+    claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status?: string | null; priority?: number | null }>({
       query: ({ name, status, priority }) => ({
         url: '/claim/search',
         method: 'GET',

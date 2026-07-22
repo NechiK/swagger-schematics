@@ -253,5 +253,13 @@ describe('RTK Query Schematics Integration', () => {
     it('should add a blob responseHandler to the query', () => {
       expect(binaryApiContent).toContain('responseHandler: (response) => response.blob(),');
     });
+
+    it('should type multipart upload bodies as FormData', () => {
+      expect(binaryApiContent).toMatch(/builder\.mutation<boolean, \{ documentId: number; body: FormData \}>/);
+    });
+
+    it('should mark non-required query params optional in the request type', () => {
+      expect(binaryApiContent).toContain('{ page?: number; force: boolean }');
+    });
   });
 });

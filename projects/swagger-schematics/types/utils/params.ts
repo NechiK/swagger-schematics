@@ -308,7 +308,7 @@ export function buildApiMethodRequestType(params: {
     });
     
     params.queryParams.forEach(p => {
-        typeParts.push(`${p.objectSymbol}: ${p.typeSymbol}`);
+        typeParts.push(`${p.objectSymbol}${isParamOptional(p) ? '?' : ''}: ${p.typeSymbol}`);
     });
     
     if (params.bodyParam) {
@@ -394,12 +394,18 @@ export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerS
     return `${param.name}${isOptional ? '?' : ''}: ${typeSymbol}`;
 }
 
+/**
+ * A parameter is optional when the spec doesn't mark it required, or when its type is nullable.
+ */
+function isParamOptional(param: IParsedParam<TParam>): boolean {
+    return !param.originalParam.required || param.typeSymbol.includes('| null');
+}
+
 export function transformParamsToObject(params: IParsedParam<TParam>[]): string {
     if (params.length === 0) {
         return '';
     }
     return `{ ${params.map(param => `${param.objectSymbol}`).join(', ')} }: { ${params.map(param => {
-        const isOptional = param.typeSymbol.includes('| null');
-        return `${param.objectSymbol}${isOptional ? '?' : ''}: ${param.typeSymbol}`;
+        return `${param.objectSymbol}${isParamOptional(param) ? '?' : ''}: ${param.typeSymbol}`;
     }).join('; ')} }`;
 }

@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0] - 2026-07-22
+
+### ✨ Added
+- **Binary response support** - endpoints returning `type: string, format: binary` (file downloads) now generate `Blob` instead of `string`:
+  - Angular: methods return `Observable<Blob>` and the call adds `responseType: 'blob'` (using HttpClient's blob overload)
+  - RTK: endpoints are typed `builder.query<Blob, ...>` and get `responseHandler: (response) => response.blob()`
+- **Multipart upload support** - `multipart/form-data` request bodies are now typed as `FormData` (previously the schema collapsed to `object`); works out of the box with Angular HttpClient and RTK fetchBaseQuery
+- **`eslintFix` option** - runs the consuming project's own ESLint with autofix on every generated file, applying your import sorting, quote, and comma rules:
+  - Resolves ESLint from the host project and uses its config (flat or legacy) via real file paths, so folder-level overrides apply
+  - Only touches files created or overwritten by the current run - pre-existing files in the same folders are left alone
+  - Never blocks generation: missing ESLint logs an info, config or per-file failures log warnings and keep the generated content
+- Tests for `operationId` priority - when the OpenAPI spec provides `operationId`, it is used (camelized) as the method name instead of path-based generation; this behavior existed but was untested
+
+### 🐛 Fixed
+- **Query parameter optionality now honors `required`** - parameters not marked `required: true` generate optional members (`page?: number`) in Angular method signatures; previously only nullable parameters were optional
+- Nullable query parameters in RTK request types are now properly optional (`status?: string | null` instead of `status: string | null`)
+- Removed a leftover token-auth `.npmrc` from the package (source of npm's `always-auth` deprecation warnings during publish)
+
+### 📦 Dependencies
+- Added eslint 10.7.0 and @typescript-eslint/parser 8.65.0 (dev-only, for the eslintFix end-to-end tests)
+
+
 ## [1.0.0-beta.1] - 2026-07-20
 
 ### 🐛 Fixed

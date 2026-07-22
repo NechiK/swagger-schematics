@@ -9,6 +9,7 @@ import {
   RTK_SCHEMATIC_OPTIONS
 } from '../helpers/setup';
 import { SWAGGER_SCHEMA } from '../__fixtures__/swagger/full-schema.fixture';
+import { BINARY_SWAGGER_SCHEMA } from '../__fixtures__/swagger/binary-schema.fixture';
 
 describe('RTK Query Schematics Integration', () => {
   let tree: UnitTestTree;
@@ -229,6 +230,40 @@ describe('RTK Query Schematics Integration', () => {
       const apiContent = resultTree.readContent(`${RTK_SCHEMATIC_OPTIONS.path}/claim.api.ts`);
       // Should use @/store/api-base instead of relative path
       expect(apiContent).toContain("import { api as baseApi } from '@/store/api-base'");
+    });
+  });
+
+  describe('Binary Response Support', () => {
+    let binaryApiContent: string;
+
+    beforeAll(async () => {
+      resetFetchMocks();
+      setupSwaggerMock(RTK_SCHEMATIC_OPTIONS.swaggerSchemaUrl, BINARY_SWAGGER_SCHEMA);
+
+      let testTree = createTestTree();
+      testTree = await runTypesSchematic(RTK_SCHEMATIC_OPTIONS, testTree);
+      const resultTree = await runApiSchematic(RTK_SCHEMATIC_OPTIONS, testTree);
+      binaryApiContent = resultTree.readContent(`${RTK_SCHEMATIC_OPTIONS.path}/document.api.ts`);
+    });
+
+    it('should generate the full binary/multipart RTK API', () => {
+      expect(binaryApiContent).toMatchSnapshot();
+    });
+
+    it('should type the endpoint response as Blob', () => {
+      expect(binaryApiContent).toMatch(/builder\.query<Blob, /);
+    });
+
+    it('should add a blob responseHandler to the query', () => {
+      expect(binaryApiContent).toContain('responseHandler: (response) => response.blob(),');
+    });
+
+    it('should type multipart upload bodies as FormData', () => {
+      expect(binaryApiContent).toMatch(/builder\.mutation<boolean, \{ documentId: number; body: FormData \}>/);
+    });
+
+    it('should mark non-required query params optional in the request type', () => {
+      expect(binaryApiContent).toContain('{ page?: number; force: boolean }');
     });
   });
 });

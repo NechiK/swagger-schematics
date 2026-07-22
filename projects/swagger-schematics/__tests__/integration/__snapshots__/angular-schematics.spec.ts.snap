@@ -43,7 +43,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
-  createClaim({ width, height }: { width: number; height: number }, body: object): Observable<void> {
+  createClaim({ width, height }: { width?: number; height?: number }, body: FormData): Observable<void> {
     return this.httpClient.post<void>(
       this.getUrl('/'),
       body,
@@ -125,7 +125,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
-  deleteClaimByFilter({ status, force }: { status: string; force: boolean }): Observable<boolean> {
+  deleteClaimByFilter({ status, force }: { status: string; force?: boolean }): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
       { params: { status, force } }
@@ -136,6 +136,50 @@ export class ClaimApiService extends ApiBaseService {
     return this.httpClient.get<IClaimDetailDTO[]>(
       this.getUrl('/search'),
       { params: omitBy({ name, status, priority }, isNil) }
+    );
+  }
+}
+"
+`;
+
+exports[`Schematics Integration Binary Response Support should generate the full binary/multipart API service 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
+
+import { omitBy, isNil } from 'lodash-es';
+
+
+
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DocumentApiService extends ApiBaseService {
+  endpoint = 'Document';
+
+  constructor() {
+    super();
+  }
+
+  getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
+    return this.httpClient.get<boolean>(
+      this.getUrl('/'),
+      { params: { page, force } }
+    );
+  }
+
+  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
+    return this.httpClient.get(
+      this.getUrl(\`/\${documentId}/download\`),
+      { params: omitBy({ thumbnail }, isNil), responseType: 'blob' }
+    );
+  }
+
+  postDocumentByDocumentIdUpload(documentId: number, body: FormData): Observable<boolean> {
+    return this.httpClient.post<boolean>(
+      this.getUrl(\`/\${documentId}/upload\`),
+      body
     );
   }
 }

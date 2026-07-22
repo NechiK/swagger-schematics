@@ -10,6 +10,7 @@ import {
   ANGULAR_SCHEMATIC_OPTIONS
 } from '../helpers/setup';
 import { SWAGGER_SCHEMA, MOCK_GROUP } from '../__fixtures__/swagger/full-schema.fixture';
+import { BINARY_SWAGGER_SCHEMA } from '../__fixtures__/swagger/binary-schema.fixture';
 import * as path from 'path';
 
 describe('Schematics Integration', () => {
@@ -251,6 +252,47 @@ describe('Schematics Integration', () => {
 
       await expect(runFullSchematics(SWAGGER_SCHEMA, optionsWithInvalidHelpers))
         .rejects.toThrow(/Template helpers file not found/);
+    });
+  });
+
+  describe('Binary Response Support', () => {
+    let binaryServiceContent: string;
+
+    beforeAll(async () => {
+      resetFetchMocks();
+      const binaryTree = await runFullSchematics(BINARY_SWAGGER_SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+      binaryServiceContent = binaryTree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/document-api.service.ts`);
+    });
+
+    it('should generate the full binary/multipart API service', () => {
+      expect(binaryServiceContent).toMatchSnapshot();
+    });
+
+    it('should return Observable<Blob> for binary responses', () => {
+      expect(binaryServiceContent).toMatch(/\(documentId: number, \{ thumbnail \}: \{ thumbnail\?: boolean \| null \}\): Observable<Blob>/);
+    });
+
+    it('should add responseType blob to the HTTP call options', () => {
+      expect(binaryServiceContent).toContain("responseType: 'blob'");
+    });
+
+    it('should call httpClient without a type generic for binary responses', () => {
+      // The blob overload types the call; a <Blob> generic would not compile
+      expect(binaryServiceContent).toContain('return this.httpClient.get(');
+      expect(binaryServiceContent).not.toContain('this.httpClient.get<Blob>');
+    });
+
+    it('should keep query params alongside responseType in options', () => {
+      expect(binaryServiceContent).toMatch(/\{ params: omitBy\(\{ thumbnail \}, isNil\), responseType: 'blob' \}/);
+    });
+
+    it('should type multipart upload bodies as FormData', () => {
+      expect(binaryServiceContent).toMatch(/\(documentId: number, body: FormData\)/);
+      expect(binaryServiceContent).not.toContain('body: object');
+    });
+
+    it('should mark non-required query params optional and keep required ones mandatory', () => {
+      expect(binaryServiceContent).toContain('{ page, force }: { page?: number; force: boolean }');
     });
   });
 });

@@ -26,6 +26,7 @@ export const <%= apiExportName %> = baseApi.injectEndpoints({
 <% if (item.bodyParam) { %>        <%= item.bodyParam.objectSymbol %>,
 <% } if (item.queryParams.length > 0 && item.hasNullableQueryParams) { %>        params: omitBy({ <%= queryParamsList.join(', ') %> }, isNil),
 <% } else if (item.queryParams.length > 0) { %>        params: { <%= queryParamsList.join(', ') %> },
+<% } if (item.isBinaryResponse) { %>        responseHandler: (response) => response.blob(),
 <% } %>      }),
     }),
 <% } %>  }),

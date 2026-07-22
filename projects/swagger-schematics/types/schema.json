@@ -18,6 +18,11 @@
         "$source": "argv",
         "index": 0
       }
+    },
+    "eslintFix": {
+      "type": "boolean",
+      "description": "Run the host project's ESLint with autofix on generated files, using the project's own configuration (import sorting, commas, quotes, etc.). Never blocks generation: failures are reported as warnings and files keep their generated content.",
+      "default": false
     }
   },
   "required": []

@@ -1,5 +1,42 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`RTK Query Schematics Integration Binary Response Support should generate the full binary/multipart RTK API 1`] = `
+"
+import { api as baseApi } from '@th-common/store/api-base';
+
+import { omitBy, isNil } from 'lodash-es';
+
+
+
+export const documentApi = baseApi.injectEndpoints({
+  overrideExisting: false,
+  endpoints: (builder) => ({
+    documentGetDocument: builder.query<boolean, { page?: number; force: boolean }>({
+      query: ({ page, force }) => ({
+        url: '/document',
+        method: 'GET',
+        params: { page, force },
+      }),
+    }),
+    documentGetDownloadByDocumentId: builder.query<Blob, { documentId: number; thumbnail?: boolean | null }>({
+      query: ({ documentId, thumbnail }) => ({
+        url: \`/document/\${documentId}/download\`,
+        method: 'GET',
+        params: omitBy({ thumbnail }, isNil),
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+    documentPostDocumentByDocumentIdUpload: builder.mutation<boolean, { documentId: number; body: FormData }>({
+      query: ({ documentId, body }) => ({
+        url: \`/document/\${documentId}/upload\`,
+        method: 'POST',
+        body,
+      }),
+    }),
+  }),
+});"
+`;
+
 exports[`RTK Query Schematics Integration File Generation should generate expected RTK files 1`] = `
 [
   "/.editorconfig",
@@ -59,7 +96,7 @@ export const claimApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
     }),
-    claimCreateClaim: builder.mutation<void, { width: number; height: number; body: object }>({
+    claimCreateClaim: builder.mutation<void, { width?: number; height?: number; body: FormData }>({
       query: ({ width, height, body }) => ({
         url: '/claim',
         method: 'POST',
@@ -140,14 +177,14 @@ export const claimApi = baseApi.injectEndpoints({
         method: 'DELETE',
       }),
     }),
-    claimDeleteClaimByFilter: builder.mutation<boolean, { status: string; force: boolean }>({
+    claimDeleteClaimByFilter: builder.mutation<boolean, { status: string; force?: boolean }>({
       query: ({ status, force }) => ({
         url: '/claim/by-filter',
         method: 'DELETE',
         params: { status, force },
       }),
     }),
-    claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status: string | null; priority: number | null }>({
+    claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status?: string | null; priority?: number | null }>({
       query: ({ name, status, priority }) => ({
         url: '/claim/search',
         method: 'GET',

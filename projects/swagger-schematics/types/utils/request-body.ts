@@ -28,11 +28,15 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
         } else {
             const typedApiRequestBody = apiRequestBody as IRequestBody;
             const content = typedApiRequestBody.content;
-            
+
             // Try content types in priority order
+            const contentType = getRequestBodyContentType(typedApiRequestBody);
             const mediaType = findMediaType(content);
-            
-            if (mediaType?.schema) {
+
+            if (contentType === 'multipart/form-data') {
+                // File/form uploads are sent as FormData - the schema describes wire fields, not a JSON DTO
+                typeSymbol = 'FormData';
+            } else if (mediaType?.schema) {
                 [typeSymbol, importRef] = transformType(mediaType.schema, swaggerData, options);
             } else {
                 typeSymbol = 'any';

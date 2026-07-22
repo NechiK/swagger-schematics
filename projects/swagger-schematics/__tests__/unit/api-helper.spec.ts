@@ -1,6 +1,8 @@
 import '../helpers/matchers';
 import { IParsedApiSchema, transformSwaggerSchema, buildScopedApiMethodName } from '../../api/helpers/api.helper';
+import { getApiMethodName } from '../../types/utils/api';
 import { SWAGGER_SCHEMA, MOCK_GROUP } from '../__fixtures__/swagger/full-schema.fixture';
+import { createGetOperation, createPathParam, createSwaggerSchema } from '../helpers/factories';
 
 describe('API Helper - transformSwaggerSchema', () => {
   let parsedSchema: IParsedApiSchema;
@@ -127,5 +129,47 @@ describe('buildScopedApiMethodName', () => {
     expect(buildScopedApiMethodName('UserGet', 'users')).toBe('usersUserGet');
     // "Use" does NOT start with "users", should not remove
     expect(buildScopedApiMethodName('UseData', 'users')).toBe('usersUseData');
+  });
+});
+
+describe('getApiMethodName - operationId priority', () => {
+  const operationWithId = (operationId?: string) => ({
+    ...createGetOperation({
+      tags: ['Ticket'],
+      summary: 'Download a ticket attachment',
+      parameters: [createPathParam('ticketId')]
+    }).get!,
+    ...(operationId ? { operationId } : {})
+  });
+
+  it('should prefer operationId over path-based generation', () => {
+    const operation = operationWithId('DownloadTicketAttachment');
+    expect(getApiMethodName(operation, 'get', '/api/Ticket/{ticketId}/attachments/{attachmentId}/download'))
+      .toBe('downloadTicketAttachment');
+  });
+
+  it('should camelize operationId variants', () => {
+    expect(getApiMethodName(operationWithId('Get_Ticket-Details'), 'get', '/api/Ticket/{ticketId}'))
+      .toBe('getTicketDetails');
+  });
+
+  it('should fall back to path-based generation without operationId', () => {
+    const operation = operationWithId(undefined);
+    expect(getApiMethodName(operation, 'get', '/api/Ticket/{ticketId}'))
+      .toBe('getByTicketId');
+  });
+
+  it('should be used by transformSwaggerSchema for endpoint names', () => {
+    const swagger = createSwaggerSchema({
+      paths: {
+        '/api/Ticket/{ticketId}/download': {
+          get: operationWithId('DownloadTicket')
+        }
+      },
+      schemas: {}
+    });
+
+    const parsed = transformSwaggerSchema(swagger);
+    expect(parsed['Ticket'].apiList[0].apiMethodName).toBe('downloadTicket');
   });
 });

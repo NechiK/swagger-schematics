@@ -178,6 +178,13 @@ export interface IParsedApiItem {
      * When true, params should be wrapped in omitBy(params, isNil) to strip null/undefined values.
      */
     hasNullableQueryParams: boolean;
+
+    /**
+     * Whether the success response is binary content (type: string, format: binary).
+     * When true, the response type is Blob: Angular calls add responseType: 'blob',
+     * RTK endpoints add a responseHandler that reads the response as a blob.
+     */
+    isBinaryResponse: boolean;
 }
 
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {

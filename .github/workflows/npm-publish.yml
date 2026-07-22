@@ -37,6 +37,10 @@ jobs:
       - name: Publish
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          if npm view "swagger-schematics@$VERSION" version >/dev/null 2>&1; then
+            echo "swagger-schematics@$VERSION already published, skipping"
+            exit 0
+          fi
           if [[ "$VERSION" == *-* ]]; then
             PRERELEASE="${VERSION#*-}"
             TAG="${PRERELEASE%%.*}"

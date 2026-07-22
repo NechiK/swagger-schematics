@@ -150,6 +150,22 @@ export function getSuccessResponse(responses: TResponse): IResponse | undefined 
     return undefined;
 }
 
+/**
+ * Checks whether the operation's success response is binary content
+ * (a schema of type string with format binary, e.g. a file download)
+ */
+export function isBinaryResponse(apiMethod: TOperation): boolean {
+    const response = getSuccessResponse(apiMethod.responses);
+    const content = (response as any)?.content;
+    if (!content) {
+        return false;
+    }
+    return Object.values(content).some((media: any) => {
+        const schema = media?.schema;
+        return !!schema && !('$ref' in schema) && schema.type === 'string' && schema.format === 'binary';
+    });
+}
+
 type TOperationPredictionProperties = 'summary' | 'description';
 
 function predictByString(apiMethod: TOperation, predictString: string) {

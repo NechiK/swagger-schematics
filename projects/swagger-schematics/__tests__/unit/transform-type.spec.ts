@@ -14,11 +14,21 @@ describe('Transform Type', () => {
   describe('transformType', () => {
     it('should transform primitive types without options', () => {
       const swagger = createSwaggerSchema();
-      
+
       expect(transformType({ type: 'string' }, swagger)).toEqual(['string']);
       expect(transformType({ type: 'integer' }, swagger)).toEqual(['number']);
       expect(transformType({ type: 'number' }, swagger)).toEqual(['number']);
       expect(transformType({ type: 'boolean' }, swagger)).toEqual(['boolean']);
+    });
+
+    it('should transform binary strings to Blob', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(transformType({ type: 'string', format: 'binary' }, swagger)).toEqual(['Blob']);
+      // Other string formats stay strings
+      expect(transformType({ type: 'string', format: 'date-time' }, swagger)).toEqual(['string']);
+      expect(transformType({ type: 'string', format: 'uuid' }, swagger)).toEqual(['string']);
+      expect(transformType({ type: 'string', format: 'byte' }, swagger)).toEqual(['string']);
     });
 
     it('should transform $ref to interface symbol', () => {

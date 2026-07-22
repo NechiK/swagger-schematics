@@ -339,6 +339,10 @@ export const transformPrimitives = (property: TSchemaWithType): [string] => {
         case 'boolean':
             return ['boolean'];
         case 'string':
+            // Binary content (file download/upload) maps to Blob
+            if (property.format === 'binary') {
+                return ['Blob'];
+            }
             return ['string'];
         case 'object':
             return ['object'];

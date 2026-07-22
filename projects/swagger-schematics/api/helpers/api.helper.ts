@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
-import { getApiMethodName, getApiResponseSymbol, getSuccessResponse } from "../../types/utils/api";
+import { getApiMethodName, getApiResponseSymbol, getSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatBody } from "../../types/utils/params";
@@ -187,6 +187,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 description: operation.description,
                 operationId: operation.operationId,
                 hasNullableQueryParams,
+                isBinaryResponse: isBinaryResponse(operation),
             };
         }));
 

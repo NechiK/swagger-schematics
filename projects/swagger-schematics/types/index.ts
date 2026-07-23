@@ -19,9 +19,10 @@ import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schem
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
+import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 
 export default function(options: SwaggerSchema): Rule {
-  return async (host: Tree) => {
+  const typesRule: Rule = async (host: Tree) => {
     const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
 
       let indentSize = '2';
@@ -163,4 +164,6 @@ export default function(options: SwaggerSchema): Rule {
       const eslintFixRule = createEslintFixRule(openApiSchematicsConfig);
       return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
   };
+
+  return wrapRuleWithErrorLogging('types', typesRule);
 }

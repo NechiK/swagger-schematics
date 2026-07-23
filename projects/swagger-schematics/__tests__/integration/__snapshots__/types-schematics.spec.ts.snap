@@ -62,11 +62,11 @@ exports[`Types Schematics Integration Interface Generation should generate Claim
 import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
 export interface IClaimDetailDTO {
-  id: number;
-  problemType: IIdNameDTO;
-  causeType: IIdNameDTO;
-  claimStatus: TClaimStatuses;
-  crmRefId?: string;
+  id?: number;
+  problemType?: IIdNameDTO;
+  causeType?: IIdNameDTO;
+  claimStatus?: TClaimStatuses;
+  crmRefId?: string | null;
 }
 "
 `;
@@ -93,9 +93,9 @@ exports[`Types Schematics Integration Interface Generation should generate IdNam
 "
 
 export interface IIdNameDTO {
-  id: number;
-  name?: string;
-  displayName?: string;
+  id?: number;
+  name?: string | null;
+  displayName?: string | null;
 }
 "
 `;

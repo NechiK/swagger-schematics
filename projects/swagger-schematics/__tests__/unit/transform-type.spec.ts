@@ -31,6 +31,69 @@ describe('Transform Type', () => {
       expect(transformType({ type: 'string', format: 'byte' }, swagger)).toEqual(['string']);
     });
 
+    it('should transform 3.1 contentMediaType binary strings to Blob', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(transformType({ type: 'string', contentMediaType: 'application/octet-stream' } as any, swagger)).toEqual(['Blob']);
+      expect(transformType({ type: 'string', contentMediaType: 'image/png' } as any, swagger)).toEqual(['Blob']);
+      // base64-encoded content stays a string
+      expect(transformType({ type: 'string', contentMediaType: 'application/octet-stream', contentEncoding: 'base64' } as any, swagger)).toEqual(['string']);
+      // textual content stays a string
+      expect(transformType({ type: 'string', contentMediaType: 'text/html' } as any, swagger)).toEqual(['string']);
+    });
+
+    it('should transform 3.1 type arrays', () => {
+      const swagger = createSwaggerSchema();
+
+      // null member affects nullability only, not the symbol (matches 3.0 nullable handling)
+      expect(transformType({ type: ['string', 'null'] } as any, swagger)).toEqual(['string', undefined]);
+      expect(transformType({ type: ['integer', 'null'] } as any, swagger)).toEqual(['number', undefined]);
+      // multiple non-null types become a union
+      expect(transformType({ type: ['string', 'integer'] } as any, swagger)).toEqual(['string | number', undefined]);
+      // duplicate mapped types are deduplicated
+      expect(transformType({ type: ['integer', 'number', 'null'] } as any, swagger)).toEqual(['number', undefined]);
+      // only null
+      expect(transformType({ type: ['null'] } as any, swagger)).toEqual(['null']);
+    });
+
+    it('should treat 3.1 type arrays containing null as nullable', () => {
+      const swagger = createSwaggerSchema({
+        NullableName: { type: ['string', 'null'] }
+      });
+
+      expect(isNullable({ type: ['string', 'null'] } as any, swagger)).toBe(true);
+      expect(isNullable({ type: ['string'] } as any, swagger)).toBe(false);
+      expect(isNullable({ $ref: '#/components/schemas/NullableName' }, swagger)).toBe(true);
+    });
+
+    it('should collect all imports from composition schemas', () => {
+      const { transformTypeWithAllImports } = require('../../types/utils/transform-type');
+      const swagger = createSwaggerSchema({
+        PartA: { type: 'object', properties: { a: { type: 'string' } } },
+        PartB: { type: 'object', properties: { b: { type: 'string' } } }
+      });
+
+      const [symbol, importRefs] = transformTypeWithAllImports({
+        allOf: [
+          { $ref: '#/components/schemas/PartA' },
+          { $ref: '#/components/schemas/PartB' }
+        ]
+      } as any, swagger);
+
+      expect(symbol).toBe('IPartA & IPartB');
+      expect(importRefs.map((ref: any) => ref.importSymbol)).toEqual(['IPartA', 'IPartB']);
+    });
+
+    it('should append | null for refs to 3.1 nullable enum schemas', () => {
+      const swagger = createSwaggerSchema({
+        Status: { type: ['string', 'null'], enum: ['Active', 'Inactive'] }
+      });
+
+      const [symbol, importRef] = transformType({ $ref: '#/components/schemas/Status' }, swagger);
+      expect(symbol).toBe('TStatus | null');
+      expect(importRef?.type).toBe('enum');
+    });
+
     it('should transform $ref to interface symbol', () => {
       const swagger = createSwaggerSchema({
         UserDTO: { type: 'object', properties: { id: { type: 'integer' } } }

@@ -3,7 +3,7 @@ import { IImportRef, ITransformTypeOptions, isNullable, transformType, getCompos
 import { ISchemaProperties, ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
 import { isAllOf, isOneOf, isAnyOf } from "../utils/transform-type";
 
-export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
+export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions, requiredProperties: string[] = []): {
     propertiesContent: Array<[string, string]>;
     refs: IImportRef[];
 } {
@@ -12,12 +12,18 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
 
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
-        const [typeSymbol, importRef] = transformType(property, swagger, options);
+        const [rawTypeSymbol, importRef] = transformType(property, swagger, options);
         if (importRef) {
             refs.push(importRef);
         }
 
-        transformed.push([`${propertyKey}${isNullable(property, swagger) ? '?' : ''}`, typeSymbol]);
+        // Per spec: a property is optional unless listed in the object's required array;
+        // nullability is expressed in the type itself
+        const nullable = isNullable(property, swagger);
+        const typeSymbol = nullable && !rawTypeSymbol.includes('| null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
+        const isOptional = !requiredProperties.includes(propertyKey);
+
+        transformed.push([`${propertyKey}${isOptional ? '?' : ''}`, typeSymbol]);
     }
 
     return {

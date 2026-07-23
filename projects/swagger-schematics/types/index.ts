@@ -3,7 +3,7 @@ import {
     applyTemplates, chain,
     MergeStrategy,
     mergeWith,
-    move, Rule, Tree,
+    move, Rule, SchematicContext, Tree,
     url
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
@@ -19,9 +19,10 @@ import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schem
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
+import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 
 export default function(options: SwaggerSchema): Rule {
-  return async (host: Tree) => {
+  return async (host: Tree, context: SchematicContext) => {
     const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
 
       let indentSize = '2';
@@ -41,6 +42,12 @@ export default function(options: SwaggerSchema): Rule {
       }
 
       const swagger: ISwaggerSchema = await fetchSwaggerSchema(openApiSchematicsConfig.swaggerSchemaUrl as string);
+
+      const versionInfo = detectOpenApiVersion(swagger);
+      if (versionInfo.warning) {
+          context.logger.warn(versionInfo.warning);
+      }
+
       const schemas = swagger.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
@@ -133,7 +140,7 @@ export default function(options: SwaggerSchema): Rule {
             const schemaProperties = schemaData.data.properties
             const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
                 typeMapping: openApiSchematicsConfig.typeMapping
-            });
+            }, (schemaData.data as { required?: string[] }).required ?? []);
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
             const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));
             itemSource = apply(interfaceTemplates, [

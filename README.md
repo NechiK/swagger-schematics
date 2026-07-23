@@ -6,6 +6,11 @@ Supports:
 - **Angular** (HttpClient services)
 - **React RTK Query** (API slices)
 
+Supported OpenAPI versions:
+- **OpenAPI 3.0.x** - full support, including `nullable`, `format: binary`, and multipart uploads
+- **OpenAPI 3.1.x** - full support, including type arrays (`type: ["string", "null"]`), `contentMediaType` binary content, and schema-less `application/octet-stream` responses
+- Newer 3.x versions are treated as 3.1 with a warning; **Swagger 2.0 is not supported** (a warning is logged and generation is attempted best-effort)
+
 
 ## How to use?
 

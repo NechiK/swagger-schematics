@@ -6,6 +6,7 @@ import {
     mergeWith,
     move,
     Rule,
+    SchematicContext,
     SchematicsException,
     Tree,
     url
@@ -23,6 +24,7 @@ import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
 import { getBaseApiImportPath } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
+import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import * as path from 'path';
 
 import { existsSync } from 'fs';
@@ -49,7 +51,7 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
 }
 
 export default function(options: SwaggerApiSchema) {
-    return async (tree: Tree) => {
+    return async (tree: Tree, context: SchematicContext) => {
         const config = getOpenapiSchematicsConfig(options);
 
         if (!config.path) {
@@ -64,6 +66,11 @@ export default function(options: SwaggerApiSchema) {
         const frameworkConfig = FRAMEWORK_CONFIGS[framework as TFrameworkType];
 
         const swagger: ISwaggerSchema = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
+
+        const versionInfo = detectOpenApiVersion(swagger);
+        if (versionInfo.warning) {
+            context.logger.warn(versionInfo.warning);
+        }
 
         const parsedApiSchemas = transformSwaggerSchema(swagger, {
             typeMapping: config.typeMapping

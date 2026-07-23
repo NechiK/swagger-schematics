@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.1.0] - 2026-07-23
+
+### ✨ Added
+- **OpenAPI version detection** - the schematics now read the document's `openapi`/`swagger` field:
+  - 3.0.x and 3.1.x are fully supported and generate silently
+  - Newer 3.x versions log a warning and are treated as 3.1; Swagger 2.0 logs a warning explaining it is unsupported
+  - Generation always continues best-effort - an unknown version never blocks it
+- **OpenAPI 3.1 support**:
+  - Type arrays: `type: ["string", "null"]` generates `string` with proper nullability; multi-type arrays become unions (`type: ["string", "integer"]` → `string | number`)
+  - Binary via `contentMediaType` (e.g. `application/octet-stream`, `image/*`) maps to `Blob`; `contentEncoding: base64` content stays `string`
+  - Schema-less `application/octet-stream` responses generate `Blob` downloads (Angular `responseType: 'blob'`, RTK `responseHandler`)
+  - Refs to 3.1 nullable enum schemas generate `TEnum | null`
+  - Numeric `exclusiveMinimum`/`exclusiveMaximum` and `examples` parse without errors
+
+### 🐛 Fixed
+- ⚠️ **BREAKING**: **Interface property optionality now follows the spec** - a property is optional (`?`) unless listed in the object schema's `required` array. Schemas that omit `required` (common for C#/ASP.NET-generated documents) now generate all-optional interfaces, matching NSwag and openapi-generator behavior. Previously only nullable properties were optional
+- ⚠️ **BREAKING**: **Nullable properties now include `| null` in their type** (`crmRefId?: string | null`), so server-sent nulls are visible to the type checker
+- **Composition schemas no longer drop imports** - `allOf`/`oneOf`/`anyOf` referencing multiple schemas now import every referenced type in generated services (previously only the first was imported)
+
+### 🗑️ Removed
+- Dead `interfaces/version_3_0` folder (never imported)
+
+
 ## [1.0.0] - 2026-07-22
 
 ### ✨ Added

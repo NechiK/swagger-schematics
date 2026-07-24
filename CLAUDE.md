@@ -1,0 +1,20 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository.
+
+## Git rules — IMPORTANT
+
+- **Never commit or push automatically.** Only run `git commit`, `git push`, `git tag`, or any other history-changing git command when the developer explicitly asks for it in the current conversation. Preparing changes, running tests, and drafting commit messages is fine — the developer decides when they land.
+- `develop` is protected: changes go through pull requests from `fix/MN-*` / `feature/MN_*` branches.
+- Do **not** add a Claude co-author trailer.
+
+## Project layout
+
+- Published package lives in `projects/swagger-schematics/` (its `package.json` is the source of truth for version); the root `package.json` is only the dev workspace wrapper — its scripts delegate into the package directory.
+- Build: `npm run build` · Tests: `npm test` (jest, config in the package's `package.json`).
+
+## Release flow
+
+1. Bump `version` in `projects/swagger-schematics/package.json` and add a `CHANGELOG.md` entry (see `.agents/skills/changelog/SKILL.md`).
+2. Merge the PR into `develop` — the publish workflow releases to npm via Trusted Publishing (OIDC, no tokens) and derives the dist-tag from the version (`-beta.x` → `beta`, stable → `latest`); already-published versions are skipped.
+3. `git tag v<version> && git push origin v<version>` creates the GitHub release with notes extracted from the CHANGELOG (only when asked — see git rules).

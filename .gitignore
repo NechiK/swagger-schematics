@@ -53,3 +53,6 @@ Thumbs.db
 # Packed file
 *.tgz
 
+
+# Generated at pack time from the root README (single source of truth)
+projects/swagger-schematics/README.md

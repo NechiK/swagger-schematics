@@ -1,9 +1,10 @@
 {
   "name": "swagger-schematics",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Schematics types and API generator via Swagger scheme",
   "scripts": {
     "prebuild": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
+    "prepack": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md')\"",
     "build": "tsc -p tsconfig.schematics.json",
     "test": "jest",
     "test:watch": "jest --watch",

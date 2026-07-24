@@ -14,6 +14,7 @@
     },
     "swaggerSchemaUrl": {
       "type": "string",
+      "description": "Source of the OpenAPI/Swagger schema: an http(s) URL, or a path to a local JSON file (absolute, relative to the project root, or a file:// URL).",
       "$default": {
         "$source": "argv",
         "index": 0

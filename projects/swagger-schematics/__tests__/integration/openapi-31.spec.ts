@@ -108,4 +108,21 @@ describe('OpenAPI 3.1 support', () => {
       expect(tree.exists(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/owner-dto.interface.ts`)).toBe(true);
     });
   });
+
+  describe('Composition: allOf inheritance and not', () => {
+    it('should render allOf + own properties as `Base & { ...own }`', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/audited-report-dto.type.ts`);
+      expect(content).toContain('export type TAuditedReportDto = IBaseAuditDto & { note?: string | null };');
+      expect(content).toContain("import { IBaseAuditDto } from './base-audit-dto.interface';");
+      expect(content).toMatchSnapshot();
+    });
+
+    it('should emit `not` schemas as `unknown` with an explanatory comment', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/not-string.type.ts`);
+      expect(content).toContain('export type TNotString = unknown;');
+      expect(content).toContain('Any value except `string`');
+      expect(content).toContain('has no TypeScript equivalent');
+      expect(content).toMatchSnapshot();
+    });
+  });
 });

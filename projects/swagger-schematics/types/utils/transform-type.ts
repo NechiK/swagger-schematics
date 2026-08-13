@@ -184,13 +184,28 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
 }
 
 /**
- * Transforms allOf schema to TypeScript intersection type
+ * Transforms allOf schema to TypeScript intersection type. A { "type": "null" }
+ * member expresses nullability rather than an intersection member, so it is
+ * lifted out to a trailing `| null` (the intersection is parenthesized when it
+ * has more than one member): allOf: [{type:null}, A, B] -> `(A & B) | null`.
  */
 function transformAllOf(schema: ISchemaAllOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const results = transformCompositionSchemas(schema.allOf, swagger, options);
+    const nonNullMembers = schema.allOf.filter(member => !isNullSchema(member));
+    const nullable = nonNullMembers.length !== schema.allOf.length;
+
+    const results = transformCompositionSchemas(nonNullMembers, swagger, options);
     const typeSymbol = results.types.join(' & ');
+
+    if (!typeSymbol) {
+        return ['null'];
+    }
+
     // Return first import ref (if multiple, they should be handled separately in full type generation)
-    return [typeSymbol, results.imports[0]];
+    if (!nullable) {
+        return [typeSymbol, results.imports[0]];
+    }
+    const wrapped = results.types.length > 1 ? `(${typeSymbol})` : typeSymbol;
+    return [`${wrapped} | null`, results.imports[0]];
 }
 
 /**

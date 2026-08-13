@@ -65,6 +65,24 @@ export const OPENAPI_31_SWAGGER_SCHEMA: ISwaggerSchema<TOpenApi31MockApiPath> = 
           displayName: { type: ['string', 'null'] }
         }
       } as any,
+      // Inheritance shape: allOf base ref + own properties.
+      BaseAuditDto: {
+        type: 'object',
+        properties: {
+          createdOn: { type: 'string', format: 'date-time' }
+        }
+      } as any,
+      AuditedReportDto: {
+        allOf: [{ $ref: '#/components/schemas/BaseAuditDto' }],
+        type: 'object',
+        properties: {
+          note: { type: ['string', 'null'] }
+        }
+      } as any,
+      // `not` has no sound TS equivalent -> emitted as `unknown` + comment.
+      NotString: {
+        not: { type: 'string' }
+      } as any,
       ReportDto: {
         type: 'object',
         additionalProperties: false,

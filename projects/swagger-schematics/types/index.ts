@@ -10,7 +10,7 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
-import { isComposition, isNot, isPrimitiveWrapper } from "./utils/transform-type";
+import { isComposition, isPrimitiveWrapper } from "./utils/transform-type";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
@@ -69,12 +69,11 @@ export default function(options: SwaggerSchema): Rule {
             return;
         }
 
-        // Handle composition schemas (allOf, oneOf, anyOf)
-        // Skip 'not' schemas as they don't have a good TypeScript equivalent
+        // Handle composition schemas (allOf, oneOf, anyOf, not) as type-aliases.
+        // 'not' has no TypeScript equivalent and is emitted as `unknown` with an
+        // explanatory comment (see transformCompositionSchema) rather than skipped,
+        // so a $ref pointing at it does not dangle.
         if (isComposition(typedSchema)) {
-            if (isNot(typedSchema)) {
-                return; // Skip 'not' schemas
-            }
             return {
                 name: schemaKey,
                 type: 'type-alias' as const,
@@ -122,7 +121,7 @@ export default function(options: SwaggerSchema): Rule {
           } else if (schemaData.type === 'type-alias') {
               // Handle composition schemas (allOf, oneOf, anyOf)
               const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
-              const { typeExpression, importRefs: compositionRefs } = transformCompositionSchema(
+              const { typeExpression, importRefs: compositionRefs, leadingComment } = transformCompositionSchema(
                   schemaData.data as TSchemaByType,
                   swagger,
                   { typeMapping: openApiSchematicsConfig.typeMapping }
@@ -139,6 +138,7 @@ export default function(options: SwaggerSchema): Rule {
                       optionsPath: openApiSchematicsConfig.path,
                       sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                       typeExpression,
+                      leadingComment: leadingComment ?? '',
                       importRefs,
                       indentSize
                   }),

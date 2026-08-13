@@ -37,6 +37,20 @@ export class ReportApiService extends ApiBaseService {
 "
 `;
 
+exports[`OpenAPI 3.1 support Composition: allOf inheritance and not should emit \`not\` schemas as \`unknown\` with an explanatory comment 1`] = `
+"
+/** Any value except \`string\`. Generated from an OpenAPI \`not\` schema, which has no TypeScript equivalent. */
+export type TNotString = unknown;
+"
+`;
+
+exports[`OpenAPI 3.1 support Composition: allOf inheritance and not should render allOf + own properties as \`Base & { ...own }\` 1`] = `
+"import { IBaseAuditDto } from './base-audit-dto.interface';
+
+export type TAuditedReportDto = IBaseAuditDto & { note?: string | null };
+"
+`;
+
 exports[`OpenAPI 3.1 support Interface generation with 3.1 schemas should generate the interface snapshot 1`] = `
 "import { TReportStatus } from '../enums/report-status.enum';
 import { IOwnerDto } from './owner-dto.interface';

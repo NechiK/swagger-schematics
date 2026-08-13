@@ -204,6 +204,46 @@ describe('Transform Type', () => {
     });
   });
 
+  describe('allOf / anyOf / not', () => {
+    const swagger = createSwaggerSchema({
+      PartA: { type: 'object', properties: { a: { type: 'string' } } },
+      PartB: { type: 'object', properties: { b: { type: 'string' } } }
+    });
+
+    it('should transform allOf to a TypeScript intersection', () => {
+      const [symbol] = transformType({
+        allOf: [{ $ref: '#/components/schemas/PartA' }, { $ref: '#/components/schemas/PartB' }]
+      } as any, swagger);
+      expect(symbol).toBe('IPartA & IPartB');
+    });
+
+    it('should lift a null member out of allOf as `(A & B) | null`', () => {
+      const [symbol] = transformType({
+        allOf: [{ type: 'null' }, { $ref: '#/components/schemas/PartA' }, { $ref: '#/components/schemas/PartB' }]
+      } as any, swagger);
+      expect(symbol).toBe('(IPartA & IPartB) | null');
+    });
+
+    it('should render a single-member nullable allOf as `A | null` (no parens)', () => {
+      const [symbol] = transformType({
+        allOf: [{ type: 'null' }, { $ref: '#/components/schemas/PartA' }]
+      } as any, swagger);
+      expect(symbol).toBe('IPartA | null');
+    });
+
+    it('should transform anyOf with multiple non-null members to a union', () => {
+      const [symbol] = transformType({
+        anyOf: [{ $ref: '#/components/schemas/PartA' }, { $ref: '#/components/schemas/PartB' }]
+      } as any, swagger);
+      expect(symbol).toBe('IPartA | IPartB');
+    });
+
+    it('should map `not` schemas to `unknown`', () => {
+      const [symbol] = transformType({ not: { type: 'string' } } as any, swagger);
+      expect(symbol).toBe('unknown');
+    });
+  });
+
   describe('typeMapping option', () => {
     it('should map custom type to primitive', () => {
       const swagger = createSwaggerSchema({

@@ -29,6 +29,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dead `interfaces/version_3_0` folder (never imported)
 
 
+## [1.0.2] - 2026-07-24
+
+### ✨ Added
+- **Local schema file support** - `swaggerSchemaUrl` now also accepts a path to a local JSON file (absolute, relative to the project root, or a `file://` URL) in addition to http(s) URLs:
+  - Useful for CI pipelines without network access to the API host - download the schema once, commit it, and point `swaggerSchemaUrl` at the file
+  - Missing files, unreadable files, and invalid JSON fail with clear messages naming the resolved path
+
+
+## [1.0.1] - 2026-07-23
+
+### 🐛 Fixed
+- **Failures are no longer silent** - both schematics now print a full error report to the console (message and stack for the whole `cause` chain) before failing. Previously a crash in CI (e.g. Azure Pipelines) could abort generation with no output at all
+- **Network errors now show the real reason** - Node's `fetch` reports failures as a bare `fetch failed`, hiding the underlying cause (DNS resolution, proxy, TLS) in `error.cause`; the schema download now surfaces the whole chain, e.g. `Failed to fetch swagger schema from '<url>': fetch failed -> getaddrinfo ENOTFOUND host`
+- Invalid JSON in `openapi-schematics.json` or in the downloaded schema now fails with a clear message naming the file/URL instead of a bare `SyntaxError`
+
+### ✨ Added
+- A `Fetching swagger schema from '<url>'` console line at the start of generation, so CI logs show how far generation got
+
+
 ## [1.0.0] - 2026-07-22
 
 ### ✨ Added

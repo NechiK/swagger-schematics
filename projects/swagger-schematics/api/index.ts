@@ -25,6 +25,7 @@ import { getBaseApiImportPath } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
+import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 import * as path from 'path';
 
 import { existsSync } from 'fs';
@@ -51,7 +52,7 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
 }
 
 export default function(options: SwaggerApiSchema) {
-    return async (tree: Tree, context: SchematicContext) => {
+    const apiRule: Rule = async (tree: Tree, context: SchematicContext) => {
         const config = getOpenapiSchematicsConfig(options);
 
         if (!config.path) {
@@ -136,4 +137,6 @@ export default function(options: SwaggerApiSchema) {
         const eslintFixRule = createEslintFixRule(config);
         return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
     };
+
+    return wrapRuleWithErrorLogging('api', apiRule);
 }

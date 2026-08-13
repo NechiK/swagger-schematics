@@ -15,28 +15,47 @@ Supports:
 npm i -D swagger-schematics
 ```
 
-2. Run schematic
+2. Run the CLI
 
 ```bash
-schematics swagger-schematics:api swaggerUrl --path=/src/app/core
+npx swagger-schematics all swaggerUrl --path=/src/app/core
 ```
 
+Or run the schematics individually:
+
 ```bash
-schematics swagger-schematics:types swaggerUrl --path=/src/app/core
+npx swagger-schematics types swaggerUrl --path=/src/app/core
+npx swagger-schematics api swaggerUrl --path=/src/app/core
 ```
+
+Useful flags: `--dry-run` (report files without writing), `--help`, `--version`.
+Any schematic option can be passed as `--option=value` (kebab-case accepted, e.g. `--swagger-schema-url`).
+
+<details>
+<summary>Legacy invocation via the Angular devkit CLI</summary>
+
+The previous invocation keeps working:
+
+```bash
+npx schematics swagger-schematics:types swaggerUrl --path=/src/app/core
+npx schematics swagger-schematics:api swaggerUrl --path=/src/app/core
+```
+
+Note: the `schematics` binary comes from `@angular-devkit/schematics-cli` in your
+`node_modules` — don't run `npx schematics` outside a project that has it
+installed, or npx will fetch an unrelated npm package that happens to own that name.
+</details>
 
 3. Enjoy!
 
 ### Run via npm scripts (recommended)
 
-Wrap the schematics in npm scripts and always run them through `npm run`:
+Wrap the CLI in an npm script and always run it through `npm run`:
 
 ```json
 {
   "scripts": {
-    "openapi": "npm run openapi:types && npm run openapi:api",
-    "openapi:types": "npx schematics swagger-schematics:types",
-    "openapi:api": "npx schematics swagger-schematics:api"
+    "openapi": "swagger-schematics all"
   }
 }
 ```

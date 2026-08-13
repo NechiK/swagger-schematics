@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.2.0] - 2026-07-27
+
+### ✨ Added
+- **`swagger-schematics` CLI** - the package now ships its own binary, running the schematics directly through `NodeWorkflow` (no generic `schematics` command needed):
+  - `swagger-schematics types [source]`, `swagger-schematics api [source]`, and `swagger-schematics all [source]` (types then api - replaces the two-script setup)
+  - Any schematic option can be passed as `--option=value`; kebab-case accepted (`--swagger-schema-url`); `--dry-run`, `--help`, `--version` supported
+  - Reports created/updated files, exits 1 on failure with the full error report
+  - Avoids the `npx schematics` name-collision trap: the npm package literally named `schematics` is an unrelated abandoned library that npx downloads when `@angular-devkit/schematics-cli` isn't installed locally
+
+### ♻️ Changed
+- README recommends the new CLI; the `schematics swagger-schematics:*` invocation remains supported (documented as legacy)
+
+
 ## [1.0.2] - 2026-07-24
 
 ### ✨ Added

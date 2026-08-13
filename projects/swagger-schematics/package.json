@@ -1,7 +1,10 @@
 {
   "name": "swagger-schematics",
-  "version": "1.0.2",
+  "version": "1.2.0",
   "description": "Schematics types and API generator via Swagger scheme",
+  "bin": {
+    "swagger-schematics": "./bin/swagger-schematics.js"
+  },
   "scripts": {
     "prebuild": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
     "prepack": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md')\"",

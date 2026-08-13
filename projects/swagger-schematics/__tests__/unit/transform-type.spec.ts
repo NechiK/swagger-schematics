@@ -129,12 +129,78 @@ describe('Transform Type', () => {
         UserDTO: { type: 'object', properties: { id: { type: 'integer' } } }
       });
 
-      const result = transformType({ 
-        type: 'array', 
-        items: { $ref: '#/components/schemas/UserDTO' } 
+      const result = transformType({
+        type: 'array',
+        items: { $ref: '#/components/schemas/UserDTO' }
       }, swagger);
-      
+
       expect(result[0]).toBe('IUserDTO[]');
+    });
+  });
+
+  describe('3.1 nullable oneOf/anyOf (null member)', () => {
+    const swagger = createSwaggerSchema({
+      UserDTO: { type: 'object', properties: { id: { type: 'integer' } } },
+      RoleDTO: { type: 'object', properties: { name: { type: 'string' } } },
+      Status: { type: 'string', enum: ['active', 'inactive'] },
+      GuidIdentifier: { type: 'string', format: 'uuid' }
+    });
+
+    it('should reduce oneOf: [{type:null}, {$ref}] to `X | null` (not `any | X`)', () => {
+      const [symbol, importRef] = transformType({
+        oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/UserDTO' }]
+      } as any, swagger);
+
+      expect(symbol).toBe('IUserDTO | null');
+      expect(symbol).not.toContain('any');
+      expect(importRef).toEqual({ type: 'interface', importSymbol: 'IUserDTO', fileName: 'user-dto' });
+    });
+
+    it('should reduce oneOf null + enum ref to `TStatus | null`', () => {
+      const [symbol, importRef] = transformType({
+        oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Status' }]
+      } as any, swagger);
+
+      expect(symbol).toBe('TStatus | null');
+      expect(importRef?.type).toBe('enum');
+    });
+
+    it('should inline a primitive-wrapper ref inside a nullable oneOf to `string | null`', () => {
+      const [symbol, importRef] = transformType({
+        oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/GuidIdentifier' }]
+      } as any, swagger);
+
+      expect(symbol).toBe('string | null');
+      expect(importRef).toBeUndefined();
+    });
+
+    it('should handle anyOf null members the same way', () => {
+      const [symbol] = transformType({
+        anyOf: [{ type: 'null' }, { $ref: '#/components/schemas/UserDTO' }]
+      } as any, swagger);
+
+      expect(symbol).toBe('IUserDTO | null');
+    });
+
+    it('should keep multiple non-null members as a union and append | null once', () => {
+      const [symbol] = transformType({
+        oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/UserDTO' }, { $ref: '#/components/schemas/RoleDTO' }]
+      } as any, swagger);
+
+      expect(symbol).toBe('IUserDTO | IRoleDTO | null');
+    });
+
+    it('should not append | null when there is no null member', () => {
+      const [symbol] = transformType({
+        oneOf: [{ $ref: '#/components/schemas/UserDTO' }, { $ref: '#/components/schemas/RoleDTO' }]
+      } as any, swagger);
+
+      expect(symbol).toBe('IUserDTO | IRoleDTO');
+    });
+
+    it('should resolve an only-null oneOf to `null`', () => {
+      const [symbol] = transformType({ oneOf: [{ type: 'null' }] } as any, swagger);
+      expect(symbol).toBe('null');
     });
   });
 

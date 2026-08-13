@@ -39,6 +39,7 @@ export class ReportApiService extends ApiBaseService {
 
 exports[`OpenAPI 3.1 support Interface generation with 3.1 schemas should generate the interface snapshot 1`] = `
 "import { TReportStatus } from '../enums/report-status.enum';
+import { IOwnerDto } from './owner-dto.interface';
 
 export interface IReportDto {
   id: number;
@@ -47,6 +48,8 @@ export interface IReportDto {
   status?: TReportStatus | null;
   attachment?: Blob;
   signature?: string;
+  ownerId?: string | null;
+  owner?: IOwnerDto | null;
 }
 "
 `;

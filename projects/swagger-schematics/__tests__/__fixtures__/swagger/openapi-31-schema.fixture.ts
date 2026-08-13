@@ -54,6 +54,17 @@ export const OPENAPI_31_SWAGGER_SCHEMA: ISwaggerSchema<TOpenApi31MockApiPath> = 
         type: ['string', 'null'],
         enum: ['Draft', 'Published']
       } as any,
+      // Strongly-typed primitive wrapper (.NET style): inlined at references.
+      GuidIdentifier: {
+        type: 'string',
+        format: 'uuid'
+      } as any,
+      OwnerDto: {
+        type: 'object',
+        properties: {
+          displayName: { type: ['string', 'null'] }
+        }
+      } as any,
       ReportDto: {
         type: 'object',
         additionalProperties: false,
@@ -64,7 +75,10 @@ export const OPENAPI_31_SWAGGER_SCHEMA: ISwaggerSchema<TOpenApi31MockApiPath> = 
           reference: { type: ['string', 'integer'] },
           status: { $ref: '#/components/schemas/ReportStatus' },
           attachment: { type: 'string', contentMediaType: 'application/octet-stream' },
-          signature: { type: 'string', contentEncoding: 'base64', contentMediaType: 'application/octet-stream' }
+          signature: { type: 'string', contentEncoding: 'base64', contentMediaType: 'application/octet-stream' },
+          // 3.1 nullable-ref idiom: oneOf: [{type:null}, {$ref}]
+          ownerId: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/GuidIdentifier' }] },
+          owner: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/OwnerDto' }] }
         }
       } as any
     }

@@ -59,6 +59,23 @@ export function isComposition(schema: TSchemaByType): boolean {
     return isAllOf(schema) || isOneOf(schema) || isAnyOf(schema) || isNot(schema);
 }
 
+/**
+ * Whether a schema is the bare JSON Schema null type: { "type": "null" }
+ * (or a type array equal to ["null"]). OpenAPI 3.1 uses this as a member of
+ * oneOf/anyOf (and, rarely, allOf) to express nullability - e.g.
+ * { "oneOf": [{ "type": "null" }, { "$ref": "..." }] }.
+ */
+export function isNullSchema(schema: TSchema): boolean {
+    if (isRef(schema)) {
+        return false;
+    }
+    const type = (schema as { type?: unknown }).type;
+    if (Array.isArray(type)) {
+        return type.length === 1 && type[0] === 'null';
+    }
+    return type === 'null';
+}
+
 export function hasAdditionalProperties(schema: TSchemaByType): schema is ISchemaObject {
     return 'additionalProperties' in schema && (schema as ISchemaObject).additionalProperties !== undefined;
 }
@@ -177,21 +194,39 @@ function transformAllOf(schema: ISchemaAllOf, swagger: ISwaggerSchema, options?:
 }
 
 /**
+ * Builds a TypeScript union from oneOf/anyOf members. A { "type": "null" }
+ * member (the OpenAPI 3.1 nullability idiom) is not emitted as its own symbol;
+ * instead it appends `| null` to the union - matching how 3.0's `nullable`
+ * keyword is handled. e.g. oneOf: [{type:null}, {$ref X}] -> `IX | null`.
+ */
+function transformUnion(members: TSchema[], swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const nonNullMembers = members.filter(member => !isNullSchema(member));
+    const nullable = nonNullMembers.length !== members.length;
+
+    const results = transformCompositionSchemas(nonNullMembers, swagger, options);
+    const typeSymbol = results.types.join(' | ');
+
+    if (!typeSymbol) {
+        // No non-null members (e.g. oneOf: [{ type: "null" }]) - the type is just null.
+        return ['null'];
+    }
+
+    // Return first import ref (if multiple, they should be handled separately in full type generation)
+    return [nullable ? `${typeSymbol} | null` : typeSymbol, results.imports[0]];
+}
+
+/**
  * Transforms oneOf schema to TypeScript union type
  */
 function transformOneOf(schema: ISchemaOneOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const results = transformCompositionSchemas(schema.oneOf, swagger, options);
-    const typeSymbol = results.types.join(' | ');
-    return [typeSymbol, results.imports[0]];
+    return transformUnion(schema.oneOf, swagger, options);
 }
 
 /**
  * Transforms anyOf schema to TypeScript union type (same as oneOf for TypeScript purposes)
  */
 function transformAnyOf(schema: ISchemaAnyOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const results = transformCompositionSchemas(schema.anyOf, swagger, options);
-    const typeSymbol = results.types.join(' | ');
-    return [typeSymbol, results.imports[0]];
+    return transformUnion(schema.anyOf, swagger, options);
 }
 
 /**

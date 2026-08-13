@@ -61,6 +61,14 @@ describe('OpenAPI 3.1 support', () => {
       expect(interfaceContent).toContain('attachment?: Blob;');
       expect(interfaceContent).toContain('signature?: string;');
     });
+
+    it('should reduce a nullable oneOf ref to `X | null` (not `any | X`)', () => {
+      // oneOf: [{type:null}, {$ref OwnerDto}] -> IOwnerDto | null
+      expect(interfaceContent).toContain('owner?: IOwnerDto | null;');
+      // oneOf: [{type:null}, {$ref GuidIdentifier}] -> primitive wrapper inlined
+      expect(interfaceContent).toContain('ownerId?: string | null;');
+      expect(interfaceContent).not.toContain('any |');
+    });
   });
 
   describe('API generation with 3.1 binary responses', () => {

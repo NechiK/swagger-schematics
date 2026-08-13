@@ -87,26 +87,12 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
         };
     }
     
-    if (isOneOf(schema)) {
-        // oneOf -> union type (A | B | C)
-        const types = schema.oneOf.map(s => {
-            const [typeSymbol] = transformType(s, swagger, options);
-            return typeSymbol;
-        });
+    if (isOneOf(schema) || isAnyOf(schema)) {
+        // oneOf/anyOf -> union type (A | B | C). Delegate to transformType so a
+        // { type: "null" } member collapses to `| null` instead of `any`.
+        const [typeExpression] = transformType(schema, swagger, options);
         return {
-            typeExpression: types.join(' | '),
-            importRefs: removeImportDuplicates(importRefs)
-        };
-    }
-    
-    if (isAnyOf(schema)) {
-        // anyOf -> union type (A | B | C)
-        const types = schema.anyOf.map(s => {
-            const [typeSymbol] = transformType(s, swagger, options);
-            return typeSymbol;
-        });
-        return {
-            typeExpression: types.join(' | '),
+            typeExpression,
             importRefs: removeImportDuplicates(importRefs)
         };
     }

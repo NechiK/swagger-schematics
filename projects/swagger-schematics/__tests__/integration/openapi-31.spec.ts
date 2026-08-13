@@ -91,4 +91,21 @@ describe('OpenAPI 3.1 support', () => {
       expect(serviceContent).toContain('{ filter }: { filter?: string | null }');
     });
   });
+
+  describe('Primitive-wrapper schemas', () => {
+    it('should not generate a file for an inlined primitive-wrapper schema', () => {
+      // GuidIdentifier = { type: 'string', format: 'uuid' } is inlined everywhere,
+      // so it must not produce an empty IGuidIdentifier interface file.
+      expect(tree.exists(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/guid-identifier.interface.ts`)).toBe(false);
+    });
+
+    it('should not reference the wrapper symbol anywhere in the output', () => {
+      const referencingFiles = tree.files.filter(file => tree.readContent(file).includes('IGuidIdentifier'));
+      expect(referencingFiles).toEqual([]);
+    });
+
+    it('should still generate real (non-wrapper) object interfaces', () => {
+      expect(tree.exists(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/owner-dto.interface.ts`)).toBe(true);
+    });
+  });
 });

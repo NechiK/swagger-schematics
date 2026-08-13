@@ -10,7 +10,7 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
-import { isComposition, isNot } from "./utils/transform-type";
+import { isComposition, isNot, isPrimitiveWrapper } from "./utils/transform-type";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
@@ -60,7 +60,15 @@ export default function(options: SwaggerSchema): Rule {
         }
         
         const typedSchema = schema as TSchemaByType;
-        
+
+        // Skip primitive-wrapper schemas (e.g. a strongly-typed GUID/int/Stream:
+        // { type: 'string', format: 'uuid' }). They are inlined at every reference
+        // to their primitive (string/number/Blob), so a standalone file would be an
+        // unused, empty interface.
+        if (isPrimitiveWrapper(typedSchema)) {
+            return;
+        }
+
         // Handle composition schemas (allOf, oneOf, anyOf)
         // Skip 'not' schemas as they don't have a good TypeScript equivalent
         if (isComposition(typedSchema)) {

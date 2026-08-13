@@ -398,7 +398,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
  * These are schemas that define a primitive type, possibly with nullable, format, etc.
  * but don't define an object structure with properties
  */
-function isPrimitiveWrapper(schema: TSchemaByType): boolean {
+export function isPrimitiveWrapper(schema: TSchemaByType): boolean {
     // Must have a primitive type
     if (!('type' in schema)) {
         return false;

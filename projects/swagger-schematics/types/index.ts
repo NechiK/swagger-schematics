@@ -124,7 +124,10 @@ export default function(options: SwaggerSchema): Rule {
               const { typeExpression, importRefs: compositionRefs, leadingComment } = transformCompositionSchema(
                   schemaData.data as TSchemaByType,
                   swagger,
-                  { typeMapping: openApiSchematicsConfig.typeMapping }
+                  {
+                      typeMapping: openApiSchematicsConfig.typeMapping,
+                      legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
+                  }
               );
               // Filter out self-references
               const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`);
@@ -148,7 +151,8 @@ export default function(options: SwaggerSchema): Rule {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
             const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
-                typeMapping: openApiSchematicsConfig.typeMapping
+                typeMapping: openApiSchematicsConfig.typeMapping,
+                legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
             }, (schemaData.data as { required?: string[] }).required ?? []);
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
             const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));

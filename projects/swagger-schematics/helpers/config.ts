@@ -9,6 +9,7 @@ type swaggerSchemaKeys = keyof SwaggerApiSchema;
 const DEFAULT_CONFIG: Partial<SwaggerApiSchema> = {
     scopeEndpointsWithTags: false,
     eslintFix: false,
+    legacyOptionalProperties: false,
 };
 
 export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerApiSchema => {

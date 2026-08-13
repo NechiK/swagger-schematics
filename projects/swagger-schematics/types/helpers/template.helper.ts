@@ -18,10 +18,14 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
         }
 
         // Per spec: a property is optional unless listed in the object's required array;
-        // nullability is expressed in the type itself
+        // nullability is expressed in the type itself.
+        // Legacy escape hatch (legacyOptionalProperties): derive optionality from
+        // nullability instead, for back-ends that do not emit `required` yet.
         const nullable = isNullable(property, swagger);
         const typeSymbol = nullable && !rawTypeSymbol.includes('| null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
-        const isOptional = !requiredProperties.includes(propertyKey);
+        const isOptional = options?.legacyOptionalProperties
+            ? nullable
+            : !requiredProperties.includes(propertyKey);
 
         transformed.push([`${propertyKey}${isOptional ? '?' : ''}`, typeSymbol]);
     }

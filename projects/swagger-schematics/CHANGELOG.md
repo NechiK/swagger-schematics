@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 3.0.x and 3.1.x are fully supported and generate silently
   - Newer 3.x versions log a warning and are treated as 3.1; Swagger 2.0 logs a warning explaining it is unsupported
   - Generation always continues best-effort - an unknown version never blocks it
+- **`legacyOptionalProperties` option** - opt back in to the pre-spec optionality rule for back-ends that do not emit a `required` array yet. When `true`, a property is optional (`?`) if it is nullable rather than if it is absent from `required`, so non-nullable fields become required. Nullability (`| null` in the type) is unaffected. Defaults to `false` (spec behavior)
 - **OpenAPI 3.1 support**:
   - Type arrays: `type: ["string", "null"]` generates `string` with proper nullability; multi-type arrays become unions (`type: ["string", "integer"]` → `string | number`)
   - Nullable refs written the 3.1 way, `oneOf: [{ "type": "null" }, { $ref }]`, generate `IX | null` (or `string | null` when the ref inlines to a primitive) - previously the `null` member leaked in as `any | IX`, erasing the type. `anyOf` behaves the same

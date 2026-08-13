@@ -36,6 +36,13 @@ export type TTypeWithImports = [string, IImportRef[]];
 export interface ITransformTypeOptions {
     /** Map custom backend types to TypeScript primitives (e.g., { 'SuperDuperInt32': 'number' }) */
     typeMapping?: Record<string, string>;
+    /**
+     * Legacy optionality: when true, an interface property is optional (`?`) iff
+     * it is nullable, ignoring the object schema's `required` array. Escape hatch
+     * for back-ends that do not emit `required` yet. Nullability (`| null`) is
+     * unaffected either way.
+     */
+    legacyOptionalProperties?: boolean;
 }
 
 // Type guards for schema composition

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.1.0] - 2026-07-23
+## [1.1.0] - 2026-08-13
 
 ### ✨ Added
 - **OpenAPI version detection** - the schematics now read the document's `openapi`/`swagger` field:
@@ -15,15 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Generation always continues best-effort - an unknown version never blocks it
 - **OpenAPI 3.1 support**:
   - Type arrays: `type: ["string", "null"]` generates `string` with proper nullability; multi-type arrays become unions (`type: ["string", "integer"]` → `string | number`)
+  - Nullable refs written the 3.1 way, `oneOf: [{ "type": "null" }, { $ref }]`, generate `IX | null` (or `string | null` when the ref inlines to a primitive) - previously the `null` member leaked in as `any | IX`, erasing the type. `anyOf` behaves the same
   - Binary via `contentMediaType` (e.g. `application/octet-stream`, `image/*`) maps to `Blob`; `contentEncoding: base64` content stays `string`
   - Schema-less `application/octet-stream` responses generate `Blob` downloads (Angular `responseType: 'blob'`, RTK `responseHandler`)
   - Refs to 3.1 nullable enum schemas generate `TEnum | null`
+  - `not` schemas generate `export type TX = unknown` with a JSDoc comment naming the excluded type (e.g. "Any value except string"), instead of being skipped - so a `$ref` pointing at them no longer dangles
   - Numeric `exclusiveMinimum`/`exclusiveMaximum` and `examples` parse without errors
 
 ### 🐛 Fixed
 - ⚠️ **BREAKING**: **Interface property optionality now follows the spec** - a property is optional (`?`) unless listed in the object schema's `required` array. Schemas that omit `required` (common for C#/ASP.NET-generated documents) now generate all-optional interfaces, matching NSwag and openapi-generator behavior. Previously only nullable properties were optional
 - ⚠️ **BREAKING**: **Nullable properties now include `| null` in their type** (`crmRefId?: string | null`), so server-sent nulls are visible to the type checker
+- **`allOf` inheritance no longer drops own properties** - a schema with `allOf` *and* its own `properties` (the base-class + extra-fields shape) now generates `Base & { ...own props... }`; previously the sibling `properties` were silently discarded. A `null` member in an intersection is lifted out to a trailing `| null` (`(A & B) | null`)
 - **Composition schemas no longer drop imports** - `allOf`/`oneOf`/`anyOf` referencing multiple schemas now import every referenced type in generated services (previously only the first was imported)
+
+### ♻️ Changed
+- **Primitive-wrapper schemas are inlined, not emitted as files** - strongly-typed wrappers like `GuidIdentifier` (`{ type: "string", format: "uuid" }`), integer identifiers, and `Stream` (`{ type: "string", format: "binary" }`) are already inlined at every reference (`string`/`number`/`Blob`), so they no longer generate empty, unused `IGuidIdentifier`/`IIntIdentifier`/`IStream` interface files
 
 ### 🗑️ Removed
 - Dead `interfaces/version_3_0` folder (never imported)

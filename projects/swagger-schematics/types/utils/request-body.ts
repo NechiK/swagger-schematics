@@ -56,9 +56,11 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
 }
 
 /**
- * Find the first available media type from the content object
+ * Find the first available media type from the content object, preferring the
+ * shared CONTENT_TYPE_PRIORITY order and falling back to the first declared
+ * media type. Shared by request-body and response type extraction.
  */
-function findMediaType(content: IContent): IMediaType | undefined {
+export function findMediaType(content: IContent): IMediaType | undefined {
     // Try priority order first
     for (const contentType of CONTENT_TYPE_PRIORITY) {
         if (content[contentType]) {

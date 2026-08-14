@@ -2,8 +2,10 @@ import {ISwaggerSchema} from '../../interfaces/version_3_1/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
 import { TOperation, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
 import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
-import { TTypeWithImports, transformTypeWithAllImports, ITransformTypeOptions, isBinarySchema } from './transform-type';
+import { TTypeWithImports, transformTypeWithAllImports, ITransformTypeOptions, isBinarySchema, getRefPropertyDefinition } from './transform-type';
 import { IResponse, TResponse } from '../../interfaces/version_3_1/response.interface';
+import { IRef } from '../../interfaces/version_3_1/ref.interface';
+import { findMediaType } from './request-body';
 
 /**
  * Gets the method name for an API operation
@@ -56,103 +58,113 @@ export function getOperationSecurity(apiMethod: TOperation): Record<string, stri
  * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
  */
 export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports {
-    const responses = apiMethod.responses;
-
-    // Priority order for success responses
-    const successCodes = [
-        THttpStatusCode.OK,       // 200
-        THttpStatusCode.Created,  // 201
-        THttpStatusCode.Accepted, // 202
-        THttpStatusCode.NoContent // 204
-    ];
-
-    // Try specific success codes first
-    for (const code of successCodes) {
-        const response = responses[code];
-        if (response) {
-            // 204 No Content should return void
-            if (code === THttpStatusCode.NoContent) {
-                return ['void', []];
-            }
-            const result = extractResponseType(response, swaggerData, options);
-            if (result) return result;
-        }
+    const resolved = resolveSuccessResponse(apiMethod.responses, swaggerData);
+    if (!resolved || resolved.key === THttpStatusCode.NoContent) {
+        // No success response, or 204 No Content
+        return ['void', []];
     }
-
-    // Try wildcard 2XX
-    const response2XX = responses['2XX'];
-    if (response2XX) {
-        const result = extractResponseType(response2XX, swaggerData, options);
-        if (result) return result;
-    }
-
-    // Try default response
-    const defaultResponse = responses['default'];
-    if (defaultResponse) {
-        const result = extractResponseType(defaultResponse, swaggerData, options);
-        if (result) return result;
-    }
-
-    return ['void', []];
+    return extractResponseType(resolved.response, swaggerData, options) ?? ['void', []];
 }
 
 /**
- * Extracts the type from a response object
+ * Extracts the type from a response object using the shared media-type
+ * priority (with first-available fallback), so any declared media type
+ * produces a type instead of silently degrading to void.
  */
 function extractResponseType(response: IResponse, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports | null {
-    if (!response.content) {
+    const content = response.content;
+    if (!content || Object.keys(content).length === 0) {
         return null;
     }
 
-    // Try application/json first, then other content types
-    const contentTypes = ['application/json', 'text/plain', '*/*'];
-
-    for (const contentType of contentTypes) {
-        const content = response.content[contentType];
-        if (content?.schema) {
-            return transformTypeWithAllImports(content.schema, swaggerData, options);
-        }
+    const mediaType = findMediaType(content);
+    if (mediaType?.schema) {
+        return transformTypeWithAllImports(mediaType.schema, swaggerData, options);
     }
 
-    // OpenAPI 3.1 binary responses: application/octet-stream, with or without
-    // a schema (3.1 allows omitting the schema entirely for raw binary)
-    if (response.content['application/octet-stream']) {
+    // OpenAPI 3.1 binary responses: application/octet-stream without a schema
+    // (3.1 allows omitting the schema entirely for raw binary)
+    if (content['application/octet-stream']) {
         return ['Blob', []];
     }
 
     return null;
 }
 
+// Priority order for success responses
+const SUCCESS_RESPONSE_KEYS = [
+    THttpStatusCode.OK,        // 200
+    THttpStatusCode.Created,   // 201
+    THttpStatusCode.Accepted,  // 202
+    THttpStatusCode.NoContent, // 204
+    '2XX',
+    'default'
+] as const;
+
+export interface IResolvedResponse {
+    /** The responses-map key the response was chosen from (e.g. '200', '2XX'). */
+    key: string;
+    /** The chosen response, with a response-level $ref already resolved. */
+    response: IResponse;
+}
+
 /**
- * Gets the success response object from responses
- * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
+ * Resolves a response-map value that may be a Reference Object
+ * (e.g. { $ref: '#/components/responses/Ok' }) to the response it points at.
  */
-export function getSuccessResponse(responses: TResponse): IResponse | undefined {
-    // Priority order for success responses
-    const successCodes = [
-        THttpStatusCode.OK,       // 200
-        THttpStatusCode.Created,  // 201
-        THttpStatusCode.Accepted, // 202
-        THttpStatusCode.NoContent // 204
-    ];
-    
-    // Try specific success codes first
-    for (const code of successCodes) {
-        if (responses[code]) {
-            return responses[code];
+function resolveResponseRef(response: IResponse | IRef, swagger: ISwaggerSchema): IResponse | undefined {
+    if (!('$ref' in response)) {
+        return response;
+    }
+    const { refPropertySchema } = getRefPropertyDefinition(response.$ref, swagger);
+    return refPropertySchema as unknown as IResponse | undefined;
+}
+
+/**
+ * Chooses THE success response for an operation - the single source both the
+ * response type and the binary check derive from, so they can never disagree.
+ *
+ * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default. Among those, the
+ * first content-bearing response wins (a bodyless 200 next to a 201 with
+ * content yields the 201); 204 always terminates the walk as No Content;
+ * with no content-bearing candidate the first existing response is returned.
+ */
+export function resolveSuccessResponse(responses: TResponse, swagger: ISwaggerSchema): IResolvedResponse | undefined {
+    const candidates: IResolvedResponse[] = [];
+    for (const key of SUCCESS_RESPONSE_KEYS) {
+        const raw = responses[key];
+        if (!raw) {
+            continue;
+        }
+        const response = resolveResponseRef(raw, swagger);
+        if (response) {
+            candidates.push({ key, response });
         }
     }
-    
-    // Try wildcard 2XX
-    if (responses['2XX']) {
-        return responses['2XX'];
-    }
 
-    // Try default response
-    if (responses['default']) {
-        return responses['default'];
+    for (const candidate of candidates) {
+        if (candidate.key === THttpStatusCode.NoContent) {
+            return candidate;
+        }
+        if (candidate.response.content && Object.keys(candidate.response.content).length > 0) {
+            return candidate;
+        }
     }
-    
+    return candidates[0];
+}
+
+/**
+ * Gets the raw success response object from responses (no $ref resolution).
+ * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default.
+ * Prefer resolveSuccessResponse, which resolves $refs and applies the same
+ * content-bearing preference the generated response type uses.
+ */
+export function getSuccessResponse(responses: TResponse): IResponse | IRef | undefined {
+    for (const key of SUCCESS_RESPONSE_KEYS) {
+        if (responses[key]) {
+            return responses[key];
+        }
+    }
     return undefined;
 }
 
@@ -160,10 +172,12 @@ export function getSuccessResponse(responses: TResponse): IResponse | undefined 
  * Checks whether the operation's success response is binary content:
  * a string schema with format: binary (3.0) or contentMediaType (3.1),
  * or an application/octet-stream response (3.1, schema optional).
+ * Uses resolveSuccessResponse, so it always inspects the same response the
+ * generated response type was derived from.
  */
-export function isBinaryResponse(apiMethod: TOperation): boolean {
-    const response = getSuccessResponse(apiMethod.responses);
-    const content = response?.content;
+export function isBinaryResponse(apiMethod: TOperation, swagger: ISwaggerSchema): boolean {
+    const resolved = resolveSuccessResponse(apiMethod.responses, swagger);
+    const content = resolved?.response.content;
     if (!content) {
         return false;
     }

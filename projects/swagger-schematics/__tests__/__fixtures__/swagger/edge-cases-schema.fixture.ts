@@ -1,7 +1,10 @@
 import { ISwaggerSchema } from '../../../interfaces/version_3_1/swagger.interface';
-import { createSwaggerSchema } from '../../helpers/factories';
+import { createSwaggerSchema, createGetOperation } from '../../helpers/factories';
 
-export type TEdgeCasesMockApiPath = never;
+export type TEdgeCasesMockApiPath =
+  | '/api/EdgeCase/download'
+  | '/api/EdgeCase/report'
+  | '/api/EdgeCase/referenced';
 
 /**
  * Edge-case shapes fixed in 1.2.0, kept in one document so the generated
@@ -12,9 +15,43 @@ export type TEdgeCasesMockApiPath = never;
  * - allOf with a nullable ref member (parenthesization)
  * - allOf with sibling own properties (inline object literal)
  * - a nullable Record of nullable values (outer | null not suppressed)
+ * - response resolution: bodyless 200 next to a binary 2XX (type and
+ *   responseType: 'blob' must agree), an xml-only response, and a
+ *   response-level $ref
  */
-export const EDGE_CASES_SWAGGER_SCHEMA: ISwaggerSchema<TEdgeCasesMockApiPath> = createSwaggerSchema<TEdgeCasesMockApiPath>({
-  paths: {} as never,
+const BASE_SCHEMA = createSwaggerSchema<TEdgeCasesMockApiPath>({
+  paths: {
+    '/api/EdgeCase/download': createGetOperation({
+      tags: ['EdgeCase'],
+      summary: 'Bodyless 200 next to a binary 2XX',
+      responses: {
+        '200': { description: 'no content' },
+        '2XX': {
+          description: 'the file',
+          content: { 'application/octet-stream': {} }
+        }
+      }
+    }),
+    '/api/EdgeCase/report': createGetOperation({
+      tags: ['EdgeCase'],
+      summary: 'Response declared only as application/xml',
+      responses: {
+        '200': {
+          description: 'xml report',
+          content: {
+            'application/xml': { schema: { $ref: '#/components/schemas/ModelA' } }
+          }
+        }
+      }
+    }),
+    '/api/EdgeCase/referenced': createGetOperation({
+      tags: ['EdgeCase'],
+      summary: 'Response-level $ref',
+      responses: {
+        '200': { $ref: '#/components/responses/OkModel' }
+      }
+    })
+  } as never,
   schemas: {
     StatusWithoutNames: {
       type: 'string',
@@ -100,3 +137,18 @@ export const EDGE_CASES_SWAGGER_SCHEMA: ISwaggerSchema<TEdgeCasesMockApiPath> = 
     }
   } as never
 });
+
+export const EDGE_CASES_SWAGGER_SCHEMA: ISwaggerSchema<TEdgeCasesMockApiPath> = {
+  ...BASE_SCHEMA,
+  components: {
+    ...BASE_SCHEMA.components,
+    responses: {
+      OkModel: {
+        description: 'referenced ok',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/ModelB' } }
+        }
+      }
+    }
+  }
+};

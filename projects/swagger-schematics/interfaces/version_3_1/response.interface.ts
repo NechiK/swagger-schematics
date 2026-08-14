@@ -37,8 +37,9 @@ export interface IResponse {
 export type TResponseKey = THttpStatusCode | 'default' | '1XX' | '2XX' | '3XX' | '4XX' | '5XX';
 
 export type TResponse = {
-    [key in TResponseKey]?: IResponse;
+    [key in TResponseKey]?: IResponse | IRef;
 } & {
-    // Allow string keys for flexibility
-    [key: string]: IResponse | undefined;
+    // Allow string keys for flexibility; per spec a response map value may be
+    // a Reference Object
+    [key: string]: IResponse | IRef | undefined;
 };

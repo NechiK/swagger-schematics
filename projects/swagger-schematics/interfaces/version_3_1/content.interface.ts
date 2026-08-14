@@ -1,8 +1,9 @@
-import { TSchema } from "./swagger.interface";
+import { IHeader, TSchema } from "./swagger.interface";
+import { IRef } from "./ref.interface";
 
 export interface IEncoding {
     contentType?: string;
-    headers?: Record<string, any>;
+    headers?: Record<string, IHeader | IRef>;
     style?: 'form' | 'spaceDelimited' | 'pipeDelimited' | 'deepObject';
     explode?: boolean;
     allowReserved?: boolean;
@@ -10,7 +11,7 @@ export interface IEncoding {
 
 export interface IMediaType {
     schema?: TSchema;
-    example?: any;
+    example?: unknown;
     examples?: Record<string, IMediaTypeExample>;
     encoding?: Record<string, IEncoding>;
 }
@@ -18,7 +19,7 @@ export interface IMediaType {
 export interface IMediaTypeExample {
     summary?: string;
     description?: string;
-    value?: any;
+    value?: unknown;
     externalValue?: string;
 }
 

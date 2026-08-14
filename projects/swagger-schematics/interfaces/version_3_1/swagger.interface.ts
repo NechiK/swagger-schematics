@@ -30,10 +30,10 @@ export interface IServerVariable {
 export interface ISchemaBase {
     title?: string;
     description?: string;
-    default?: any;
-    example?: any;
+    default?: unknown;
+    example?: unknown;
     /** OpenAPI 3.1 (JSON Schema): examples replaces the schema-level example keyword */
-    examples?: any[];
+    examples?: unknown[];
     required?: string[];
     minLength?: number;
     maxLength?: number;
@@ -223,8 +223,8 @@ export interface IOAuthFlow {
 export interface ILink {
     operationRef?: string;
     operationId?: string;
-    parameters?: Record<string, any>;
-    requestBody?: any;
+    parameters?: Record<string, unknown>;
+    requestBody?: unknown;
     description?: string;
     server?: IServer;
 }
@@ -241,7 +241,7 @@ export interface IHeader {
     style?: 'simple';
     explode?: boolean;
     schema?: TSchema;
-    example?: any;
+    example?: unknown;
     examples?: Record<string, IExample>;
 }
 

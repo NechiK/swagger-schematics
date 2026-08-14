@@ -17,7 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ♻️ Changed
 - README recommends the new CLI; the `schematics swagger-schematics:*` invocation remains supported (documented as legacy)
-- ⚠️ **Published OpenAPI interface types tightened** - free-form spec fields (`example`, `default`, `examples` items, `IExample.value`, `ILink.requestBody`/`parameters`) are now `unknown` instead of `any`, and `IEncoding.headers` / response `IHeader.examples` gained proper object types. Consumers reading these fields must narrow or cast before use
+- ⚠️ **Published types tightened - the package is now `any`-free** (no runtime behavior change):
+  - Free-form OpenAPI spec fields (`example`, `default`, `examples` items, `IExample.value`, `ILink.requestBody`/`parameters`) are `unknown` instead of `any`; `IEncoding.headers` and response `IHeader.examples` gained proper object types. Consumers reading these fields must narrow or cast before use
+  - `IParsedApiItem.bodyParam` is typed via the new exported `TParsedBodyParam` alias (`IParsedParam<IRequestBody | IRef>`) and `IParsedApiItem.response` is `IResponse | undefined` (previously both `any`)
 
 ### 📦 Dependencies
 - Updated @angular-devkit packages to 20.3.34 (latest v20 LTS patch) - pulls in the fixed ajv 8.18.0 and picomatch 4.0.4, clearing the last npm audit advisories; `npm audit` now reports 0 vulnerabilities

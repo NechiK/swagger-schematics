@@ -216,6 +216,7 @@ Each item in `apiList` has the following properties:
 | `isQuery`                | boolean  | True for GET/HEAD methods                                                                            |
 | `requestMethod`          | string   | HTTP method for httpClient (e.g., "get", "post")                                                     |
 | `responseTypeSymbol`     | string   | Response type (e.g., "IClaimDetailDTO", "void")                                                      |
+| `response`               | object   | Raw OpenAPI success response object, or undefined if the operation has none                          |
 | `bodyParam`              | object   | Parsed body parameter or null                                                                        |
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Array of parsed query parameters                                                                     |

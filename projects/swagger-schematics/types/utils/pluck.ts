@@ -106,8 +106,11 @@ export function safePluck<T extends object,
     }
     let prop: unknown = stateObject[keysArr.shift() as K1];
 
-    keysArr.forEach(key => {
-            prop = (prop as Record<PropertyKey, unknown>)[key];
-    });
+    for (const key of keysArr) {
+        if (prop === null || prop === undefined) {
+            return undefined;
+        }
+        prop = (prop as Record<PropertyKey, unknown>)[key];
+    }
     return prop as T[K1];
 }

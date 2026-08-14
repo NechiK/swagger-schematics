@@ -504,8 +504,9 @@ export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): 
     const refPath = ref.split('/');
     refPath.shift(); // Remove '#'
     
-    // The ref path is only known at runtime - safePluck sanitizes the keys and
-    // handles missing segments, so the tuple shape is asserted, not proven
+    // The ref path is only known at runtime - safePluck returns undefined when
+    // any segment is missing (e.g. a dangling or 2.0-style '#/definitions/' ref),
+    // so the tuple shape is asserted, not proven
     const refPropertySchema = safePluck(swagger, refPath as unknown as [keyof ISwaggerSchema]) as unknown as TSchemaByType | undefined;
     const refPropertyKey = refPath[refPath.length - 1];
     

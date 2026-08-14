@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2026-08-14
 
+### 🐛 Fixed
+- **Dangling `$ref`s no longer crash generation** - a ref into a missing document section (e.g. a Swagger 2.0-style `#/definitions/...` in a 3.x document, or `#/components/requestBodies/...` when that section is absent) previously threw an uncaught TypeError and aborted the run; it now falls back to the unresolved-ref handling
+- **Enum members are always valid TypeScript identifiers**:
+  - String enums without `x-enum-varnames` sanitize their values into PascalCase member names (`in progress` → `InProgress`, `not-started` → `NotStarted`); values that are already valid identifiers are kept as-is
+  - Numeric enums without `x-enum-varnames` generate `_1 = 1` instead of the invalid `1 = 1`
+  - An `x-enum-varnames` array shorter than `enum` falls back to the value-derived name for the missing entries instead of emitting a member literally named `undefined`
+  - Backslashes, newlines, and carriage returns in string enum values are escaped (previously only single quotes were)
+
 ### ✨ Added
 - **`swagger-schematics` CLI** - the package now ships its own binary, running the schematics directly through `NodeWorkflow` (no generic `schematics` command needed):
   - `swagger-schematics types [source]`, `swagger-schematics api [source]`, and `swagger-schematics all [source]` (types then api - replaces the two-script setup)

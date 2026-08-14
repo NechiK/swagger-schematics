@@ -102,7 +102,7 @@ export default function(options: SwaggerSchema): Rule {
           if (schemaData.type === 'enum') {
               const parsed = parseName(`${openApiSchematicsConfig.path}/enums`, schemaData.name);
               const enumValuesList = schemaData.data.enum;
-              const enumNamesList = schemaData.data['x-enum-varnames'] ? schemaData.data['x-enum-varnames'] : enumValuesList;
+              const enumNamesList = schemaData.data['x-enum-varnames'];
               itemSource = apply(enumTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,
@@ -111,7 +111,10 @@ export default function(options: SwaggerSchema): Rule {
                       name: parsed.name,
                       path: parsed.path,
                       enums: enumValuesList.reduce((parsedEnumValues, currentValue, currentIndex) => {
-                          parsedEnumValues.push([enumNamesList[currentIndex], currentValue]);
+                          // Fall back to the value per index - x-enum-varnames may be
+                          // shorter than enum in malformed specs
+                          const rawName = enumNamesList?.[currentIndex] ?? currentValue;
+                          parsedEnumValues.push([enums.toEnumMemberName(rawName, currentIndex), currentValue]);
                           return parsedEnumValues;
                       }, [] as Array<[string | number, string | number]>),
                       indentSize

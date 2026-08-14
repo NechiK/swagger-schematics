@@ -188,10 +188,10 @@ export class DocumentApiService extends ApiBaseService {
 
 exports[`Schematics Integration Enum Generation should generate ClaimStatuses enum without names 1`] = `
 "export enum TClaimStatuses {
-  1 = 1,
-  2 = 2,
-  3 = 3,
-  99 = 99
+  _1 = 1,
+  _2 = 2,
+  _3 = 3,
+  _99 = 99
 }
 "
 `;

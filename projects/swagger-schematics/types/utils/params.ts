@@ -2,6 +2,9 @@ import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/oper
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
 import { IImportRef, transformType, transformTypeWithAllImports, ITransformTypeOptions, isNullable } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
+import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
+import { IRef } from "../../interfaces/version_3_1/ref.interface";
+import { IResponse } from "../../interfaces/version_3_1/response.interface";
 
 /**
  * Represents the structure of a parsed parameter.
@@ -35,6 +38,12 @@ export interface IParsedParam<T> {
      */
     objectSymbol: string;
 }
+
+/**
+ * A parsed request body parameter - the original is the operation's
+ * requestBody, either inline or a $ref.
+ */
+export type TParsedBodyParam = IParsedParam<IRequestBody | IRef>;
 
 /**
  * Represents the structure of a parsed API item.
@@ -100,11 +109,11 @@ export interface IParsedApiItem {
     /** The HTTP request method (e.g., GET, POST, PUT, DELETE). */
     requestMethod: string;
     
-    /** 
+    /**
      * The parsed body parameter associated with this API item, if any.
-     * @type {IParsedParam<any> | null}
+     * @type {TParsedBodyParam | null}
      */
-    bodyParam: IParsedParam<any> | null;
+    bodyParam: TParsedBodyParam | null;
     
     /** 
      * A symbol representing the response type of this API item.
@@ -113,7 +122,7 @@ export interface IParsedApiItem {
     responseTypeSymbol: string;
     
     /** The response object associated with this API item. */
-    response: any;
+    response: IResponse | undefined;
     
     /** 
      * Whether the operation is deprecated.
@@ -261,7 +270,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 export function transformParamsToApiMethodParams(params: {
     pathParams: IParsedParam<IPathParam>[];
     queryParams: IParsedParam<IQueryParam>[];
-    bodyParam: IParsedParam<any> | null;
+    bodyParam: TParsedBodyParam | null;
 }): string {
     const methodParams: string[] = [
         params.pathParams.map(param => param.functionSymbol).join(', '),
@@ -278,7 +287,7 @@ export function transformParamsToApiMethodParams(params: {
 export function extractApiMethodParamNames(params: {
     pathParams: IParsedParam<IPathParam>[];
     queryParams: IParsedParam<IQueryParam>[];
-    bodyParam: IParsedParam<any> | null;
+    bodyParam: TParsedBodyParam | null;
 }): string[] {
     const names: string[] = [
         ...params.pathParams.map(param => param.objectSymbol),
@@ -297,7 +306,7 @@ export function extractApiMethodParamNames(params: {
 export function buildApiMethodRequestType(params: {
     pathParams: IParsedParam<IPathParam>[];
     queryParams: IParsedParam<IQueryParam>[];
-    bodyParam: IParsedParam<any> | null;
+    bodyParam: TParsedBodyParam | null;
 }): string {
     const typeParts: string[] = [];
     
@@ -350,7 +359,7 @@ export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasN
  *          or empty string for GET/DELETE/etc. without body.
  *          Template authors: use truthy check (e.g., `if (bodyFormatted)`) to determine presence.
  */
-export function formatBody(bodyParam: IParsedParam<any> | null, methodType: string): string {
+export function formatBody(bodyParam: TParsedBodyParam | null, methodType: string): string {
     if (bodyParam) return bodyParam.objectSymbol;
     if (['post', 'put'].includes(methodType)) return '{}';
     return '';
@@ -358,7 +367,7 @@ export function formatBody(bodyParam: IParsedParam<any> | null, methodType: stri
 
 export function getApiCallParams(params: {
     queryParams: IParsedParam<IQueryParam>[];
-    bodyParam: IParsedParam<any> | null;
+    bodyParam: TParsedBodyParam | null;
 }): string {
     return [
         ...params.queryParams.map(param => `\${${param.objectSymbol}}`),

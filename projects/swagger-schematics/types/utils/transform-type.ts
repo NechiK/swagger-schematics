@@ -120,8 +120,8 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
     // Handle typed schemas
     if ('type' in schema) {
         // OpenAPI 3.1 (JSON Schema): type may be an array, e.g. ["string", "null"]
-        if (Array.isArray((schema as any).type)) {
-            return transformTypeArray(schema as TSchemaWithType, swagger, options);
+        if (hasTypeArray(schema)) {
+            return transformTypeArray(schema, swagger, options);
         }
         const typedSchema = schema as TSchemaWithType;
         switch (typedSchema.type) {
@@ -139,12 +139,22 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
 }
 
 /**
+ * The interfaces model the common OpenAPI single-string `type`, but 3.1
+ * (JSON Schema) also allows an array of type names, e.g. ["string", "null"].
+ */
+type TSchemaTypeArray = ISchemaBase & { type: string[] };
+
+function hasTypeArray(schema: object): schema is TSchemaTypeArray {
+    return Array.isArray((schema as { type?: unknown }).type);
+}
+
+/**
  * Transforms an OpenAPI 3.1 type array (e.g. ["string", "null"]) into a union type.
  * The "null" member only affects nullability (reported via isNullable), matching
  * how 3.0's nullable keyword is handled - it is not appended to the type symbol here.
  */
-function transformTypeArray(schema: TSchemaWithType, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const types = ((schema as any).type as string[]).filter(typeName => typeName !== 'null');
+function transformTypeArray(schema: TSchemaTypeArray, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const types = schema.type.filter(typeName => typeName !== 'null');
 
     if (types.length === 0) {
         return ['null'];
@@ -154,7 +164,7 @@ function transformTypeArray(schema: TSchemaWithType, swagger: ISwaggerSchema, op
     let firstImportRef: IImportRef | undefined;
 
     for (const typeName of types) {
-        const [symbol, importRef] = transformType({ ...(schema as any), type: typeName } as TSchema, swagger, options);
+        const [symbol, importRef] = transformType({ ...schema, type: typeName } as unknown as TSchema, swagger, options);
         symbols.push(symbol);
         firstImportRef = firstImportRef ?? importRef;
     }
@@ -183,11 +193,11 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
         return false;
     }
     const typed = schema as TSchemaWithType & { contentMediaType?: string; contentEncoding?: string };
-    const typeNames = Array.isArray((typed as any).type) ? (typed as any).type : [typed.type];
+    const typeNames: unknown[] = hasTypeArray(typed) ? typed.type : [typed.type];
     if (!typeNames.includes('string')) {
         return false;
     }
-    return (typed as any).format === 'binary' || isBinaryContentMediaType(typed);
+    return (typed as { format?: unknown }).format === 'binary' || isBinaryContentMediaType(typed);
 }
 
 /**
@@ -494,8 +504,9 @@ export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): 
     const refPath = ref.split('/');
     refPath.shift(); // Remove '#'
     
-    // Use any to bypass strict type checking - safePluck handles undefined at runtime
-    const refPropertySchema = safePluck(swagger, refPath as any) as TSchemaByType | undefined;
+    // The ref path is only known at runtime - safePluck sanitizes the keys and
+    // handles missing segments, so the tuple shape is asserted, not proven
+    const refPropertySchema = safePluck(swagger, refPath as unknown as [keyof ISwaggerSchema]) as unknown as TSchemaByType | undefined;
     const refPropertyKey = refPath[refPath.length - 1];
     
     return { refPropertySchema, refPropertyKey };
@@ -512,7 +523,7 @@ export function transformRefProperty(refProperty: TSchemaByType, refPropertyKey:
 export function isRefPropertyEnum(refProperty: TSchemaByType): boolean {
     if (!refProperty) return false;
     // Check if it's an enum (either integer or string enum)
-    return 'enum' in refProperty && Array.isArray((refProperty as any).enum);
+    return 'enum' in refProperty && Array.isArray(refProperty.enum);
 }
 
 export function isRef(property: TSchema | TParam): property is IRef {
@@ -530,7 +541,7 @@ export function isSchemaValueNullable(schema: TSchemaByType | undefined): boolea
     if ((schema as TSchemaWithType).nullable === true) {
         return true;
     }
-    const type = (schema as any).type;
+    const type = (schema as { type?: unknown }).type;
     return Array.isArray(type) && type.includes('null');
 }
 

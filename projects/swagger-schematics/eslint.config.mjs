@@ -31,12 +31,4 @@ export default tseslint.config(
     ...config,
     files: SOURCE_FILES,
   })),
-  {
-    files: SOURCE_FILES,
-    rules: {
-      // Existing typing debt (schema transform engine); the lint script's
-      // --max-warnings caps the count so it can only go down.
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
 );

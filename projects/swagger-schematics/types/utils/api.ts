@@ -80,14 +80,14 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
     }
 
     // Try wildcard 2XX
-    const response2XX = (responses as any)['2XX'];
+    const response2XX = responses['2XX'];
     if (response2XX) {
         const result = extractResponseType(response2XX, swaggerData, options);
         if (result) return result;
     }
 
     // Try default response
-    const defaultResponse = (responses as any)['default'];
+    const defaultResponse = responses['default'];
     if (defaultResponse) {
         const result = extractResponseType(defaultResponse, swaggerData, options);
         if (result) return result;
@@ -99,7 +99,7 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
 /**
  * Extracts the type from a response object
  */
-function extractResponseType(response: any, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports | null {
+function extractResponseType(response: IResponse, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports | null {
     if (!response.content) {
         return null;
     }
@@ -144,13 +144,13 @@ export function getSuccessResponse(responses: TResponse): IResponse | undefined 
     }
     
     // Try wildcard 2XX
-    if ((responses as any)['2XX']) {
-        return (responses as any)['2XX'];
+    if (responses['2XX']) {
+        return responses['2XX'];
     }
-    
+
     // Try default response
-    if ((responses as any)['default']) {
-        return (responses as any)['default'];
+    if (responses['default']) {
+        return responses['default'];
     }
     
     return undefined;
@@ -163,14 +163,14 @@ export function getSuccessResponse(responses: TResponse): IResponse | undefined 
  */
 export function isBinaryResponse(apiMethod: TOperation): boolean {
     const response = getSuccessResponse(apiMethod.responses);
-    const content = (response as any)?.content;
+    const content = response?.content;
     if (!content) {
         return false;
     }
     if (content['application/octet-stream']) {
         return true;
     }
-    return Object.values(content).some((media: any) => isBinarySchema(media?.schema));
+    return Object.values(content).some(media => isBinarySchema(media?.schema));
 }
 
 type TOperationPredictionProperties = 'summary' | 'description';

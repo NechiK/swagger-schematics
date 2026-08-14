@@ -9,7 +9,7 @@
     "prebuild": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
     "prepack": "npm run build && node -e \"require('fs').copyFileSync('../../README.md', 'README.md'); require('fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
     "build": "tsc -p tsconfig.schematics.json",
-    "lint": "eslint . --max-warnings 18",
+    "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformType, transformTypeWithAllImports, ITransformTypeOptions, isNullable } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
@@ -375,11 +375,11 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
         return { typeSymbol: 'any', isParamNullable: false, importRefs: [] };
     }
 
-    let [typeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+    const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
     const isParamNullable = isNullable(schema, swagger);
-    if (isParamNullable && !typeSymbol.endsWith(' | null')) {
-        typeSymbol += ' | null';
-    }
+    const typeSymbol = isParamNullable && !rawTypeSymbol.endsWith(' | null')
+        ? `${rawTypeSymbol} | null`
+        : rawTypeSymbol;
     return { typeSymbol, isParamNullable, importRefs };
 }
 

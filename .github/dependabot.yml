@@ -5,12 +5,22 @@ updates:
     schedule:
       interval: weekly
     groups:
-      # One PR for all minor/patch bumps; majors (e.g. the Angular
-      # migration) stay as separate PRs so they are visible but unmerged.
+      # One PR for all minor/patch bumps; majors stay as separate PRs so
+      # they are visible but unmerged.
       minor-and-patch:
         update-types:
           - minor
           - patch
+      # The @angular-devkit/* + @schematics/angular packages version in
+      # lockstep - a tree mixing majors breaks the schematics runtime, so
+      # the Angular major migration must arrive as ONE atomic PR, never
+      # as per-package bumps.
+      angular-major:
+        patterns:
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+        update-types:
+          - major
 
   - package-ecosystem: github-actions
     directory: /

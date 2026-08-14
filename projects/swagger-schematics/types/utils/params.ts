@@ -217,7 +217,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 
             if (apiParam.schema) {
                 [typeSymbol, paramImportRefs] = transformTypeWithAllImports(apiParam.schema, swagger, options);
-                if (isNullable(apiParam.schema, swagger) && !typeSymbol.includes('| null')) {
+                if (isNullable(apiParam.schema, swagger) && !typeSymbol.endsWith(' | null')) {
                     typeSymbol += ' | null';
                 }
             } else if (apiParam.content) {
@@ -226,7 +226,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
                 const content = apiParam.content[contentType as keyof typeof apiParam.content];
                 if (content?.schema) {
                     [typeSymbol, paramImportRefs] = transformTypeWithAllImports(content.schema, swagger, options);
-                    if (isNullable(content.schema, swagger) && !typeSymbol.includes('| null')) {
+                    if (isNullable(content.schema, swagger) && !typeSymbol.endsWith(' | null')) {
                         typeSymbol += ' | null';
                     }
                 }
@@ -382,7 +382,7 @@ export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerS
     if (param.schema) {
         [typeSymbol] = transformType(param.schema, swagger, options);
         isParamNullable = isNullable(param.schema, swagger);
-        if (isParamNullable && !typeSymbol.includes('| null')) {
+        if (isParamNullable && !typeSymbol.endsWith(' | null')) {
             typeSymbol += ' | null';
         }
     } else if (param.content) {
@@ -391,7 +391,7 @@ export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerS
         if (content?.schema) {
             [typeSymbol] = transformType(content.schema, swagger, options);
             isParamNullable = isNullable(content.schema, swagger);
-            if (isParamNullable && !typeSymbol.includes('| null')) {
+            if (isParamNullable && !typeSymbol.endsWith(' | null')) {
                 typeSymbol += ' | null';
             }
         }
@@ -405,7 +405,7 @@ export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerS
  * A parameter is optional when the spec doesn't mark it required, or when its type is nullable.
  */
 function isParamOptional(param: IParsedParam<TParam>): boolean {
-    return !param.originalParam.required || param.typeSymbol.includes('| null');
+    return !param.originalParam.required || param.typeSymbol.endsWith(' | null');
 }
 
 export function transformParamsToObject(params: IParsedParam<TParam>[]): string {

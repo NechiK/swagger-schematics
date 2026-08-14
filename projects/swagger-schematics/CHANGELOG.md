@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-08-14
 
 ### 🐛 Fixed
+- **Union types are parenthesized when composed** - an array of a union or nullable ref now generates `(IA | null)[]` instead of `IA | null[]`, and an allOf member that renders as a union generates `IBase & (IExtra | null)` instead of `IBase & IExtra | null`. Both previously compiled to silently wrong types
+- **Inline `allOf` with sibling `properties` no longer drops the own properties** - a schema combining `allOf: [Base]` with its own `properties` (the inheritance shape) now renders an intersection with a real object literal, e.g. `IBase & { extra?: string }`, everywhere; previously only named type-alias files kept the properties while inline occurrences (property types, array items) silently lost them
+- **Interface properties with inline union types now import every referenced schema** - a property like `items: { oneOf: [A, B] }` (or a `Record` whose values are a union) previously imported only the first referenced type, generating a file that didn't compile; imports are now collected through array items and `additionalProperties`
+- **Outer nullability is no longer suppressed by a nested `| null`** - a nullable schema rendering e.g. `Record<string, string | null>` now correctly gets its own trailing `| null` (the guard checked for `| null` anywhere in the symbol instead of at the end); the same fix stops a required parameter of such a type being wrongly marked optional
 - **Dangling `$ref`s no longer crash generation** - a ref into a missing document section (e.g. a Swagger 2.0-style `#/definitions/...` in a 3.x document, or `#/components/requestBodies/...` when that section is absent) previously threw an uncaught TypeError and aborted the run; it now falls back to the unresolved-ref handling
 - **Enum members are always valid TypeScript identifiers**:
   - String enums without `x-enum-varnames` sanitize their values into PascalCase member names (`in progress` → `InProgress`, `not-started` → `NotStarted`); values that are already valid identifiers are kept as-is

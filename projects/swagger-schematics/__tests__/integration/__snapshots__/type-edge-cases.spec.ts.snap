@@ -1,0 +1,91 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Type generation edge cases allOf with a nullable ref member is parenthesized 1`] = `
+"import { IModelA } from './model-a.interface';
+import { INullableExtra } from './nullable-extra.interface';
+
+export type TIntersectNullableDto = IModelA & (INullableExtra | null);
+"
+`;
+
+exports[`Type generation edge cases allOf with own properties renders the inline literal 1`] = `
+"import { IModelA } from './model-a.interface';
+import { IModelB } from './model-b.interface';
+
+export type TDerivedDto = IModelA & { extra?: string; other?: IModelB };
+"
+`;
+
+exports[`Type generation edge cases arrays of unions and nullable refs are parenthesized 1`] = `
+"import { IModelA } from './model-a.interface';
+import { IModelB } from './model-b.interface';
+import { INullableExtra } from './nullable-extra.interface';
+
+export interface IMixedListDto {
+  unionList?: (IModelA | IModelB)[];
+  nullableRefList?: (INullableExtra | null)[];
+}
+"
+`;
+
+exports[`Type generation edge cases enum without varnames sanitizes string values 1`] = `
+"export enum TStatusWithoutNames {
+  InProgress = 'in progress',
+  NotStarted = 'not-started',
+  Done = 'Done'
+}
+"
+`;
+
+exports[`Type generation edge cases generates the expected files 1`] = `
+[
+  "/.editorconfig",
+  "/test-output/enums/numeric-codes.enum.ts",
+  "/test-output/enums/partial-names.enum.ts",
+  "/test-output/enums/status-without-names.enum.ts",
+  "/test-output/enums/tricky-values.enum.ts",
+  "/test-output/interfaces/derived-dto.type.ts",
+  "/test-output/interfaces/intersect-nullable-dto.type.ts",
+  "/test-output/interfaces/mixed-list-dto.interface.ts",
+  "/test-output/interfaces/model-a.interface.ts",
+  "/test-output/interfaces/model-b.interface.ts",
+  "/test-output/interfaces/nullable-extra.interface.ts",
+  "/test-output/interfaces/nullable-map-dto.interface.ts",
+  "/tsconfig.json",
+]
+`;
+
+exports[`Type generation edge cases nullable Record keeps its outer | null 1`] = `
+"
+
+export interface INullableMapDto {
+  map?: Record<string, string | null> | null;
+}
+"
+`;
+
+exports[`Type generation edge cases numeric enum without varnames prefixes members 1`] = `
+"export enum TNumericCodes {
+  _1 = 1,
+  _2 = 2,
+  _99 = 99
+}
+"
+`;
+
+exports[`Type generation edge cases quotes and backslashes are escaped 1`] = `
+"export enum TTrickyValues {
+  Apostrophe = 'it\\'s',
+  Backslash = 'back\\\\slash'
+}
+"
+`;
+
+exports[`Type generation edge cases short x-enum-varnames falls back per index 1`] = `
+"export enum TPartialNames {
+  One = 1,
+  Two = 2,
+  _3 = 3
+}
+"
+`;

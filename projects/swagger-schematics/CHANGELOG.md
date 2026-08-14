@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ♻️ Changed
 - README recommends the new CLI; the `schematics swagger-schematics:*` invocation remains supported (documented as legacy)
 
+### 📦 Dependencies
+- Updated @angular-devkit packages to 20.3.34 (latest v20 LTS patch) - pulls in the fixed ajv 8.18.0 and picomatch 4.0.4, clearing the last npm audit advisories; `npm audit` now reports 0 vulnerabilities
+- Updated dev dependencies: @types/node to 26.2.0, ts-jest to 29.4.12, eslint to 10.8.1, fs-extra to 11.4.0, @typescript-eslint/parser to 8.67.0
+- `npm audit fix` refreshed vulnerable transitive dev dependencies (@babel/core, brace-expansion, diff) in the lockfile
+
 
 ## [1.1.0] - 2026-08-13
 

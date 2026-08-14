@@ -8,6 +8,7 @@ package-lock.json
 # Test files
 karma.conf.js
 tests
+jest.global-setup.js
 
 # Ignores TypeScript files, but keeps definitions.
 *.ts

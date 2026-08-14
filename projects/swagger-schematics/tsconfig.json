@@ -12,7 +12,8 @@
     ],
     "paths": {
       "@fixtures/*": ["./__tests__/__fixtures__/*"],
-      "@helpers/*": ["./__tests__/helpers/*"]
+      "@helpers/*": ["./__tests__/helpers/*"],
+      "@lib/*": ["./*"]
     }
   },
   "exclude": [

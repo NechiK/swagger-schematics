@@ -59,3 +59,7 @@ Thumbs.db
 # Generated at pack time from the root README/LICENSE (single source of truth)
 projects/swagger-schematics/README.md
 projects/swagger-schematics/LICENSE
+
+# Local generator experiments (swagger-schematics ... --path=/demo-output)
+/demo-output/
+/openapi-schematics.json

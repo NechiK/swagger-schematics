@@ -41,7 +41,8 @@
     },
     "moduleNameMapper": {
       "^@fixtures/(.*)$": "<rootDir>/__tests__/__fixtures__/$1",
-      "^@helpers/(.*)$": "<rootDir>/__tests__/helpers/$1"
+      "^@helpers/(.*)$": "<rootDir>/__tests__/helpers/$1",
+      "^@lib/(.*)$": "<rootDir>/$1"
     },
     "coverageThreshold": {
       "global": {

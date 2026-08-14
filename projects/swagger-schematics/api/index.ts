@@ -84,24 +84,24 @@ export default function(options: SwaggerApiSchema) {
         const apiServiceTemplates = url(config.apiServiceTemplatePath || frameworkConfig.templates.apiService);
         const baseApiTemplates = url(config.baseApiTemplatePath || frameworkConfig.templates.baseApi);
 
-        let finalRule: Rule | undefined;
+        // Loop-invariant: the base API location, file extension, and custom
+        // helpers depend only on the config, so resolve (and require) them once
+        // instead of per controller.
+        // For Angular the canonical base service file always lives in the
+        // resolved directory, so the writer and this import computation agree.
+        const baseApiPath = framework === 'react-rtk'
+            ? (config.baseApiPath || DEFAULT_RTK_BASE_API_PATH)
+            : `${config.baseApiPath ? resolveAngularBaseApiDir(config.baseApiPath) : config.path}/_api-base.service.ts`;
+        const apiFileExt = framework === 'react-rtk' ? '.api.ts' : '-api.service.ts';
+        const customHelpers = config.templateHelpersPath
+            ? loadTemplateHelpers(config.templateHelpersPath)
+            : {};
+
+        const rules: Rule[] = [];
 
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
-            
-            // Determine API file path and base API path. For Angular the
-            // canonical base service file always lives in the resolved
-            // directory, so the writer and this import computation agree.
-            const baseApiPath = framework === 'react-rtk'
-                ? (config.baseApiPath || DEFAULT_RTK_BASE_API_PATH)
-                : `${config.baseApiPath ? resolveAngularBaseApiDir(config.baseApiPath) : config.path}/_api-base.service.ts`;
-            const apiFileExt = framework === 'react-rtk' ? '.api.ts' : '-api.service.ts';
             const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}${apiFileExt}`;
-
-            // Load custom template helpers if provided
-            const customHelpers = config.templateHelpersPath 
-                ? loadTemplateHelpers(config.templateHelpersPath)
-                : {};
 
             // Common template context
             const templateContext: Record<string, unknown> = {
@@ -128,21 +128,17 @@ export default function(options: SwaggerApiSchema) {
                 move(parsed.path)
             ]);
 
-            finalRule = finalRule
-                ? chain([finalRule, mergeWith(itemSource, MergeStrategy.Overwrite)])
-                : chain([mergeWith(itemSource, MergeStrategy.Overwrite)]);
+            rules.push(mergeWith(itemSource, MergeStrategy.Overwrite));
         });
 
         // Generate base API files (skip if they already exist)
         const baseApiRule = generateBaseApiRule(tree, framework, config, baseApiTemplates);
         if (baseApiRule) {
-            finalRule = finalRule
-                ? chain([finalRule, baseApiRule])
-                : chain([baseApiRule]);
+            rules.push(baseApiRule);
         }
 
         const eslintFixRule = createEslintFixRule(config);
-        return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
+        return rules.length ? chain([...rules, eslintFixRule]) : eslintFixRule;
     };
 
     return wrapRuleWithErrorLogging('api', apiRule);

@@ -23,7 +23,8 @@ function readFileContent(filePath: string, tree?: Tree): string {
 
 /** The subset of a parsed tsconfig this helper reads. */
 interface IParsedTsConfig {
-  extends?: string;
+  /** TypeScript 5.0+ allows an array of base configs. */
+  extends?: string | string[];
   compilerOptions?: {
     baseUrl?: string;
     paths?: Record<string, string[]>;
@@ -61,16 +62,30 @@ export function loadTsConfig(tsConfigPath: string, tree?: Tree): TsConfigResult 
   let configJson = parseTsConfig(tsConfigPath, configFileContent);
 
   if (configJson.extends) {
-    const extendsPath = path.resolve(path.dirname(tsConfigPath), configJson.extends);
-    const extendsConfigContent = readFileContent(extendsPath, tree);
-    const extendsConfigJson = parseTsConfig(extendsPath, extendsConfigContent);
-    
+    // TS 5.0+ allows an array of base configs; later entries override earlier
+    // ones, and the config's own values override them all
+    const extendsRefs = Array.isArray(configJson.extends) ? configJson.extends : [configJson.extends];
+    let mergedBase: IParsedTsConfig = {};
+    for (const extendsRef of extendsRefs) {
+      const extendsPath = path.resolve(path.dirname(tsConfigPath), extendsRef);
+      const extendsConfigContent = readFileContent(extendsPath, tree);
+      const extendsConfigJson = parseTsConfig(extendsPath, extendsConfigContent);
+      mergedBase = {
+        ...mergedBase,
+        ...extendsConfigJson,
+        compilerOptions: {
+          ...mergedBase.compilerOptions,
+          ...extendsConfigJson.compilerOptions,
+        },
+      };
+    }
+
     // Deep merge compilerOptions to preserve options from both configs
     configJson = {
-      ...extendsConfigJson,
+      ...mergedBase,
       ...configJson,
       compilerOptions: {
-        ...extendsConfigJson.compilerOptions,
+        ...mergedBase.compilerOptions,
         ...configJson.compilerOptions,
       },
     };

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 - **Union types are parenthesized when composed** - an array of a union or nullable ref now generates `(IA | null)[]` instead of `IA | null[]`, and an allOf member that renders as a union generates `IBase & (IExtra | null)` instead of `IBase & IExtra | null`. Both previously compiled to silently wrong types
 - **Inline `allOf` with sibling `properties` no longer drops the own properties** - a schema combining `allOf: [Base]` with its own `properties` (the inheritance shape) now renders an intersection with a real object literal, e.g. `IBase & { extra?: string }`, everywhere; previously only named type-alias files kept the properties while inline occurrences (property types, array items) silently lost them
+- **tsconfig `extends` arrays are supported** - a host project using TypeScript 5.0+ `"extends": ["./a.json", "./b.json"]` no longer crashes path-alias resolution (which silently fell back to relative imports); entries merge with later ones overriding earlier, and the config's own values overriding all
 - **Custom Angular `baseApiPath` works** - previously the base-service writer treated the value as a directory while the import computation treated it as a file path, so any explicitly-set value produced broken imports or files under a directory literally named `_api-base.service.ts`. Both forms are now accepted (the `_api-base.service.ts` file path or its directory) and the writer and imports always agree
 - **`apiPathKey` option is implemented** - it was documented and declared in the schema but never read; the `/api/` prefix was hardcoded. The configured prefix now drives path filtering, controller grouping, and method naming (default `/api/` unchanged)
 - **CLI: bare boolean flags no longer swallow the next argument** - `swagger-schematics types --eslint-fix ./schema.json` previously made `./schema.json` the value of `eslintFix` and lost the schema source; boolean options (detected from the schematic schemas) now stay flags, while `--flag true`/`--flag false` is still accepted
@@ -38,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚠️ **Published types tightened - the package is now `any`-free** (no runtime behavior change):
   - Free-form OpenAPI spec fields (`example`, `default`, `examples` items, `IExample.value`, `ILink.requestBody`/`parameters`) are `unknown` instead of `any`; `IEncoding.headers` and response `IHeader.examples` gained proper object types. Consumers reading these fields must narrow or cast before use
   - `IParsedApiItem.bodyParam` is typed via the new exported `TParsedBodyParam` alias (`IParsedParam<IRequestBody | IRef>`) and `IParsedApiItem.response` is `IResponse | undefined` (previously both `any`)
+  - The duplicate (and drifted) `IHeader`/`ILink` declarations are unified: `response.interface.ts` owns the single spec-correct versions (with `content` and `$ref`-able `examples`); `swagger.interface.ts` re-exports them, so existing imports keep working
+
+### ⚡ Performance
+- Generated files are linted concurrently by `eslintFix` (previously one file at a time), custom template helpers load once per run instead of once per controller, and rule composition / import deduplication no longer do quadratic work on large documents
 
 ### 📦 Dependencies
 - Updated @angular-devkit packages to 20.3.34 (latest v20 LTS patch) - pulls in the fixed ajv 8.18.0 and picomatch 4.0.4, clearing the last npm audit advisories; `npm audit` now reports 0 vulnerabilities

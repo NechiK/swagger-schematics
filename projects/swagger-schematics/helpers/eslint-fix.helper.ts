@@ -11,7 +11,7 @@ interface ILintMessage {
 
 /** The subset of an ESLint lint result this rule inspects. */
 interface ILintResult {
-    fatalErrorCount: number;
+    fatalErrorCount?: number;
     messages?: ILintMessage[];
     output?: string;
 }
@@ -75,17 +75,19 @@ export function createEslintFixRule(
                 .map(action => action.path)
         ));
 
-        for (const filePath of generatedFiles) {
+        // Each file lints independently - run them concurrently; the tree
+        // writes are synchronous and touch distinct paths.
+        await Promise.all(generatedFiles.map(async filePath => {
             const buffer = tree.read(filePath);
             if (!buffer) {
-                continue;
+                return;
             }
             const content = buffer.toString();
             const absolutePath = path.join(process.cwd(), filePath);
 
             try {
                 if (await eslint.isPathIgnored(absolutePath)) {
-                    continue;
+                    return;
                 }
 
                 const [result] = await eslint.lintText(content, { filePath: absolutePath });
@@ -93,7 +95,7 @@ export function createEslintFixRule(
                 if ((result?.fatalErrorCount ?? 0) > 0) {
                     const fatal = result.messages?.find(message => message.fatal);
                     context.logger.warn(`eslintFix: could not fix ${filePath}: ${fatal?.message || 'fatal lint error'}`);
-                    continue;
+                    return;
                 }
 
                 if (typeof result?.output === 'string' && result.output !== content) {
@@ -102,6 +104,6 @@ export function createEslintFixRule(
             } catch (error) {
                 context.logger.warn(`eslintFix: failed for ${filePath}: ${(error as Error).message}`);
             }
-        }
+        }));
     };
 }

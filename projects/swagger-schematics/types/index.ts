@@ -96,7 +96,7 @@ export default function(options: SwaggerSchema): Rule {
       const enumTemplates = url('./templates/enum');
       const typeAliasTemplates = url('./templates/type-alias');
 
-      let finalRule: Rule | undefined;
+      const rules: Rule[] = [];
       parsedSchemas.forEach(schemaData => {
           let itemSource;
           if (schemaData.type === 'enum') {
@@ -176,15 +176,11 @@ export default function(options: SwaggerSchema): Rule {
             ]);
           }
 
-          if (!!finalRule) {
-              finalRule = chain([finalRule, mergeWith(itemSource, MergeStrategy.Overwrite)]);
-          } else {
-              finalRule = chain([mergeWith(itemSource, MergeStrategy.Overwrite)]);
-          }
+          rules.push(mergeWith(itemSource, MergeStrategy.Overwrite));
       });
 
       const eslintFixRule = createEslintFixRule(openApiSchematicsConfig);
-      return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
+      return rules.length ? chain([...rules, eslintFixRule]) : eslintFixRule;
   };
 
   return wrapRuleWithErrorLogging('types', typesRule);

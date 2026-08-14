@@ -8,11 +8,15 @@ import { isAllOf, isOneOf, isAnyOf, isNot } from "../utils/transform-type";
 export { transformProperties } from "../utils/transform-type";
 
 export function removeImportDuplicates(importRefs: IImportRef[]): IImportRef[] {
-    return importRefs.filter((item, index, self) =>
-        index === self.findIndex(t => (
-            t.importSymbol === item.importSymbol && t.fileName === item.fileName
-        ))
-    );
+    const seen = new Set<string>();
+    return importRefs.filter(item => {
+        const key = `${item.importSymbol}|${item.fileName}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
 }
 
 export function transformRefsToImport(refs: IImportRef[], optionsPath: string, sourcePath: string) {

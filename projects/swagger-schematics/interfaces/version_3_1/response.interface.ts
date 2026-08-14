@@ -1,9 +1,10 @@
 import { THttpStatusCode } from '../http-status-code.enum';
 import { IContent } from './content.interface';
-import { TSchema } from './swagger.interface';
+import { IServer, TSchema } from './swagger.interface';
 import { IRef } from './ref.interface';
 import { IExample } from './params.interface';
 
+/** The single Header Object declaration - swagger.interface re-exports it. */
 export interface IHeader {
     description?: string;
     required?: boolean;
@@ -17,13 +18,14 @@ export interface IHeader {
     content?: IContent;
 }
 
+/** The single Link Object declaration - swagger.interface re-exports it. */
 export interface ILink {
     operationRef?: string;
     operationId?: string;
     parameters?: Record<string, unknown>;
     requestBody?: unknown;
     description?: string;
-    server?: { url: string; description?: string };
+    server?: IServer;
 }
 
 export interface IResponse {

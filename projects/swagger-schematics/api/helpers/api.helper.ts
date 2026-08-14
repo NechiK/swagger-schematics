@@ -114,7 +114,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
         const apiOperations = getPathOperations(swaggerPath);
 
-        apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(apiOperations.map((
+        apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
             [operationKey, operation]
         ): IParsedApiItem => {
             const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey, apiPathPrefix);

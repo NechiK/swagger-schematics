@@ -211,32 +211,16 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 
     if (operation.parameters) {
         operation.parameters.forEach(apiParam => {
-            // Handle schema or content (schema takes precedence)
-            let typeSymbol: string = 'any';
-            let paramImportRefs: IImportRef[] = [];
-
-            if (apiParam.schema) {
-                [typeSymbol, paramImportRefs] = transformTypeWithAllImports(apiParam.schema, swagger, options);
-                if (isNullable(apiParam.schema, swagger) && !typeSymbol.endsWith(' | null')) {
-                    typeSymbol += ' | null';
-                }
-            } else if (apiParam.content) {
-                // If content is provided instead of schema, try to extract type from it
-                const contentType = Object.keys(apiParam.content)[0];
-                const content = apiParam.content[contentType as keyof typeof apiParam.content];
-                if (content?.schema) {
-                    [typeSymbol, paramImportRefs] = transformTypeWithAllImports(content.schema, swagger, options);
-                    if (isNullable(content.schema, swagger) && !typeSymbol.endsWith(' | null')) {
-                        typeSymbol += ' | null';
-                    }
-                }
-            }
+            // Resolve the parameter's type once - typeSymbol and functionSymbol
+            // derive from the same resolution, so they cannot drift
+            const { typeSymbol, isParamNullable, importRefs: paramImportRefs } = resolveParamType(apiParam, swagger, options);
 
             importRefs.push(...paramImportRefs);
 
+            const isOptional = !apiParam.required || isParamNullable;
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
-                functionSymbol: transformParamToFunctionSymbol(apiParam, swagger, options),
+                functionSymbol: `${apiParam.name}${isOptional ? '?' : ''}: ${typeSymbol}`,
                 interpolationSymbol: `\${${apiParam.name}}`,
                 typeSymbol,
                 objectSymbol: apiParam.name,
@@ -375,28 +359,32 @@ export function getApiCallParams(params: {
     ].join(', ');
 }
 
-export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
-    let typeSymbol = 'any';
-    let isParamNullable = false;
-    
-    if (param.schema) {
-        [typeSymbol] = transformType(param.schema, swagger, options);
-        isParamNullable = isNullable(param.schema, swagger);
-        if (isParamNullable && !typeSymbol.endsWith(' | null')) {
-            typeSymbol += ' | null';
-        }
-    } else if (param.content) {
-        const contentType = Object.keys(param.content)[0];
-        const content = param.content[contentType as keyof typeof param.content];
-        if (content?.schema) {
-            [typeSymbol] = transformType(content.schema, swagger, options);
-            isParamNullable = isNullable(content.schema, swagger);
-            if (isParamNullable && !typeSymbol.endsWith(' | null')) {
-                typeSymbol += ' | null';
-            }
-        }
+/**
+ * Resolves a parameter's rendered type once: schema (or first content entry's
+ * schema), nullability append, and import refs. The single source both
+ * typeSymbol and functionSymbol derive from.
+ */
+function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
+    typeSymbol: string;
+    isParamNullable: boolean;
+    importRefs: IImportRef[];
+} {
+    const schema = param.schema
+        ?? (param.content ? param.content[Object.keys(param.content)[0] as keyof typeof param.content]?.schema : undefined);
+    if (!schema) {
+        return { typeSymbol: 'any', isParamNullable: false, importRefs: [] };
     }
-    
+
+    let [typeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+    const isParamNullable = isNullable(schema, swagger);
+    if (isParamNullable && !typeSymbol.endsWith(' | null')) {
+        typeSymbol += ' | null';
+    }
+    return { typeSymbol, isParamNullable, importRefs };
+}
+
+export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
+    const { typeSymbol, isParamNullable } = resolveParamType(param, swagger, options);
     const isOptional = !param.required || isParamNullable;
     return `${param.name}${isOptional ? '?' : ''}: ${typeSymbol}`;
 }

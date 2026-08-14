@@ -21,7 +21,8 @@
       }
     },
     "apiPathKey": {
-      "type": "string"
+      "type": "string",
+      "description": "Path prefix that selects which API paths are generated; the prefix is stripped before grouping and method naming. Defaults to '/api/'."
     },
     "apiServiceTemplatePath": {
       "type": "string"

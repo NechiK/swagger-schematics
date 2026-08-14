@@ -22,7 +22,7 @@ import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, TFrameworkType } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
-import { getBaseApiImportPath } from './helpers/import-path.helper';
+import { getBaseApiImportPath, resolveAngularBaseApiDir } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
@@ -76,7 +76,8 @@ export default function(options: SwaggerApiSchema) {
         }
 
         const parsedApiSchemas = transformSwaggerSchema(swagger, {
-            typeMapping: config.typeMapping
+            typeMapping: config.typeMapping,
+            apiPathKey: config.apiPathKey
         });
 
         // Select templates based on framework
@@ -88,8 +89,12 @@ export default function(options: SwaggerApiSchema) {
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
             
-            // Determine API file path and base API path
-            const baseApiPath = config.baseApiPath || (framework === 'react-rtk' ? DEFAULT_RTK_BASE_API_PATH : `${config.path}/_api-base.service.ts`);
+            // Determine API file path and base API path. For Angular the
+            // canonical base service file always lives in the resolved
+            // directory, so the writer and this import computation agree.
+            const baseApiPath = framework === 'react-rtk'
+                ? (config.baseApiPath || DEFAULT_RTK_BASE_API_PATH)
+                : `${config.baseApiPath ? resolveAngularBaseApiDir(config.baseApiPath) : config.path}/_api-base.service.ts`;
             const apiFileExt = framework === 'react-rtk' ? '.api.ts' : '-api.service.ts';
             const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}${apiFileExt}`;
 

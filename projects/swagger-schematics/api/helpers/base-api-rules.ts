@@ -13,6 +13,7 @@ import {
 import { SwaggerApiSchema } from '../schema';
 import { strings } from '@angular-devkit/core';
 import { parseName } from '@schematics/angular/utility/parse-name';
+import { resolveAngularBaseApiDir } from './import-path.helper';
 
 // Default base API paths
 export const DEFAULT_RTK_BASE_API_PATH = 'th-common/store/api-base.ts';
@@ -43,7 +44,7 @@ function generateAngularBaseApiRule(
     config: SwaggerApiSchema,
     baseApiTemplates: ReturnType<typeof url>
 ): Rule {
-    const basePath = config.baseApiPath || config.path;
+    const basePath = config.baseApiPath ? resolveAngularBaseApiDir(config.baseApiPath) : config.path;
     if (!basePath) {
         throw new SchematicsException(`Base API path is not defined in the configuration.`);
     }

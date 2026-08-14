@@ -15,6 +15,22 @@ export interface IParsedCliArgs {
 
 const COMMANDS: TCliCommand[] = ['types', 'api', 'all'];
 
+import typesSchema from '../types/schema.json';
+import apiSchema from '../api/schema.json';
+
+/**
+ * Option names the schematic schemas declare as boolean. A bare boolean flag
+ * must not consume the next token as its value - `--eslint-fix ./schema.json`
+ * means eslintFix=true plus a positional, not eslintFix='./schema.json'.
+ */
+const BOOLEAN_OPTIONS: ReadonlySet<string> = new Set(
+    [typesSchema, apiSchema].flatMap(schema =>
+        Object.entries((schema as { properties?: Record<string, { type?: string }> }).properties ?? {})
+            .filter(([, definition]) => definition.type === 'boolean')
+            .map(([name]) => name)
+    )
+);
+
 function camelize(key: string): string {
     return key.replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
 }
@@ -64,12 +80,22 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
                 continue;
             }
 
+            const name = camelize(body);
             const next = argv[index + 1];
-            if (next !== undefined && !next.startsWith('-')) {
-                parsed.options[camelize(body)] = coerceValue(next);
+            if (BOOLEAN_OPTIONS.has(name)) {
+                // Boolean flags never swallow a following positional; an
+                // explicit `--flag true` / `--flag false` is still accepted
+                if (next === 'true' || next === 'false') {
+                    parsed.options[name] = coerceValue(next);
+                    index++;
+                } else {
+                    parsed.options[name] = true;
+                }
+            } else if (next !== undefined && !next.startsWith('-')) {
+                parsed.options[name] = coerceValue(next);
                 index++;
             } else {
-                parsed.options[camelize(body)] = true;
+                parsed.options[name] = true;
             }
             continue;
         }

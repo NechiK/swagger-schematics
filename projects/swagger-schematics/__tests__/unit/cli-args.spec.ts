@@ -44,6 +44,25 @@ describe('parseCliArgs', () => {
     expect(parseCliArgs(['api', '--eslint-fix']).options).toEqual({ eslintFix: true });
   });
 
+  it('should not let a bare boolean flag swallow the following positional', () => {
+    const args = parseCliArgs(['types', '--eslint-fix', './schema.json']);
+
+    expect(args.options).toEqual({ eslintFix: true });
+    expect(args.positionals).toEqual(['./schema.json']);
+  });
+
+  it('should still accept an explicit true/false after a boolean flag', () => {
+    expect(parseCliArgs(['api', '--eslint-fix', 'false']).options).toEqual({ eslintFix: false });
+    expect(parseCliArgs(['api', '--legacy-optional-properties', 'true']).options).toEqual({ legacyOptionalProperties: true });
+  });
+
+  it('should keep consuming values for non-boolean options', () => {
+    const args = parseCliArgs(['types', '--path', '/src/app', './schema.json']);
+
+    expect(args.options).toEqual({ path: '/src/app' });
+    expect(args.positionals).toEqual(['./schema.json']);
+  });
+
   it('should extract dry-run, help, and version as CLI flags, not schematic options', () => {
     const args = parseCliArgs(['types', '--dry-run', '--help', '--version']);
 

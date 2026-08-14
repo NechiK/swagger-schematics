@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Angular custom baseApiPath accepts a file-path value 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "../core/base/_api-base.service";
+import { Observable } from "rxjs";
+
+import { omitBy, isNil } from 'lodash-es';
+
+
+
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DocumentApiService extends ApiBaseService {
+  endpoint = 'Document';
+
+  constructor() {
+    super();
+  }
+
+  getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
+    return this.httpClient.get<boolean>(
+      this.getUrl('/'),
+      { params: { page, force } }
+    );
+  }
+
+  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
+    return this.httpClient.get(
+      this.getUrl(\`/\${documentId}/download\`),
+      { params: omitBy({ thumbnail }, isNil), responseType: 'blob' }
+    );
+  }
+
+  postDocumentByDocumentIdUpload(documentId: number, body: FormData): Observable<boolean> {
+    return this.httpClient.post<boolean>(
+      this.getUrl(\`/\${documentId}/upload\`),
+      body
+    );
+  }
+}
+"
+`;

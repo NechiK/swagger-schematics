@@ -45,6 +45,7 @@ export interface SchematicOptions {
   path: string;
   framework: string;
   baseApiPath?: string;
+  apiPathKey?: string;
   scopeEndpointsWithTags?: boolean;
   eslintFix?: boolean;
   legacyOptionalProperties?: boolean;

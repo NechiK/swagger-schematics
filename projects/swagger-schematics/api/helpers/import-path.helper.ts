@@ -3,6 +3,21 @@ import { loadTsConfig, resolvePathToAlias, normalizePath } from '../../helpers/t
 import * as path from 'path';
 
 /**
+ * Angular baseApiPath accepts either the base service file path
+ * ('src/app/core/api/_api-base.service.ts') or its directory
+ * ('src/app/core/api'); both resolve to the directory the canonical base
+ * files are generated into - the writer and the import computation must
+ * derive from the same location.
+ */
+export function resolveAngularBaseApiDir(baseApiPath: string): string {
+    if (!baseApiPath.endsWith('.ts')) {
+        return baseApiPath;
+    }
+    const separatorIndex = baseApiPath.lastIndexOf('/');
+    return separatorIndex <= 0 ? '/' : baseApiPath.slice(0, separatorIndex);
+}
+
+/**
  * Calculate relative import path from source file to target file
  * Both paths should be relative paths within the workspace (can start with / or not)
  */

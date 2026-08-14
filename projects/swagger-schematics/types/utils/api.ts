@@ -11,29 +11,35 @@ import { findMediaType } from './request-body';
  * Gets the method name for an API operation
  * Priority: operationId -> path-based generation
  */
-export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string): string {
+export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string, apiPathPrefix: string = '/api/'): string {
     // Prefer operationId if available (per OpenAPI spec recommendation)
     if (apiMethod.operationId) {
         return camelize(apiMethod.operationId);
     }
-    
+
+    // Strip the configured prefix once so the pattern matching below works
+    // for any apiPathKey, not just the default /api/
+    const relativePath = apiPathKey.startsWith(apiPathPrefix)
+        ? apiPathKey.slice(apiPathPrefix.length)
+        : apiPathKey.replace(/^\//, '');
+
     // Fall back to path-based name generation
     let parsedMethodName = '';
     switch (apiMethodKey) {
         case 'get':
-            parsedMethodName = parseGetRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parseGetRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         case 'post':
-            parsedMethodName = parsePostRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parsePostRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         case 'put':
-            parsedMethodName = parsePutRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parsePutRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         case 'delete':
-            parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         default:
-            parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
+            parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, relativePath);
     }
 
     return camelize(parsedMethodName);
@@ -205,31 +211,31 @@ function parseMethodName(apiMethod: TOperation, apiMethodKey: string, apiPathKey
     }
 }
 
-function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
-    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/{id}
-    const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/{id}/dataName
-    const getSubresourceMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/subresource
-    const getSubresourceByParamMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/subresource/{param}
-    
+function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, relativePath: string) {
+    const getModelByParamNameMatch = /^([a-zA-Z]+)\/{(\w+)}$/.exec(relativePath); // modelName/{id}
+    const getGetModelDataParamNameMatch = /^([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(relativePath); // modelName/{id}/dataName
+    const getSubresourceMatch = /^([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(relativePath); // modelName/subresource
+    const getSubresourceByParamMatch = /^([a-zA-Z]+)\/([a-zA-Z]+)\/{(\w+)}$/.exec(relativePath); // modelName/subresource/{param}
+
     if (getModelByParamNameMatch) {
-        const paramName = capitalize(getModelByParamNameMatch[3]);
+        const paramName = capitalize(getModelByParamNameMatch[2]);
         return `${apiMethodKey}By${paramName}`;
     } else if (getGetModelDataParamNameMatch) {
-        const modelName = capitalize(getGetModelDataParamNameMatch[2]);
-        const paramName = capitalize(getGetModelDataParamNameMatch[3]);
-        const dataName = capitalize(getGetModelDataParamNameMatch[4]);
+        const modelName = capitalize(getGetModelDataParamNameMatch[1]);
+        const paramName = capitalize(getGetModelDataParamNameMatch[2]);
+        const dataName = capitalize(getGetModelDataParamNameMatch[3]);
         return `${apiMethodKey}${dataName}By${paramName.toLowerCase().includes(modelName.toLowerCase()) ? '' : modelName}${paramName}`;
     } else if (getSubresourceByParamMatch) {
-        const modelName = capitalize(getSubresourceByParamMatch[2]);
-        const subresource = capitalize(getSubresourceByParamMatch[3]);
-        const paramName = capitalize(getSubresourceByParamMatch[4]);
+        const modelName = capitalize(getSubresourceByParamMatch[1]);
+        const subresource = capitalize(getSubresourceByParamMatch[2]);
+        const paramName = capitalize(getSubresourceByParamMatch[3]);
         return `${apiMethodKey}${modelName}${subresource}By${paramName}`;
     } else if (getSubresourceMatch) {
-        const modelName = capitalize(getSubresourceMatch[2]);
-        const subresource = capitalize(getSubresourceMatch[3]);
+        const modelName = capitalize(getSubresourceMatch[1]);
+        const subresource = capitalize(getSubresourceMatch[2]);
         return `${apiMethodKey}${modelName}${subresource}`;
     } else {
-        return parseDefaultMethodName(apiMethodKey, apiPathKey);
+        return parseDefaultMethodName(apiMethodKey, relativePath);
     }
 }
 

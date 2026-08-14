@@ -34,12 +34,14 @@
     "framework": {
       "type": "string",
       "description": "Target framework for generated API code: 'angular' or 'react-rtk'.",
-      "enum": ["angular", "react-rtk"]
+      "enum": [
+        "angular",
+        "react-rtk"
+      ]
     },
     "scopeEndpointsWithTags": {
       "type": "boolean",
-      "description": "Whether to scope endpoint names with tags for RTK Query. When true, generates names like 'postsGetAll' instead of 'getAll'. Recommended for APIs with multiple controllers to avoid naming collisions.",
-      "default": false
+      "description": "Whether to scope endpoint names with tags for RTK Query. When true, generates names like 'postsGetAll' instead of 'getAll'. Recommended for APIs with multiple controllers to avoid naming collisions."
     },
     "typeMapping": {
       "type": "object",
@@ -54,13 +56,11 @@
     },
     "eslintFix": {
       "type": "boolean",
-      "description": "Run the host project's ESLint with autofix on generated files, using the project's own configuration (import sorting, commas, quotes, etc.). Never blocks generation: failures are reported as warnings and files keep their generated content.",
-      "default": false
+      "description": "Run the host project's ESLint with autofix on generated files, using the project's own configuration (import sorting, commas, quotes, etc.). Never blocks generation: failures are reported as warnings and files keep their generated content."
     },
     "legacyOptionalProperties": {
       "type": "boolean",
-      "description": "Legacy optionality: mark an interface property optional ('?') when it is nullable instead of when it is absent from the object schema's 'required' array. Escape hatch for back-ends that do not emit 'required' yet. Nullability ('| null' in the type) is unaffected.",
-      "default": false
+      "description": "Legacy optionality: mark an interface property optional ('?') when it is nullable instead of when it is absent from the object schema's 'required' array. Escape hatch for back-ends that do not emit 'required' yet. Nullability ('| null' in the type) is unaffected."
     }
   },
   "required": []

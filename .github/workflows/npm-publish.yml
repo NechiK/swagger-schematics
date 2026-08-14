@@ -5,9 +5,36 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - 'projects/swagger-schematics/**'
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should-publish: ${{ steps.check.outputs.should-publish }}
+      version: ${{ steps.check.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Check whether the version is already published
+        id: check
+        run: |
+          VERSION=$(node -p "require('./projects/swagger-schematics/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "swagger-schematics@$VERSION" version >/dev/null 2>&1; then
+            echo "swagger-schematics@$VERSION already published - skipping publish job"
+            echo "should-publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "swagger-schematics@$VERSION not on npm yet - publishing"
+            echo "should-publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
   npm-publish:
+    needs: check-version
+    if: needs.check-version.outputs.should-publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,11 +62,7 @@ jobs:
 
       - name: Publish
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if npm view "swagger-schematics@$VERSION" version >/dev/null 2>&1; then
-            echo "swagger-schematics@$VERSION already published, skipping"
-            exit 0
-          fi
+          VERSION="${{ needs.check-version.outputs.version }}"
           if [[ "$VERSION" == *-* ]]; then
             PRERELEASE="${VERSION#*-}"
             TAG="${PRERELEASE%%.*}"

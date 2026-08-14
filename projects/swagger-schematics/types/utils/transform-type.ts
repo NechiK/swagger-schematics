@@ -36,6 +36,13 @@ export type TTypeWithImports = [string, IImportRef[]];
 export interface ITransformTypeOptions {
     /** Map custom backend types to TypeScript primitives (e.g., { 'SuperDuperInt32': 'number' }) */
     typeMapping?: Record<string, string>;
+    /**
+     * Legacy optionality: when true, an interface property is optional (`?`) iff
+     * it is nullable, ignoring the object schema's `required` array. Escape hatch
+     * for back-ends that do not emit `required` yet. Nullability (`| null`) is
+     * unaffected either way.
+     */
+    legacyOptionalProperties?: boolean;
 }
 
 // Type guards for schema composition
@@ -57,6 +64,23 @@ export function isNot(schema: TSchemaByType): schema is ISchemaNot {
 
 export function isComposition(schema: TSchemaByType): boolean {
     return isAllOf(schema) || isOneOf(schema) || isAnyOf(schema) || isNot(schema);
+}
+
+/**
+ * Whether a schema is the bare JSON Schema null type: { "type": "null" }
+ * (or a type array equal to ["null"]). OpenAPI 3.1 uses this as a member of
+ * oneOf/anyOf (and, rarely, allOf) to express nullability - e.g.
+ * { "oneOf": [{ "type": "null" }, { "$ref": "..." }] }.
+ */
+export function isNullSchema(schema: TSchema): boolean {
+    if (isRef(schema)) {
+        return false;
+    }
+    const type = (schema as { type?: unknown }).type;
+    if (Array.isArray(type)) {
+        return type.length === 1 && type[0] === 'null';
+    }
+    return type === 'null';
 }
 
 export function hasAdditionalProperties(schema: TSchemaByType): schema is ISchemaObject {
@@ -95,6 +119,10 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
 
     // Handle typed schemas
     if ('type' in schema) {
+        // OpenAPI 3.1 (JSON Schema): type may be an array, e.g. ["string", "null"]
+        if (Array.isArray((schema as any).type)) {
+            return transformTypeArray(schema as TSchemaWithType, swagger, options);
+        }
         const typedSchema = schema as TSchemaWithType;
         switch (typedSchema.type) {
             case 'array':
@@ -105,37 +133,122 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
                 return transformPrimitives(typedSchema);
         }
     }
-    
+
     // Fallback for schemas without type (shouldn't happen in valid OpenAPI)
     return ['any'];
 }
 
 /**
- * Transforms allOf schema to TypeScript intersection type
+ * Transforms an OpenAPI 3.1 type array (e.g. ["string", "null"]) into a union type.
+ * The "null" member only affects nullability (reported via isNullable), matching
+ * how 3.0's nullable keyword is handled - it is not appended to the type symbol here.
+ */
+function transformTypeArray(schema: TSchemaWithType, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const types = ((schema as any).type as string[]).filter(typeName => typeName !== 'null');
+
+    if (types.length === 0) {
+        return ['null'];
+    }
+
+    const symbols: string[] = [];
+    let firstImportRef: IImportRef | undefined;
+
+    for (const typeName of types) {
+        const [symbol, importRef] = transformType({ ...(schema as any), type: typeName } as TSchema, swagger, options);
+        symbols.push(symbol);
+        firstImportRef = firstImportRef ?? importRef;
+    }
+
+    return [Array.from(new Set(symbols)).join(' | '), firstImportRef];
+}
+
+/**
+ * OpenAPI 3.1 (JSON Schema) marks binary string content via contentMediaType
+ * (e.g. application/octet-stream) instead of 3.0's format: binary.
+ * base64-encoded content (contentEncoding) stays a plain string.
+ */
+export function isBinaryContentMediaType(schema: { contentMediaType?: string; contentEncoding?: string }): boolean {
+    if (!schema.contentMediaType || schema.contentEncoding) {
+        return false;
+    }
+    return !/^text\//i.test(schema.contentMediaType) && !/json$/i.test(schema.contentMediaType);
+}
+
+/**
+ * Whether a schema describes binary content in either OpenAPI 3.0 (format: binary)
+ * or OpenAPI 3.1 (contentMediaType) style.
+ */
+export function isBinarySchema(schema: TSchema | undefined): boolean {
+    if (!schema || isRef(schema)) {
+        return false;
+    }
+    const typed = schema as TSchemaWithType & { contentMediaType?: string; contentEncoding?: string };
+    const typeNames = Array.isArray((typed as any).type) ? (typed as any).type : [typed.type];
+    if (!typeNames.includes('string')) {
+        return false;
+    }
+    return (typed as any).format === 'binary' || isBinaryContentMediaType(typed);
+}
+
+/**
+ * Transforms allOf schema to TypeScript intersection type. A { "type": "null" }
+ * member expresses nullability rather than an intersection member, so it is
+ * lifted out to a trailing `| null` (the intersection is parenthesized when it
+ * has more than one member): allOf: [{type:null}, A, B] -> `(A & B) | null`.
  */
 function transformAllOf(schema: ISchemaAllOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const results = transformCompositionSchemas(schema.allOf, swagger, options);
+    const nonNullMembers = schema.allOf.filter(member => !isNullSchema(member));
+    const nullable = nonNullMembers.length !== schema.allOf.length;
+
+    const results = transformCompositionSchemas(nonNullMembers, swagger, options);
     const typeSymbol = results.types.join(' & ');
+
+    if (!typeSymbol) {
+        return ['null'];
+    }
+
     // Return first import ref (if multiple, they should be handled separately in full type generation)
-    return [typeSymbol, results.imports[0]];
+    if (!nullable) {
+        return [typeSymbol, results.imports[0]];
+    }
+    const wrapped = results.types.length > 1 ? `(${typeSymbol})` : typeSymbol;
+    return [`${wrapped} | null`, results.imports[0]];
+}
+
+/**
+ * Builds a TypeScript union from oneOf/anyOf members. A { "type": "null" }
+ * member (the OpenAPI 3.1 nullability idiom) is not emitted as its own symbol;
+ * instead it appends `| null` to the union - matching how 3.0's `nullable`
+ * keyword is handled. e.g. oneOf: [{type:null}, {$ref X}] -> `IX | null`.
+ */
+function transformUnion(members: TSchema[], swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const nonNullMembers = members.filter(member => !isNullSchema(member));
+    const nullable = nonNullMembers.length !== members.length;
+
+    const results = transformCompositionSchemas(nonNullMembers, swagger, options);
+    const typeSymbol = results.types.join(' | ');
+
+    if (!typeSymbol) {
+        // No non-null members (e.g. oneOf: [{ type: "null" }]) - the type is just null.
+        return ['null'];
+    }
+
+    // Return first import ref (if multiple, they should be handled separately in full type generation)
+    return [nullable ? `${typeSymbol} | null` : typeSymbol, results.imports[0]];
 }
 
 /**
  * Transforms oneOf schema to TypeScript union type
  */
 function transformOneOf(schema: ISchemaOneOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const results = transformCompositionSchemas(schema.oneOf, swagger, options);
-    const typeSymbol = results.types.join(' | ');
-    return [typeSymbol, results.imports[0]];
+    return transformUnion(schema.oneOf, swagger, options);
 }
 
 /**
  * Transforms anyOf schema to TypeScript union type (same as oneOf for TypeScript purposes)
  */
 function transformAnyOf(schema: ISchemaAnyOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const results = transformCompositionSchemas(schema.anyOf, swagger, options);
-    const typeSymbol = results.types.join(' | ');
-    return [typeSymbol, results.imports[0]];
+    return transformUnion(schema.anyOf, swagger, options);
 }
 
 /**
@@ -154,6 +267,19 @@ function transformCompositionSchemas(schemas: TSchema[], swagger: ISwaggerSchema
     }
 
     return { types, imports };
+}
+
+/**
+ * Like transformType, but returns ALL import refs. Compositions
+ * (allOf/oneOf/anyOf) can reference several schemas; transformType's tuple
+ * only carries the first ref, which loses imports in API generation.
+ */
+export function transformTypeWithAllImports(property: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports {
+    const [typeSymbol, importRef] = transformType(property, swagger, options);
+    if (!isRef(property) && isComposition(property as TSchemaByType)) {
+        return [typeSymbol, getCompositionImports(property, swagger, options)];
+    }
+    return [typeSymbol, importRef ? [importRef] : []];
 }
 
 /**
@@ -242,9 +368,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
 
             if (mappedSchema) {
                 // Use the mapped schema's type, but preserve nullable from the original schema
-                const originalIsNullable = refPropertySchema
-                    ? Boolean((refPropertySchema as TSchemaWithType).nullable)
-                    : false;
+                const originalIsNullable = isSchemaValueNullable(refPropertySchema);
 
                 const symbol = transformRefProperty(mappedSchema, mappedKey);
                 const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
@@ -258,9 +382,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
         }
 
         // Mapped to a primitive or the schema wasn't found - preserve nullable from original if available
-        const originalIsNullable = refPropertySchema
-            ? Boolean((refPropertySchema as TSchemaWithType).nullable)
-            : false;
+        const originalIsNullable = isSchemaValueNullable(refPropertySchema);
         return [originalIsNullable ? `${mappedValue} | null` : mappedValue];
     }
 
@@ -278,12 +400,12 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     // These should be inlined rather than imported
     if (isPrimitiveWrapper(refPropertySchema)) {
         const [primitiveType] = transformPrimitives(refPropertySchema as TSchemaWithType);
-        const isNullable = (refPropertySchema as TSchemaWithType).nullable;
+        const isNullable = isSchemaValueNullable(refPropertySchema);
         return [isNullable ? `${primitiveType} | null` : primitiveType];
     }
     
     const symbol = transformRefProperty(refPropertySchema, refPropertyKey);
-    const isNullable = (refPropertySchema as TSchemaWithType).nullable;
+    const isNullable = isSchemaValueNullable(refPropertySchema);
     const typeSymbol = isNullable ? `${symbol} | null` : symbol;
 
     return [typeSymbol, {
@@ -298,7 +420,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
  * These are schemas that define a primitive type, possibly with nullable, format, etc.
  * but don't define an object structure with properties
  */
-function isPrimitiveWrapper(schema: TSchemaByType): boolean {
+export function isPrimitiveWrapper(schema: TSchemaByType): boolean {
     // Must have a primitive type
     if (!('type' in schema)) {
         return false;
@@ -339,8 +461,9 @@ export const transformPrimitives = (property: TSchemaWithType): [string] => {
         case 'boolean':
             return ['boolean'];
         case 'string':
-            // Binary content (file download/upload) maps to Blob
-            if (property.format === 'binary') {
+            // Binary content (file download/upload) maps to Blob:
+            // format: binary (3.0) or contentMediaType (3.1)
+            if (property.format === 'binary' || isBinaryContentMediaType(property)) {
                 return ['Blob'];
             }
             return ['string'];
@@ -397,8 +520,24 @@ export function isRef(property: TSchema | TParam): property is IRef {
 }
 
 /**
+ * Whether the schema value itself is nullable:
+ * OpenAPI 3.0 nullable keyword, or an OpenAPI 3.1 type array containing "null".
+ */
+export function isSchemaValueNullable(schema: TSchemaByType | undefined): boolean {
+    if (!schema) {
+        return false;
+    }
+    if ((schema as TSchemaWithType).nullable === true) {
+        return true;
+    }
+    const type = (schema as any).type;
+    return Array.isArray(type) && type.includes('null');
+}
+
+/**
  * Check if a schema is nullable, resolving $ref if necessary.
- * A schema is considered nullable if it has `nullable: true` or `default: null`.
+ * A schema is considered nullable if it has `nullable: true` (3.0),
+ * a type array containing "null" (3.1), or `default: null`.
  */
 export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean {
     if (isRef(property)) {
@@ -406,7 +545,7 @@ export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean 
         if (!refPropertySchema) {
             return false;
         }
-        return Boolean((refPropertySchema as TSchemaWithType).nullable) || (refPropertySchema as ISchemaBase).default === null;
+        return isSchemaValueNullable(refPropertySchema) || (refPropertySchema as ISchemaBase).default === null;
     }
-    return Boolean((property as TSchemaWithType).nullable) || (property as ISchemaBase).default === null;
+    return isSchemaValueNullable(property as TSchemaByType) || (property as ISchemaBase).default === null;
 }

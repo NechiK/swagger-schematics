@@ -1,0 +1,69 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`OpenAPI 3.1 support API generation with 3.1 binary responses should generate the service snapshot 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
+
+import { omitBy, isNil } from 'lodash-es';
+
+
+import { IReportDto } from './interfaces/report-dto.interface';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ReportApiService extends ApiBaseService {
+  endpoint = 'Report';
+
+  constructor() {
+    super();
+  }
+
+  getReport({ filter }: { filter?: string | null }): Observable<IReportDto[]> {
+    return this.httpClient.get<IReportDto[]>(
+      this.getUrl('/'),
+      { params: omitBy({ filter }, isNil) }
+    );
+  }
+
+  getDownloadByReportId(reportId: number): Observable<Blob> {
+    return this.httpClient.get(
+      this.getUrl(\`/\${reportId}/download\`),
+      { responseType: 'blob' }
+    );
+  }
+}
+"
+`;
+
+exports[`OpenAPI 3.1 support Composition: allOf inheritance and not should emit \`not\` schemas as \`unknown\` with an explanatory comment 1`] = `
+"
+/** Any value except \`string\`. Generated from an OpenAPI \`not\` schema, which has no TypeScript equivalent. */
+export type TNotString = unknown;
+"
+`;
+
+exports[`OpenAPI 3.1 support Composition: allOf inheritance and not should render allOf + own properties as \`Base & { ...own }\` 1`] = `
+"import { IBaseAuditDto } from './base-audit-dto.interface';
+
+export type TAuditedReportDto = IBaseAuditDto & { note?: string | null };
+"
+`;
+
+exports[`OpenAPI 3.1 support Interface generation with 3.1 schemas should generate the interface snapshot 1`] = `
+"import { TReportStatus } from '../enums/report-status.enum';
+import { IOwnerDto } from './owner-dto.interface';
+
+export interface IReportDto {
+  id: number;
+  name?: string | null;
+  reference: string | number;
+  status?: TReportStatus | null;
+  attachment?: Blob;
+  signature?: string;
+  ownerId?: string | null;
+  owner?: IOwnerDto | null;
+}
+"
+`;

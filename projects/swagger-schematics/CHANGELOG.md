@@ -19,6 +19,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README recommends the new CLI; the `schematics swagger-schematics:*` invocation remains supported (documented as legacy)
 
 
+## [1.1.0] - 2026-08-13
+
+### ✨ Added
+- **OpenAPI version detection** - the schematics now read the document's `openapi`/`swagger` field:
+  - 3.0.x and 3.1.x are fully supported and generate silently
+  - Newer 3.x versions log a warning and are treated as 3.1; Swagger 2.0 logs a warning explaining it is unsupported
+  - Generation always continues best-effort - an unknown version never blocks it
+- **`legacyOptionalProperties` option** - opt back in to the pre-spec optionality rule for back-ends that do not emit a `required` array yet. When `true`, a property is optional (`?`) if it is nullable rather than if it is absent from `required`, so non-nullable fields become required. Nullability (`| null` in the type) is unaffected. Defaults to `false` (spec behavior)
+- **OpenAPI 3.1 support**:
+  - Type arrays: `type: ["string", "null"]` generates `string` with proper nullability; multi-type arrays become unions (`type: ["string", "integer"]` → `string | number`)
+  - Nullable refs written the 3.1 way, `oneOf: [{ "type": "null" }, { $ref }]`, generate `IX | null` (or `string | null` when the ref inlines to a primitive) - previously the `null` member leaked in as `any | IX`, erasing the type. `anyOf` behaves the same
+  - Binary via `contentMediaType` (e.g. `application/octet-stream`, `image/*`) maps to `Blob`; `contentEncoding: base64` content stays `string`
+  - Schema-less `application/octet-stream` responses generate `Blob` downloads (Angular `responseType: 'blob'`, RTK `responseHandler`)
+  - Refs to 3.1 nullable enum schemas generate `TEnum | null`
+  - `not` schemas generate `export type TX = unknown` with a JSDoc comment naming the excluded type (e.g. "Any value except string"), instead of being skipped - so a `$ref` pointing at them no longer dangles
+  - Numeric `exclusiveMinimum`/`exclusiveMaximum` and `examples` parse without errors
+
+### 🐛 Fixed
+- ⚠️ **BREAKING**: **Interface property optionality now follows the spec** - a property is optional (`?`) unless listed in the object schema's `required` array. Schemas that omit `required` (common for C#/ASP.NET-generated documents) now generate all-optional interfaces, matching NSwag and openapi-generator behavior. Previously only nullable properties were optional
+- ⚠️ **BREAKING**: **Nullable properties now include `| null` in their type** (`crmRefId?: string | null`), so server-sent nulls are visible to the type checker
+- **`allOf` inheritance no longer drops own properties** - a schema with `allOf` *and* its own `properties` (the base-class + extra-fields shape) now generates `Base & { ...own props... }`; previously the sibling `properties` were silently discarded. A `null` member in an intersection is lifted out to a trailing `| null` (`(A & B) | null`)
+- **Composition schemas no longer drop imports** - `allOf`/`oneOf`/`anyOf` referencing multiple schemas now import every referenced type in generated services (previously only the first was imported)
+
+### ♻️ Changed
+- **Primitive-wrapper schemas are inlined, not emitted as files** - strongly-typed wrappers like `GuidIdentifier` (`{ type: "string", format: "uuid" }`), integer identifiers, and `Stream` (`{ type: "string", format: "binary" }`) are already inlined at every reference (`string`/`number`/`Blob`), so they no longer generate empty, unused `IGuidIdentifier`/`IIntIdentifier`/`IStream` interface files
+
+### 🗑️ Removed
+- Dead `interfaces/version_3_0` folder (never imported)
+
+
 ## [1.0.2] - 2026-07-24
 
 ### ✨ Added

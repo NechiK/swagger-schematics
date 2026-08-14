@@ -20,6 +20,10 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
+    "globalSetup": "<rootDir>/jest.global-setup.js",
+    "setupFilesAfterEnv": [
+      "<rootDir>/__tests__/helpers/silence-schematic-logs.ts"
+    ],
     "roots": [
       "<rootDir>/__tests__"
     ],

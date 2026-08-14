@@ -116,14 +116,14 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 apiParsedSchema[apiPrefix].importRefs.push(...paramImportRefs);
             }
 
-            const [responseTypeSymbol, responseTypeImportRef] = getApiResponseSymbol(operation, swaggerSchema, options);
-            if (responseTypeImportRef) {
-                apiParsedSchema[apiPrefix].importRefs.push(responseTypeImportRef);
+            const [responseTypeSymbol, responseTypeImportRefs] = getApiResponseSymbol(operation, swaggerSchema, options);
+            if (responseTypeImportRefs.length > 0) {
+                apiParsedSchema[apiPrefix].importRefs.push(...responseTypeImportRefs);
             }
 
-            const [bodyParam, importRef] = transformRequestBody(operation, swaggerSchema, options);
-            if (importRef) {
-                apiParsedSchema[apiPrefix].importRefs.push(importRef);
+            const [bodyParam, bodyImportRefs] = transformRequestBody(operation, swaggerSchema, options);
+            if (bodyImportRefs.length > 0) {
+                apiParsedSchema[apiPrefix].importRefs.push(...bodyImportRefs);
             }
 
             // Build API URL, handling path params that may come from body for PUT/POST

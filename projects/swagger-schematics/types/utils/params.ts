@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformType, ITransformTypeOptions, isNullable } from "./transform-type";
+import { IImportRef, transformType, transformTypeWithAllImports, ITransformTypeOptions, isNullable } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 
 /**
@@ -204,10 +204,10 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
         operation.parameters.forEach(apiParam => {
             // Handle schema or content (schema takes precedence)
             let typeSymbol: string = 'any';
-            let importRef: IImportRef | undefined;
-            
+            let paramImportRefs: IImportRef[] = [];
+
             if (apiParam.schema) {
-                [typeSymbol, importRef] = transformType(apiParam.schema, swagger, options);
+                [typeSymbol, paramImportRefs] = transformTypeWithAllImports(apiParam.schema, swagger, options);
                 if (isNullable(apiParam.schema, swagger) && !typeSymbol.includes('| null')) {
                     typeSymbol += ' | null';
                 }
@@ -216,16 +216,14 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
                 const contentType = Object.keys(apiParam.content)[0];
                 const content = apiParam.content[contentType as keyof typeof apiParam.content];
                 if (content?.schema) {
-                    [typeSymbol, importRef] = transformType(content.schema, swagger, options);
+                    [typeSymbol, paramImportRefs] = transformTypeWithAllImports(content.schema, swagger, options);
                     if (isNullable(content.schema, swagger) && !typeSymbol.includes('| null')) {
                         typeSymbol += ' | null';
                     }
                 }
             }
 
-            if (importRef) {
-                importRefs.push(importRef);
-            }
+            importRefs.push(...paramImportRefs);
 
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,

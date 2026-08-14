@@ -3,6 +3,8 @@ projects/**/*.js
 projects/**/*.js.map
 projects/**/*.d.ts
 !projects/**/__tests__/__fixtures__/*.js
+# Committed source .js (not build output)
+!projects/**/jest.global-setup.js
 
 # compiled output
 dist

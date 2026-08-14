@@ -6,6 +6,11 @@ Supports:
 - **Angular** (HttpClient services)
 - **React RTK Query** (API slices)
 
+Supported OpenAPI versions:
+- **OpenAPI 3.0.x** - full support, including `nullable`, `format: binary`, and multipart uploads
+- **OpenAPI 3.1.x** - full support, including type arrays (`type: ["string", "null"]`), `contentMediaType` binary content, and schema-less `application/octet-stream` responses
+- Newer 3.x versions are treated as 3.1 with a warning; **Swagger 2.0 is not supported** (a warning is logged and generation is attempted best-effort)
+
 
 ## How to use?
 
@@ -153,6 +158,7 @@ When mapping to another schema, the `nullable` property from the original type i
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
+| `legacyOptionalProperties` | boolean | types      | Legacy optionality for back-ends that don't emit a `required` array yet. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`) |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.

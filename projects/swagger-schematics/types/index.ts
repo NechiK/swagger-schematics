@@ -3,14 +3,14 @@ import {
     applyTemplates, chain,
     MergeStrategy,
     mergeWith,
-    move, Rule, Tree,
+    move, Rule, SchematicContext, Tree,
     url
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
-import { isComposition, isNot } from "./utils/transform-type";
+import { isComposition, isPrimitiveWrapper } from "./utils/transform-type";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
@@ -19,10 +19,11 @@ import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schem
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
+import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 
 export default function(options: SwaggerSchema): Rule {
-  const typesRule: Rule = async (host: Tree) => {
+  const typesRule: Rule = async (host: Tree, context: SchematicContext) => {
     const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
 
       let indentSize = '2';
@@ -42,6 +43,12 @@ export default function(options: SwaggerSchema): Rule {
       }
 
       const swagger: ISwaggerSchema = await fetchSwaggerSchema(openApiSchematicsConfig.swaggerSchemaUrl as string);
+
+      const versionInfo = detectOpenApiVersion(swagger);
+      if (versionInfo.warning) {
+          context.logger.warn(versionInfo.warning);
+      }
+
       const schemas = swagger.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
@@ -53,13 +60,20 @@ export default function(options: SwaggerSchema): Rule {
         }
         
         const typedSchema = schema as TSchemaByType;
-        
-        // Handle composition schemas (allOf, oneOf, anyOf)
-        // Skip 'not' schemas as they don't have a good TypeScript equivalent
+
+        // Skip primitive-wrapper schemas (e.g. a strongly-typed GUID/int/Stream:
+        // { type: 'string', format: 'uuid' }). They are inlined at every reference
+        // to their primitive (string/number/Blob), so a standalone file would be an
+        // unused, empty interface.
+        if (isPrimitiveWrapper(typedSchema)) {
+            return;
+        }
+
+        // Handle composition schemas (allOf, oneOf, anyOf, not) as type-aliases.
+        // 'not' has no TypeScript equivalent and is emitted as `unknown` with an
+        // explanatory comment (see transformCompositionSchema) rather than skipped,
+        // so a $ref pointing at it does not dangle.
         if (isComposition(typedSchema)) {
-            if (isNot(typedSchema)) {
-                return; // Skip 'not' schemas
-            }
             return {
                 name: schemaKey,
                 type: 'type-alias' as const,
@@ -107,10 +121,13 @@ export default function(options: SwaggerSchema): Rule {
           } else if (schemaData.type === 'type-alias') {
               // Handle composition schemas (allOf, oneOf, anyOf)
               const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
-              const { typeExpression, importRefs: compositionRefs } = transformCompositionSchema(
+              const { typeExpression, importRefs: compositionRefs, leadingComment } = transformCompositionSchema(
                   schemaData.data as TSchemaByType,
                   swagger,
-                  { typeMapping: openApiSchematicsConfig.typeMapping }
+                  {
+                      typeMapping: openApiSchematicsConfig.typeMapping,
+                      legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
+                  }
               );
               // Filter out self-references
               const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`);
@@ -124,6 +141,7 @@ export default function(options: SwaggerSchema): Rule {
                       optionsPath: openApiSchematicsConfig.path,
                       sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                       typeExpression,
+                      leadingComment: leadingComment ?? '',
                       importRefs,
                       indentSize
                   }),
@@ -133,8 +151,9 @@ export default function(options: SwaggerSchema): Rule {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
             const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
-                typeMapping: openApiSchematicsConfig.typeMapping
-            });
+                typeMapping: openApiSchematicsConfig.typeMapping,
+                legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
+            }, (schemaData.data as { required?: string[] }).required ?? []);
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
             const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));
             itemSource = apply(interfaceTemplates, [

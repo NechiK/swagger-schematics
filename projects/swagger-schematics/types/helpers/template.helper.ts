@@ -1,9 +1,9 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
 import { IImportRef, ITransformTypeOptions, isNullable, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISchemaProperties, ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
-import { isAllOf, isOneOf, isAnyOf } from "../utils/transform-type";
+import { isAllOf, isOneOf, isAnyOf, isNot, isNullSchema } from "../utils/transform-type";
 
-export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
+export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions, requiredProperties: string[] = []): {
     propertiesContent: Array<[string, string]>;
     refs: IImportRef[];
 } {
@@ -12,12 +12,22 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
 
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
-        const [typeSymbol, importRef] = transformType(property, swagger, options);
+        const [rawTypeSymbol, importRef] = transformType(property, swagger, options);
         if (importRef) {
             refs.push(importRef);
         }
 
-        transformed.push([`${propertyKey}${isNullable(property, swagger) ? '?' : ''}`, typeSymbol]);
+        // Per spec: a property is optional unless listed in the object's required array;
+        // nullability is expressed in the type itself.
+        // Legacy escape hatch (legacyOptionalProperties): derive optionality from
+        // nullability instead, for back-ends that do not emit `required` yet.
+        const nullable = isNullable(property, swagger);
+        const typeSymbol = nullable && !rawTypeSymbol.includes('| null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
+        const isOptional = options?.legacyOptionalProperties
+            ? nullable
+            : !requiredProperties.includes(propertyKey);
+
+        transformed.push([`${propertyKey}${isOptional ? '?' : ''}`, typeSymbol]);
     }
 
     return {
@@ -61,51 +71,70 @@ export function buildImport(fromPath: string, toPath: string, symbolName: string
 }
 
 /**
- * Transform a composition schema (allOf, oneOf, anyOf) into a type expression and import refs
+ * Transform a composition schema (allOf, oneOf, anyOf, not) into a type
+ * expression, import refs and an optional leading JSDoc comment.
  */
 export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     typeExpression: string;
     importRefs: IImportRef[];
+    leadingComment?: string;
 } {
     const importRefs = getCompositionImports(schema, swagger, options);
     
     if (isAllOf(schema)) {
-        // allOf -> intersection type (A & B & C)
-        const types = schema.allOf.map(s => {
-            const [typeSymbol] = transformType(s, swagger, options);
-            return typeSymbol;
-        });
+        // allOf -> intersection type (A & B & C).
+        const nonNullMembers = schema.allOf.filter(member => !isNullSchema(member));
+        const nullable = nonNullMembers.length !== schema.allOf.length;
+        const parts = nonNullMembers.map(s => transformType(s, swagger, options)[0]);
+
+        // A schema can carry its own `properties` alongside allOf - the common
+        // inheritance shape `Derived = Base & { ...own props... }`. Render the
+        // own properties as an inline object literal and merge their imports.
+        const ownRefs: IImportRef[] = [];
+        const ownProperties = (schema as { properties?: ISchemaProperties }).properties;
+        if (ownProperties && Object.keys(ownProperties).length > 0) {
+            const { propertiesContent, refs } = transformProperties(
+                ownProperties,
+                swagger,
+                options,
+                (schema as { required?: string[] }).required ?? []
+            );
+            parts.push(`{ ${propertiesContent.map(([name, type]) => `${name}: ${type}`).join('; ')} }`);
+            ownRefs.push(...refs);
+        }
+
+        let typeExpression = parts.join(' & ');
+        if (nullable && typeExpression) {
+            typeExpression = parts.length > 1 ? `(${typeExpression}) | null` : `${typeExpression} | null`;
+        }
         return {
-            typeExpression: types.join(' & '),
+            typeExpression: typeExpression || 'null',
+            importRefs: removeImportDuplicates([...importRefs, ...ownRefs])
+        };
+    }
+    
+    if (isOneOf(schema) || isAnyOf(schema)) {
+        // oneOf/anyOf -> union type (A | B | C). Delegate to transformType so a
+        // { type: "null" } member collapses to `| null` instead of `any`.
+        const [typeExpression] = transformType(schema, swagger, options);
+        return {
+            typeExpression,
             importRefs: removeImportDuplicates(importRefs)
         };
     }
     
-    if (isOneOf(schema)) {
-        // oneOf -> union type (A | B | C)
-        const types = schema.oneOf.map(s => {
-            const [typeSymbol] = transformType(s, swagger, options);
-            return typeSymbol;
-        });
+    if (isNot(schema)) {
+        // `not` has no TypeScript equivalent - emit `unknown`, but keep the
+        // excluded type in a JSDoc comment so the intent is not lost.
+        const [excluded] = transformType((schema as { not: TSchemaByType }).not, swagger, options);
         return {
-            typeExpression: types.join(' | '),
-            importRefs: removeImportDuplicates(importRefs)
+            typeExpression: 'unknown',
+            importRefs: [],
+            leadingComment: `/** Any value except \`${excluded}\`. Generated from an OpenAPI \`not\` schema, which has no TypeScript equivalent. */`
         };
     }
-    
-    if (isAnyOf(schema)) {
-        // anyOf -> union type (A | B | C)
-        const types = schema.anyOf.map(s => {
-            const [typeSymbol] = transformType(s, swagger, options);
-            return typeSymbol;
-        });
-        return {
-            typeExpression: types.join(' | '),
-            importRefs: removeImportDuplicates(importRefs)
-        };
-    }
-    
-    // Fallback for 'not' or unknown composition
+
+    // Fallback for unknown composition
     return {
         typeExpression: 'unknown',
         importRefs: []

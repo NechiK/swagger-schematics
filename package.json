@@ -1,8 +1,5 @@
 {
-  "engines": {
-    "node": ">=24.0.0",
-    "npm": ">=10.0.0"
-  },
+  "private": true,
   "scripts": {
     "build": "(cd projects/swagger-schematics && npm run build)",
     "build:debug": "npm run build && (cd projects/swagger-schematics && npm link)",
@@ -12,19 +9,5 @@
     "version:prerelease": "(cd projects/swagger-schematics && npm version prerelease)",
     "publish": "npm run build && (cd projects/swagger-schematics && npm publish --provenance --access public)",
     "publish:debug": "npm run build && (cd projects/swagger-schematics && npm pack)"
-  },
-  "dependencies": {
-    "@angular-devkit/core": "19.2.15",
-    "@angular-devkit/schematics": "19.2.15",
-    "@angular-devkit/schematics-cli": "19.2.15",
-    "@schematics/angular": "19.2.15",
-    "editorconfig": "3.0.2"
-  },
-  "devDependencies": {
-    "@types/node": "26.1.1",
-    "@types/json-schema": "7.0.15",
-    "fs-extra": "11.3.6",
-    "ts-node": "10.9.2",
-    "typescript": "5.9.3"
   }
 }

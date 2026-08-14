@@ -1,4 +1,5 @@
 import { Rule, SchematicContext, Tree } from '@angular-devkit/schematics';
+import { createRequire } from 'module';
 import * as path from 'path';
 import { SwaggerApiSchema } from '../api/schema';
 
@@ -10,8 +11,8 @@ export type TESLintModuleLoader = () => { ESLint: any };
 
 const loadHostESLint: TESLintModuleLoader = () => {
     // Resolve ESLint from the consuming project, not from this package
-    const eslintPath = require.resolve('eslint', { paths: [process.cwd()] });
-    return require(eslintPath);
+    const hostRequire = createRequire(path.join(process.cwd(), 'package.json'));
+    return hostRequire('eslint');
 };
 
 /**

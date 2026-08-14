@@ -5,6 +5,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "types": [
       "jest",
       "node"

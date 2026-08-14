@@ -4,6 +4,7 @@ import { createConsoleLogger } from '@angular-devkit/core/node';
 import { NodeWorkflow } from '@angular-devkit/schematics/tools';
 import { parseCliArgs, helpText, TCliCommand } from './cli-args';
 import { logSchematicError } from '../helpers/error-logging.helper';
+import { version } from '../package.json';
 
 const COLLECTION_PATH = path.join(__dirname, '..', 'collection.json');
 
@@ -60,7 +61,7 @@ async function main(): Promise<void> {
     const args = parseCliArgs(process.argv.slice(2));
 
     if (args.version) {
-        console.log(require('../package.json').version);
+        console.log(version);
         return;
     }
 

@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefix projects/swagger-schematics
 
+      - name: Lint
+        run: npm run lint
+
       - name: Test
         run: npm test
 

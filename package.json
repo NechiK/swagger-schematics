@@ -3,6 +3,7 @@
   "scripts": {
     "build": "(cd projects/swagger-schematics && npm run build)",
     "build:debug": "npm run build && (cd projects/swagger-schematics && npm link)",
+    "lint": "(cd projects/swagger-schematics && npm run lint)",
     "test": "(cd projects/swagger-schematics && npm run test)",
     "version:prerelease": "(cd projects/swagger-schematics && npm version prerelease)",
     "publish:debug": "npm run build && (cd projects/swagger-schematics && npm pack)"

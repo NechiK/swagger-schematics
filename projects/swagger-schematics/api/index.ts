@@ -12,6 +12,7 @@ import {
     url
 } from '@angular-devkit/schematics';
 import { strings } from '@angular-devkit/core';
+import { createRequire } from 'module';
 import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
@@ -43,8 +44,9 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
     
     try {
         // Clear require cache to ensure fresh load
-        delete require.cache[require.resolve(absolutePath)];
-        const helpers = require(absolutePath);
+        const helperRequire = createRequire(__filename);
+        delete helperRequire.cache[helperRequire.resolve(absolutePath)];
+        const helpers = helperRequire(absolutePath);
         return helpers.default || helpers;
     } catch (error) {
         throw new Error(`Failed to load template helpers from '${helpersPath}': ${(error as Error).message}`);

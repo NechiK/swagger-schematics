@@ -23,7 +23,7 @@ export interface IMediaTypeExample {
 }
 
 // IContentBase is kept for backward compatibility
-export interface IContentBase extends IMediaType {}
+export type IContentBase = IMediaType;
 
 // Known content types
 export type TKnownContentType = 

@@ -21,10 +21,19 @@ function readFileContent(filePath: string, tree?: Tree): string {
   return readFileSync(filePath, 'utf-8');
 }
 
+/** The subset of a parsed tsconfig this helper reads. */
+interface IParsedTsConfig {
+  extends?: string;
+  compilerOptions?: {
+    baseUrl?: string;
+    paths?: Record<string, string[]>;
+  };
+}
+
 /**
  * Parse tsconfig JSON content with error handling
  */
-function parseTsConfig(filePath: string, content: string): Record<string, any> {
+function parseTsConfig(filePath: string, content: string): IParsedTsConfig {
   const result = parseConfigFileTextToJson(filePath, content);
   
   if (result.error) {

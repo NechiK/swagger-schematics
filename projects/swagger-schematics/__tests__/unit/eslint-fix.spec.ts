@@ -26,6 +26,8 @@ describe('createEslintFixRule', () => {
       lintText: overrides.lintText ?? jest.fn().mockResolvedValue([{ output: undefined, fatalErrorCount: 0, messages: [] }])
     };
     class ESLintMock {
+      isPathIgnored = instance.isPathIgnored;
+      lintText = instance.lintText;
       constructor() {
         if (overrides.constructorError) {
           throw overrides.constructorError;

@@ -82,7 +82,7 @@ export default function(options: SwaggerSchema): Rule {
         }
         
         // Check if it's an enum (integer or string with enum values)
-        const isEnum = 'enum' in typedSchema && Array.isArray((typedSchema as any).enum);
+        const isEnum = 'enum' in typedSchema && Array.isArray(typedSchema.enum);
         const schemaType = isEnum ? 'enum' : 'interface';
         
         return {
@@ -113,7 +113,7 @@ export default function(options: SwaggerSchema): Rule {
                       enums: enumValuesList.reduce((parsedEnumValues, currentValue, currentIndex) => {
                           parsedEnumValues.push([enumNamesList[currentIndex], currentValue]);
                           return parsedEnumValues;
-                      }, [] as any[][]),
+                      }, [] as Array<[string | number, string | number]>),
                       indentSize
                   }),
                   move(parsed.path)

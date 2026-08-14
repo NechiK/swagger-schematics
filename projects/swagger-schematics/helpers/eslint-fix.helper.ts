@@ -3,11 +3,32 @@ import { createRequire } from 'module';
 import * as path from 'path';
 import { SwaggerApiSchema } from '../api/schema';
 
+/** The subset of an ESLint lint message this rule inspects. */
+interface ILintMessage {
+    fatal?: boolean;
+    message: string;
+}
+
+/** The subset of an ESLint lint result this rule inspects. */
+interface ILintResult {
+    fatalErrorCount: number;
+    messages?: ILintMessage[];
+    output?: string;
+}
+
+/** The subset of the host project's ESLint instance this rule calls. */
+interface IESLintInstance {
+    isPathIgnored(filePath: string): Promise<boolean>;
+    lintText(code: string, options: { filePath: string }): Promise<ILintResult[]>;
+}
+
+type TESLintConstructor = new (options: { fix: boolean; cwd: string }) => IESLintInstance;
+
 /**
  * Loads the ESLint module. Injectable so tests can stub every failure mode
  * without ESLint installed.
  */
-export type TESLintModuleLoader = () => { ESLint: any };
+export type TESLintModuleLoader = () => { ESLint: TESLintConstructor };
 
 const loadHostESLint: TESLintModuleLoader = () => {
     // Resolve ESLint from the consuming project, not from this package
@@ -32,7 +53,7 @@ export function createEslintFixRule(
             return;
         }
 
-        let ESLint: any;
+        let ESLint: TESLintConstructor;
         try {
             ({ ESLint } = loadESLintModule());
         } catch {
@@ -40,7 +61,7 @@ export function createEslintFixRule(
             return;
         }
 
-        let eslint: any;
+        let eslint: IESLintInstance;
         try {
             eslint = new ESLint({ fix: true, cwd: process.cwd() });
         } catch (error) {
@@ -69,8 +90,8 @@ export function createEslintFixRule(
 
                 const [result] = await eslint.lintText(content, { filePath: absolutePath });
 
-                if (result?.fatalErrorCount > 0) {
-                    const fatal = result.messages?.find((message: any) => message.fatal);
+                if ((result?.fatalErrorCount ?? 0) > 0) {
+                    const fatal = result.messages?.find(message => message.fatal);
                     context.logger.warn(`eslintFix: could not fix ${filePath}: ${fatal?.message || 'fatal lint error'}`);
                     continue;
                 }

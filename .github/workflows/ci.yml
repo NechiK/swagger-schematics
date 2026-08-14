@@ -34,7 +34,7 @@ jobs:
         run: npm run lint
 
       - name: Test
-        run: npm test
+        run: npm run test:coverage --prefix projects/swagger-schematics
 
       - name: Build
         run: npm run build

@@ -1,5 +1,8 @@
 # Swagger Schematics
 
+[![npm version](https://img.shields.io/npm/v/swagger-schematics)](https://www.npmjs.com/package/swagger-schematics)
+[![CI](https://github.com/NechiK/swagger-schematics/actions/workflows/ci.yml/badge.svg)](https://github.com/NechiK/swagger-schematics/actions/workflows/ci.yml)
+
 Generate TypeScript types and API services from OpenAPI/Swagger schemas using Angular Schematics.
 
 Supports:

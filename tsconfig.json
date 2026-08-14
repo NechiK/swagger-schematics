@@ -4,12 +4,6 @@
   "compilerOptions": {
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "angular-schematics": [
-        "dist/angular-schematics/angular-schematics",
-        "dist/angular-schematics"
-      ],
-    },
     "strict": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,

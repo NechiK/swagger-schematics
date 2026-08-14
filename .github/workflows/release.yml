@@ -27,7 +27,7 @@ jobs:
           CHANGELOG=$(awk -v ver="$VERSION" '
             /^## \[/ {
               if (found) exit
-              if (index($0, ver)) found=1
+              if (index($0, "[" ver "]")) found=1
               next
             }
             found { print }

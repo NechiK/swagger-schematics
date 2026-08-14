@@ -10,6 +10,7 @@ karma.conf.js
 tests
 __tests__
 jest.global-setup.js
+coverage
 
 # Packed tarballs (never ship a build artifact inside the package)
 *.tgz

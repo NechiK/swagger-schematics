@@ -7,7 +7,7 @@
   },
   "scripts": {
     "prebuild": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
-    "prepack": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md')\"",
+    "prepack": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md'); require('fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
     "build": "tsc -p tsconfig.schematics.json",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -53,7 +53,7 @@
     "type": "git",
     "url": "git+https://github.com/NechiK/swagger-schematics.git"
   },
-  "license": "ISC",
+  "license": "MIT",
   "engines": {
     "node": "^20.19.0 || ^22.12.0 || >=24.0.0",
     "npm": ">=10.0.0"

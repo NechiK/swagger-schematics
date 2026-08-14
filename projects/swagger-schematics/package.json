@@ -1,11 +1,15 @@
 {
   "name": "swagger-schematics",
-  "version": "1.1.0",
-  "description": "Schematics types and API generator via Swagger scheme",
+  "version": "1.2.0",
+  "description": "Generate TypeScript types and API services (Angular HttpClient / RTK Query) from OpenAPI/Swagger schemas",
+  "bin": {
+    "swagger-schematics": "bin/swagger-schematics.js"
+  },
   "scripts": {
     "prebuild": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
-    "prepack": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md')\"",
+    "prepack": "npm run build && node -e \"require('fs').copyFileSync('../../README.md', 'README.md'); require('fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
     "build": "tsc -p tsconfig.schematics.json",
+    "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -37,42 +41,64 @@
     },
     "moduleNameMapper": {
       "^@fixtures/(.*)$": "<rootDir>/__tests__/__fixtures__/$1",
-      "^@helpers/(.*)$": "<rootDir>/__tests__/helpers/$1"
+      "^@helpers/(.*)$": "<rootDir>/__tests__/helpers/$1",
+      "^@lib/(.*)$": "<rootDir>/$1"
+    },
+    "coverageThreshold": {
+      "global": {
+        "statements": 86,
+        "branches": 73,
+        "functions": 82,
+        "lines": 87
+      }
     }
   },
   "keywords": [
     "schematics",
     "angular",
-    "generate"
+    "generate",
+    "openapi",
+    "swagger",
+    "typescript",
+    "codegen",
+    "code-generation",
+    "api-client",
+    "rtk-query",
+    "react"
   ],
   "author": "Maks Nechesonov",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NechiK/swagger-schematics.git"
   },
-  "license": "ISC",
+  "homepage": "https://github.com/NechiK/swagger-schematics#readme",
+  "bugs": {
+    "url": "https://github.com/NechiK/swagger-schematics/issues"
+  },
+  "license": "MIT",
   "engines": {
     "node": "^20.19.0 || ^22.12.0 || >=24.0.0",
     "npm": ">=10.0.0"
   },
   "dependencies": {
-    "@angular-devkit/core": "20.3.14",
-    "@angular-devkit/schematics": "20.3.14",
-    "@angular-devkit/schematics-cli": "20.3.14",
-    "@schematics/angular": "20.3.14",
+    "@angular-devkit/core": "20.3.34",
+    "@angular-devkit/schematics": "20.3.34",
+    "@angular-devkit/schematics-cli": "20.3.34",
+    "@schematics/angular": "20.3.34",
     "editorconfig": "3.0.2"
   },
   "devDependencies": {
     "@types/jest": "30.0.0",
     "@types/json-schema": "7.0.15",
-    "@types/node": "26.1.1",
-    "@typescript-eslint/parser": "8.65.0",
-    "eslint": "10.7.0",
-    "fs-extra": "11.3.6",
+    "@types/node": "26.2.0",
+    "@typescript-eslint/parser": "8.67.0",
+    "eslint": "10.8.1",
+    "fs-extra": "11.4.0",
     "jest": "30.4.2",
     "json-schema-to-typescript": "15.0.4",
-    "ts-jest": "29.4.11",
+    "ts-jest": "29.4.12",
     "ts-node": "10.9.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.67.0"
   }
 }

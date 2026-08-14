@@ -1,17 +1,39 @@
 import { Rule, SchematicContext, Tree } from '@angular-devkit/schematics';
+import { createRequire } from 'module';
 import * as path from 'path';
 import { SwaggerApiSchema } from '../api/schema';
+
+/** The subset of an ESLint lint message this rule inspects. */
+interface ILintMessage {
+    fatal?: boolean;
+    message: string;
+}
+
+/** The subset of an ESLint lint result this rule inspects. */
+interface ILintResult {
+    fatalErrorCount?: number;
+    messages?: ILintMessage[];
+    output?: string;
+}
+
+/** The subset of the host project's ESLint instance this rule calls. */
+interface IESLintInstance {
+    isPathIgnored(filePath: string): Promise<boolean>;
+    lintText(code: string, options: { filePath: string }): Promise<ILintResult[]>;
+}
+
+type TESLintConstructor = new (options: { fix: boolean; cwd: string }) => IESLintInstance;
 
 /**
  * Loads the ESLint module. Injectable so tests can stub every failure mode
  * without ESLint installed.
  */
-export type TESLintModuleLoader = () => { ESLint: any };
+export type TESLintModuleLoader = () => { ESLint: TESLintConstructor };
 
 const loadHostESLint: TESLintModuleLoader = () => {
     // Resolve ESLint from the consuming project, not from this package
-    const eslintPath = require.resolve('eslint', { paths: [process.cwd()] });
-    return require(eslintPath);
+    const hostRequire = createRequire(path.join(process.cwd(), 'package.json'));
+    return hostRequire('eslint');
 };
 
 /**
@@ -31,7 +53,7 @@ export function createEslintFixRule(
             return;
         }
 
-        let ESLint: any;
+        let ESLint: TESLintConstructor;
         try {
             ({ ESLint } = loadESLintModule());
         } catch {
@@ -39,7 +61,7 @@ export function createEslintFixRule(
             return;
         }
 
-        let eslint: any;
+        let eslint: IESLintInstance;
         try {
             eslint = new ESLint({ fix: true, cwd: process.cwd() });
         } catch (error) {
@@ -53,25 +75,27 @@ export function createEslintFixRule(
                 .map(action => action.path)
         ));
 
-        for (const filePath of generatedFiles) {
+        // Each file lints independently - run them concurrently; the tree
+        // writes are synchronous and touch distinct paths.
+        await Promise.all(generatedFiles.map(async filePath => {
             const buffer = tree.read(filePath);
             if (!buffer) {
-                continue;
+                return;
             }
             const content = buffer.toString();
             const absolutePath = path.join(process.cwd(), filePath);
 
             try {
                 if (await eslint.isPathIgnored(absolutePath)) {
-                    continue;
+                    return;
                 }
 
                 const [result] = await eslint.lintText(content, { filePath: absolutePath });
 
-                if (result?.fatalErrorCount > 0) {
-                    const fatal = result.messages?.find((message: any) => message.fatal);
+                if ((result?.fatalErrorCount ?? 0) > 0) {
+                    const fatal = result.messages?.find(message => message.fatal);
                     context.logger.warn(`eslintFix: could not fix ${filePath}: ${fatal?.message || 'fatal lint error'}`);
-                    continue;
+                    return;
                 }
 
                 if (typeof result?.output === 'string' && result.output !== content) {
@@ -80,6 +104,6 @@ export function createEslintFixRule(
             } catch (error) {
                 context.logger.warn(`eslintFix: failed for ${filePath}: ${(error as Error).message}`);
             }
-        }
+        }));
     };
 }

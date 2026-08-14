@@ -2,7 +2,7 @@ import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { TOperationWithRequestBody } from "../../interfaces/version_3_1/operation.interface";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions } from "./transform-type";
-import { IParsedParam } from "./params";
+import { TParsedBodyParam } from "./params";
 import { IContent, IMediaType, TKnownContentType } from "../../interfaces/version_3_1/content.interface";
 
 // Priority order for content types when determining request body type
@@ -16,11 +16,11 @@ const CONTENT_TYPE_PRIORITY: TKnownContentType[] = [
     '*/*'
 ];
 
-export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>, options?: ITransformTypeOptions): [IParsedParam<any> | null, IImportRef[]] {
+export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>, options?: ITransformTypeOptions): [TParsedBodyParam | null, IImportRef[]] {
     const apiRequestBody = operation.requestBody;
     let typeSymbol: string | undefined;
     let importRefs: IImportRef[] = [];
-    let parsedRequestBodyParams: IParsedParam<any> | null = null;
+    let parsedRequestBodyParams: TParsedBodyParam | null = null;
 
     if (apiRequestBody) {
         if ('$ref' in apiRequestBody) {
@@ -56,9 +56,11 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
 }
 
 /**
- * Find the first available media type from the content object
+ * Find the first available media type from the content object, preferring the
+ * shared CONTENT_TYPE_PRIORITY order and falling back to the first declared
+ * media type. Shared by request-body and response type extraction.
  */
-function findMediaType(content: IContent): IMediaType | undefined {
+export function findMediaType(content: IContent): IMediaType | undefined {
     // Try priority order first
     for (const contentType of CONTENT_TYPE_PRIORITY) {
         if (content[contentType]) {

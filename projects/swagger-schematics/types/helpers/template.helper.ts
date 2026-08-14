@@ -1,47 +1,22 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
-import { IImportRef, ITransformTypeOptions, isNullable, transformType, getCompositionImports } from "../utils/transform-type";
-import { ISchemaProperties, ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
-import { isAllOf, isOneOf, isAnyOf, isNot, isNullSchema } from "../utils/transform-type";
+import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
+import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
+import { isAllOf, isOneOf, isAnyOf, isNot } from "../utils/transform-type";
 
-export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions, requiredProperties: string[] = []): {
-    propertiesContent: Array<[string, string]>;
-    refs: IImportRef[];
-} {
-    const transformed: Array<[string, string]> = [];
-    const refs: IImportRef[] = [];
-
-    for (const propertyKey in properties) {
-        const property = properties[propertyKey];
-        const [rawTypeSymbol, importRef] = transformType(property, swagger, options);
-        if (importRef) {
-            refs.push(importRef);
-        }
-
-        // Per spec: a property is optional unless listed in the object's required array;
-        // nullability is expressed in the type itself.
-        // Legacy escape hatch (legacyOptionalProperties): derive optionality from
-        // nullability instead, for back-ends that do not emit `required` yet.
-        const nullable = isNullable(property, swagger);
-        const typeSymbol = nullable && !rawTypeSymbol.includes('| null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
-        const isOptional = options?.legacyOptionalProperties
-            ? nullable
-            : !requiredProperties.includes(propertyKey);
-
-        transformed.push([`${propertyKey}${isOptional ? '?' : ''}`, typeSymbol]);
-    }
-
-    return {
-        propertiesContent: transformed,
-        refs
-    };
-}
+// Property rendering lives with the rest of the type transformation; re-exported
+// here because interface generation historically imported it from this module.
+export { transformProperties } from "../utils/transform-type";
 
 export function removeImportDuplicates(importRefs: IImportRef[]): IImportRef[] {
-    return importRefs.filter((item, index, self) =>
-        index === self.findIndex(t => (
-            t.importSymbol === item.importSymbol && t.fileName === item.fileName
-        ))
-    );
+    const seen = new Set<string>();
+    return importRefs.filter(item => {
+        const key = `${item.importSymbol}|${item.fileName}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
 }
 
 export function transformRefsToImport(refs: IImportRef[], optionsPath: string, sourcePath: string) {
@@ -82,37 +57,17 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
     const importRefs = getCompositionImports(schema, swagger, options);
     
     if (isAllOf(schema)) {
-        // allOf -> intersection type (A & B & C).
-        const nonNullMembers = schema.allOf.filter(member => !isNullSchema(member));
-        const nullable = nonNullMembers.length !== schema.allOf.length;
-        const parts = nonNullMembers.map(s => transformType(s, swagger, options)[0]);
-
-        // A schema can carry its own `properties` alongside allOf - the common
-        // inheritance shape `Derived = Base & { ...own props... }`. Render the
-        // own properties as an inline object literal and merge their imports.
-        const ownRefs: IImportRef[] = [];
-        const ownProperties = (schema as { properties?: ISchemaProperties }).properties;
-        if (ownProperties && Object.keys(ownProperties).length > 0) {
-            const { propertiesContent, refs } = transformProperties(
-                ownProperties,
-                swagger,
-                options,
-                (schema as { required?: string[] }).required ?? []
-            );
-            parts.push(`{ ${propertiesContent.map(([name, type]) => `${name}: ${type}`).join('; ')} }`);
-            ownRefs.push(...refs);
-        }
-
-        let typeExpression = parts.join(' & ');
-        if (nullable && typeExpression) {
-            typeExpression = parts.length > 1 ? `(${typeExpression}) | null` : `${typeExpression} | null`;
-        }
+        // allOf -> intersection type (A & B & C). Delegate to transformType,
+        // whose allOf handling also renders sibling own-properties and lifts a
+        // { type: "null" } member to a trailing `| null`; getCompositionImports
+        // (importRefs above) already includes the own-property refs.
+        const [typeExpression] = transformType(schema, swagger, options);
         return {
-            typeExpression: typeExpression || 'null',
-            importRefs: removeImportDuplicates([...importRefs, ...ownRefs])
+            typeExpression,
+            importRefs: removeImportDuplicates(importRefs)
         };
     }
-    
+
     if (isOneOf(schema) || isAnyOf(schema)) {
         // oneOf/anyOf -> union type (A | B | C). Delegate to transformType so a
         // { type: "null" } member collapses to `| null` instead of `any`.

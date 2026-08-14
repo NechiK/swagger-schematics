@@ -2,36 +2,44 @@ import {ISwaggerSchema} from '../../interfaces/version_3_1/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
 import { TOperation, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
 import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
-import { TTypeWithImports, transformTypeWithAllImports, ITransformTypeOptions, isBinarySchema } from './transform-type';
+import { TTypeWithImports, transformTypeWithAllImports, ITransformTypeOptions, isBinarySchema, getRefPropertyDefinition } from './transform-type';
 import { IResponse, TResponse } from '../../interfaces/version_3_1/response.interface';
+import { IRef } from '../../interfaces/version_3_1/ref.interface';
+import { findMediaType } from './request-body';
 
 /**
  * Gets the method name for an API operation
  * Priority: operationId -> path-based generation
  */
-export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string): string {
+export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string, apiPathPrefix: string = '/api/'): string {
     // Prefer operationId if available (per OpenAPI spec recommendation)
     if (apiMethod.operationId) {
         return camelize(apiMethod.operationId);
     }
-    
+
+    // Strip the configured prefix once so the pattern matching below works
+    // for any apiPathKey, not just the default /api/
+    const relativePath = apiPathKey.startsWith(apiPathPrefix)
+        ? apiPathKey.slice(apiPathPrefix.length)
+        : apiPathKey.replace(/^\//, '');
+
     // Fall back to path-based name generation
     let parsedMethodName = '';
     switch (apiMethodKey) {
         case 'get':
-            parsedMethodName = parseGetRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parseGetRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         case 'post':
-            parsedMethodName = parsePostRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parsePostRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         case 'put':
-            parsedMethodName = parsePutRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parsePutRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         case 'delete':
-            parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, apiPathKey);
+            parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         default:
-            parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, apiPathKey);
+            parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, relativePath);
     }
 
     return camelize(parsedMethodName);
@@ -56,103 +64,113 @@ export function getOperationSecurity(apiMethod: TOperation): Record<string, stri
  * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
  */
 export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports {
-    const responses = apiMethod.responses;
-
-    // Priority order for success responses
-    const successCodes = [
-        THttpStatusCode.OK,       // 200
-        THttpStatusCode.Created,  // 201
-        THttpStatusCode.Accepted, // 202
-        THttpStatusCode.NoContent // 204
-    ];
-
-    // Try specific success codes first
-    for (const code of successCodes) {
-        const response = responses[code];
-        if (response) {
-            // 204 No Content should return void
-            if (code === THttpStatusCode.NoContent) {
-                return ['void', []];
-            }
-            const result = extractResponseType(response, swaggerData, options);
-            if (result) return result;
-        }
+    const resolved = resolveSuccessResponse(apiMethod.responses, swaggerData);
+    if (!resolved || resolved.key === THttpStatusCode.NoContent) {
+        // No success response, or 204 No Content
+        return ['void', []];
     }
-
-    // Try wildcard 2XX
-    const response2XX = (responses as any)['2XX'];
-    if (response2XX) {
-        const result = extractResponseType(response2XX, swaggerData, options);
-        if (result) return result;
-    }
-
-    // Try default response
-    const defaultResponse = (responses as any)['default'];
-    if (defaultResponse) {
-        const result = extractResponseType(defaultResponse, swaggerData, options);
-        if (result) return result;
-    }
-
-    return ['void', []];
+    return extractResponseType(resolved.response, swaggerData, options) ?? ['void', []];
 }
 
 /**
- * Extracts the type from a response object
+ * Extracts the type from a response object using the shared media-type
+ * priority (with first-available fallback), so any declared media type
+ * produces a type instead of silently degrading to void.
  */
-function extractResponseType(response: any, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports | null {
-    if (!response.content) {
+function extractResponseType(response: IResponse, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports | null {
+    const content = response.content;
+    if (!content || Object.keys(content).length === 0) {
         return null;
     }
 
-    // Try application/json first, then other content types
-    const contentTypes = ['application/json', 'text/plain', '*/*'];
-
-    for (const contentType of contentTypes) {
-        const content = response.content[contentType];
-        if (content?.schema) {
-            return transformTypeWithAllImports(content.schema, swaggerData, options);
-        }
+    const mediaType = findMediaType(content);
+    if (mediaType?.schema) {
+        return transformTypeWithAllImports(mediaType.schema, swaggerData, options);
     }
 
-    // OpenAPI 3.1 binary responses: application/octet-stream, with or without
-    // a schema (3.1 allows omitting the schema entirely for raw binary)
-    if (response.content['application/octet-stream']) {
+    // OpenAPI 3.1 binary responses: application/octet-stream without a schema
+    // (3.1 allows omitting the schema entirely for raw binary)
+    if (content['application/octet-stream']) {
         return ['Blob', []];
     }
 
     return null;
 }
 
+// Priority order for success responses
+const SUCCESS_RESPONSE_KEYS = [
+    THttpStatusCode.OK,        // 200
+    THttpStatusCode.Created,   // 201
+    THttpStatusCode.Accepted,  // 202
+    THttpStatusCode.NoContent, // 204
+    '2XX',
+    'default'
+] as const;
+
+export interface IResolvedResponse {
+    /** The responses-map key the response was chosen from (e.g. '200', '2XX'). */
+    key: string;
+    /** The chosen response, with a response-level $ref already resolved. */
+    response: IResponse;
+}
+
 /**
- * Gets the success response object from responses
- * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
+ * Resolves a response-map value that may be a Reference Object
+ * (e.g. { $ref: '#/components/responses/Ok' }) to the response it points at.
  */
-export function getSuccessResponse(responses: TResponse): IResponse | undefined {
-    // Priority order for success responses
-    const successCodes = [
-        THttpStatusCode.OK,       // 200
-        THttpStatusCode.Created,  // 201
-        THttpStatusCode.Accepted, // 202
-        THttpStatusCode.NoContent // 204
-    ];
-    
-    // Try specific success codes first
-    for (const code of successCodes) {
-        if (responses[code]) {
-            return responses[code];
+function resolveResponseRef(response: IResponse | IRef, swagger: ISwaggerSchema): IResponse | undefined {
+    if (!('$ref' in response)) {
+        return response;
+    }
+    const { refPropertySchema } = getRefPropertyDefinition(response.$ref, swagger);
+    return refPropertySchema as unknown as IResponse | undefined;
+}
+
+/**
+ * Chooses THE success response for an operation - the single source both the
+ * response type and the binary check derive from, so they can never disagree.
+ *
+ * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default. Among those, the
+ * first content-bearing response wins (a bodyless 200 next to a 201 with
+ * content yields the 201); 204 always terminates the walk as No Content;
+ * with no content-bearing candidate the first existing response is returned.
+ */
+export function resolveSuccessResponse(responses: TResponse, swagger: ISwaggerSchema): IResolvedResponse | undefined {
+    const candidates: IResolvedResponse[] = [];
+    for (const key of SUCCESS_RESPONSE_KEYS) {
+        const raw = responses[key];
+        if (!raw) {
+            continue;
+        }
+        const response = resolveResponseRef(raw, swagger);
+        if (response) {
+            candidates.push({ key, response });
         }
     }
-    
-    // Try wildcard 2XX
-    if ((responses as any)['2XX']) {
-        return (responses as any)['2XX'];
+
+    for (const candidate of candidates) {
+        if (candidate.key === THttpStatusCode.NoContent) {
+            return candidate;
+        }
+        if (candidate.response.content && Object.keys(candidate.response.content).length > 0) {
+            return candidate;
+        }
     }
-    
-    // Try default response
-    if ((responses as any)['default']) {
-        return (responses as any)['default'];
+    return candidates[0];
+}
+
+/**
+ * Gets the raw success response object from responses (no $ref resolution).
+ * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default.
+ * Prefer resolveSuccessResponse, which resolves $refs and applies the same
+ * content-bearing preference the generated response type uses.
+ */
+export function getSuccessResponse(responses: TResponse): IResponse | IRef | undefined {
+    for (const key of SUCCESS_RESPONSE_KEYS) {
+        if (responses[key]) {
+            return responses[key];
+        }
     }
-    
     return undefined;
 }
 
@@ -160,17 +178,19 @@ export function getSuccessResponse(responses: TResponse): IResponse | undefined 
  * Checks whether the operation's success response is binary content:
  * a string schema with format: binary (3.0) or contentMediaType (3.1),
  * or an application/octet-stream response (3.1, schema optional).
+ * Uses resolveSuccessResponse, so it always inspects the same response the
+ * generated response type was derived from.
  */
-export function isBinaryResponse(apiMethod: TOperation): boolean {
-    const response = getSuccessResponse(apiMethod.responses);
-    const content = (response as any)?.content;
+export function isBinaryResponse(apiMethod: TOperation, swagger: ISwaggerSchema): boolean {
+    const resolved = resolveSuccessResponse(apiMethod.responses, swagger);
+    const content = resolved?.response.content;
     if (!content) {
         return false;
     }
     if (content['application/octet-stream']) {
         return true;
     }
-    return Object.values(content).some((media: any) => isBinarySchema(media?.schema));
+    return Object.values(content).some(media => isBinarySchema(media?.schema));
 }
 
 type TOperationPredictionProperties = 'summary' | 'description';
@@ -191,31 +211,31 @@ function parseMethodName(apiMethod: TOperation, apiMethodKey: string, apiPathKey
     }
 }
 
-function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, apiPathKey: string) {
-    const getModelByParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/{id}
-    const getGetModelDataParamNameMatch = /(^\/api\/)([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/{id}/dataName
-    const getSubresourceMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(apiPathKey); // /api/modelName/subresource
-    const getSubresourceByParamMatch = /(^\/api\/)([a-zA-Z]+)\/([a-zA-Z]+)\/{(\w+)}$/.exec(apiPathKey); // /api/modelName/subresource/{param}
-    
+function parseGetRequestName(apiMethod: TOperation, apiMethodKey: string, relativePath: string) {
+    const getModelByParamNameMatch = /^([a-zA-Z]+)\/{(\w+)}$/.exec(relativePath); // modelName/{id}
+    const getGetModelDataParamNameMatch = /^([a-zA-Z]+)\/{(\w+)}\/([a-zA-Z]+)$/.exec(relativePath); // modelName/{id}/dataName
+    const getSubresourceMatch = /^([a-zA-Z]+)\/([a-zA-Z]+)$/.exec(relativePath); // modelName/subresource
+    const getSubresourceByParamMatch = /^([a-zA-Z]+)\/([a-zA-Z]+)\/{(\w+)}$/.exec(relativePath); // modelName/subresource/{param}
+
     if (getModelByParamNameMatch) {
-        const paramName = capitalize(getModelByParamNameMatch[3]);
+        const paramName = capitalize(getModelByParamNameMatch[2]);
         return `${apiMethodKey}By${paramName}`;
     } else if (getGetModelDataParamNameMatch) {
-        const modelName = capitalize(getGetModelDataParamNameMatch[2]);
-        const paramName = capitalize(getGetModelDataParamNameMatch[3]);
-        const dataName = capitalize(getGetModelDataParamNameMatch[4]);
+        const modelName = capitalize(getGetModelDataParamNameMatch[1]);
+        const paramName = capitalize(getGetModelDataParamNameMatch[2]);
+        const dataName = capitalize(getGetModelDataParamNameMatch[3]);
         return `${apiMethodKey}${dataName}By${paramName.toLowerCase().includes(modelName.toLowerCase()) ? '' : modelName}${paramName}`;
     } else if (getSubresourceByParamMatch) {
-        const modelName = capitalize(getSubresourceByParamMatch[2]);
-        const subresource = capitalize(getSubresourceByParamMatch[3]);
-        const paramName = capitalize(getSubresourceByParamMatch[4]);
+        const modelName = capitalize(getSubresourceByParamMatch[1]);
+        const subresource = capitalize(getSubresourceByParamMatch[2]);
+        const paramName = capitalize(getSubresourceByParamMatch[3]);
         return `${apiMethodKey}${modelName}${subresource}By${paramName}`;
     } else if (getSubresourceMatch) {
-        const modelName = capitalize(getSubresourceMatch[2]);
-        const subresource = capitalize(getSubresourceMatch[3]);
+        const modelName = capitalize(getSubresourceMatch[1]);
+        const subresource = capitalize(getSubresourceMatch[2]);
         return `${apiMethodKey}${modelName}${subresource}`;
     } else {
-        return parseDefaultMethodName(apiMethodKey, apiPathKey);
+        return parseDefaultMethodName(apiMethodKey, relativePath);
     }
 }
 

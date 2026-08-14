@@ -22,13 +22,11 @@
     },
     "eslintFix": {
       "type": "boolean",
-      "description": "Run the host project's ESLint with autofix on generated files, using the project's own configuration (import sorting, commas, quotes, etc.). Never blocks generation: failures are reported as warnings and files keep their generated content.",
-      "default": false
+      "description": "Run the host project's ESLint with autofix on generated files, using the project's own configuration (import sorting, commas, quotes, etc.). Never blocks generation: failures are reported as warnings and files keep their generated content."
     },
     "legacyOptionalProperties": {
       "type": "boolean",
-      "description": "Legacy optionality: mark an interface property optional ('?') when it is nullable instead of when it is absent from the object schema's 'required' array. Escape hatch for back-ends that do not emit 'required' yet. Nullability ('| null' in the type) is unaffected.",
-      "default": false
+      "description": "Legacy optionality: mark an interface property optional ('?') when it is nullable instead of when it is absent from the object schema's 'required' array. Escape hatch for back-ends that do not emit 'required' yet. Nullability ('| null' in the type) is unaffected."
     }
   },
   "required": []

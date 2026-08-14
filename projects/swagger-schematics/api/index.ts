@@ -12,6 +12,7 @@ import {
     url
 } from '@angular-devkit/schematics';
 import { strings } from '@angular-devkit/core';
+import { createRequire } from 'module';
 import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
@@ -21,7 +22,7 @@ import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, TFrameworkType } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
-import { getBaseApiImportPath } from './helpers/import-path.helper';
+import { getBaseApiImportPath, resolveAngularBaseApiDir } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
@@ -43,8 +44,9 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
     
     try {
         // Clear require cache to ensure fresh load
-        delete require.cache[require.resolve(absolutePath)];
-        const helpers = require(absolutePath);
+        const helperRequire = createRequire(__filename);
+        delete helperRequire.cache[helperRequire.resolve(absolutePath)];
+        const helpers = helperRequire(absolutePath);
         return helpers.default || helpers;
     } catch (error) {
         throw new Error(`Failed to load template helpers from '${helpersPath}': ${(error as Error).message}`);
@@ -74,27 +76,32 @@ export default function(options: SwaggerApiSchema) {
         }
 
         const parsedApiSchemas = transformSwaggerSchema(swagger, {
-            typeMapping: config.typeMapping
+            typeMapping: config.typeMapping,
+            apiPathKey: config.apiPathKey
         });
 
         // Select templates based on framework
         const apiServiceTemplates = url(config.apiServiceTemplatePath || frameworkConfig.templates.apiService);
         const baseApiTemplates = url(config.baseApiTemplatePath || frameworkConfig.templates.baseApi);
 
-        let finalRule: Rule | undefined;
+        // Loop-invariant: the base API location, file extension, and custom
+        // helpers depend only on the config, so resolve (and require) them once
+        // instead of per controller.
+        // For Angular the canonical base service file always lives in the
+        // resolved directory, so the writer and this import computation agree.
+        const baseApiPath = framework === 'react-rtk'
+            ? (config.baseApiPath || DEFAULT_RTK_BASE_API_PATH)
+            : `${config.baseApiPath ? resolveAngularBaseApiDir(config.baseApiPath) : config.path}/_api-base.service.ts`;
+        const apiFileExt = framework === 'react-rtk' ? '.api.ts' : '-api.service.ts';
+        const customHelpers = config.templateHelpersPath
+            ? loadTemplateHelpers(config.templateHelpersPath)
+            : {};
+
+        const rules: Rule[] = [];
 
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
-            
-            // Determine API file path and base API path
-            const baseApiPath = config.baseApiPath || (framework === 'react-rtk' ? DEFAULT_RTK_BASE_API_PATH : `${config.path}/_api-base.service.ts`);
-            const apiFileExt = framework === 'react-rtk' ? '.api.ts' : '-api.service.ts';
             const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}${apiFileExt}`;
-
-            // Load custom template helpers if provided
-            const customHelpers = config.templateHelpersPath 
-                ? loadTemplateHelpers(config.templateHelpersPath)
-                : {};
 
             // Common template context
             const templateContext: Record<string, unknown> = {
@@ -121,21 +128,17 @@ export default function(options: SwaggerApiSchema) {
                 move(parsed.path)
             ]);
 
-            finalRule = finalRule
-                ? chain([finalRule, mergeWith(itemSource, MergeStrategy.Overwrite)])
-                : chain([mergeWith(itemSource, MergeStrategy.Overwrite)]);
+            rules.push(mergeWith(itemSource, MergeStrategy.Overwrite));
         });
 
         // Generate base API files (skip if they already exist)
         const baseApiRule = generateBaseApiRule(tree, framework, config, baseApiTemplates);
         if (baseApiRule) {
-            finalRule = finalRule
-                ? chain([finalRule, baseApiRule])
-                : chain([baseApiRule]);
+            rules.push(baseApiRule);
         }
 
         const eslintFixRule = createEslintFixRule(config);
-        return finalRule ? chain([finalRule, eslintFixRule]) : eslintFixRule;
+        return rules.length ? chain([...rules, eslintFixRule]) : eslintFixRule;
     };
 
     return wrapRuleWithErrorLogging('api', apiRule);

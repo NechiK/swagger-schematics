@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /projects/swagger-schematics
+    schedule:
+      interval: weekly
+    groups:
+      # One PR for all minor/patch bumps; majors (e.g. the Angular
+      # migration) stay as separate PRs so they are visible but unmerged.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

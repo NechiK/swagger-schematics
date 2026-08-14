@@ -20,14 +20,14 @@ export interface IParamBase {
     schema?: TSchema;
     content?: IContent;
     // Example values
-    example?: any;
+    example?: unknown;
     examples?: Record<string, IExample>;
 }
 
 export interface IExample {
     summary?: string;
     description?: string;
-    value?: any;
+    value?: unknown;
     externalValue?: string;
 }
 

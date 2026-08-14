@@ -30,10 +30,10 @@ export interface IServerVariable {
 export interface ISchemaBase {
     title?: string;
     description?: string;
-    default?: any;
-    example?: any;
+    default?: unknown;
+    example?: unknown;
     /** OpenAPI 3.1 (JSON Schema): examples replaces the schema-level example keyword */
-    examples?: any[];
+    examples?: unknown[];
     required?: string[];
     minLength?: number;
     maxLength?: number;
@@ -168,7 +168,11 @@ export interface ISchemaProperties {
 
 export type TSchema = TSchemaByType | IRef;
 
-import { IResponse } from "./response.interface";
+import { IHeader, ILink, IResponse } from "./response.interface";
+// Re-exported for backward compatibility - these were previously (divergent)
+// duplicate declarations in this file; response.interface.ts owns the single
+// spec-correct versions now.
+export { IHeader, ILink };
 import { IRequestBody } from "./request.interface";
 import { IExample } from "./params.interface";
 
@@ -219,31 +223,8 @@ export interface IOAuthFlow {
     scopes: Record<string, string>;
 }
 
-// Link object for HATEOAS
-export interface ILink {
-    operationRef?: string;
-    operationId?: string;
-    parameters?: Record<string, any>;
-    requestBody?: any;
-    description?: string;
-    server?: IServer;
-}
-
 // Callback object for webhooks
 export type TCallback = Record<string, IPath>;
-
-// Header object (reusable)
-export interface IHeader {
-    description?: string;
-    required?: boolean;
-    deprecated?: boolean;
-    allowEmptyValue?: boolean;
-    style?: 'simple';
-    explode?: boolean;
-    schema?: TSchema;
-    example?: any;
-    examples?: Record<string, IExample>;
-}
 
 // Components object with all reusable components
 export interface IComponents {

@@ -5,13 +5,15 @@
   "compilerOptions": {
     "module": "commonjs",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "types": [
       "jest",
       "node"
     ],
     "paths": {
       "@fixtures/*": ["./__tests__/__fixtures__/*"],
-      "@helpers/*": ["./__tests__/helpers/*"]
+      "@helpers/*": ["./__tests__/helpers/*"],
+      "@lib/*": ["./*"]
     }
   },
   "exclude": [

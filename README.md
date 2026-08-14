@@ -1,5 +1,8 @@
 # Swagger Schematics
 
+[![npm version](https://img.shields.io/npm/v/swagger-schematics)](https://www.npmjs.com/package/swagger-schematics)
+[![CI](https://github.com/NechiK/swagger-schematics/actions/workflows/ci.yml/badge.svg)](https://github.com/NechiK/swagger-schematics/actions/workflows/ci.yml)
+
 Generate TypeScript types and API services from OpenAPI/Swagger schemas using Angular Schematics.
 
 Supports:
@@ -20,28 +23,47 @@ Supported OpenAPI versions:
 npm i -D swagger-schematics
 ```
 
-2. Run schematic
+2. Run the CLI
 
 ```bash
-schematics swagger-schematics:api swaggerUrl --path=/src/app/core
+npx swagger-schematics all swaggerUrl --path=/src/app/core
 ```
 
+Or run the schematics individually:
+
 ```bash
-schematics swagger-schematics:types swaggerUrl --path=/src/app/core
+npx swagger-schematics types swaggerUrl --path=/src/app/core
+npx swagger-schematics api swaggerUrl --path=/src/app/core
 ```
+
+Useful flags: `--dry-run` (report files without writing), `--help`, `--version`.
+Any schematic option can be passed as `--option=value` (kebab-case accepted, e.g. `--swagger-schema-url`).
+
+<details>
+<summary>Legacy invocation via the Angular devkit CLI</summary>
+
+The previous invocation keeps working:
+
+```bash
+npx schematics swagger-schematics:types swaggerUrl --path=/src/app/core
+npx schematics swagger-schematics:api swaggerUrl --path=/src/app/core
+```
+
+Note: the `schematics` binary comes from `@angular-devkit/schematics-cli` in your
+`node_modules` — don't run `npx schematics` outside a project that has it
+installed, or npx will fetch an unrelated npm package that happens to own that name.
+</details>
 
 3. Enjoy!
 
 ### Run via npm scripts (recommended)
 
-Wrap the schematics in npm scripts and always run them through `npm run`:
+Wrap the CLI in an npm script and always run it through `npm run`:
 
 ```json
 {
   "scripts": {
-    "openapi": "npm run openapi:types && npm run openapi:api",
-    "openapi:types": "npx schematics swagger-schematics:types",
-    "openapi:api": "npx schematics swagger-schematics:api"
+    "openapi": "swagger-schematics all"
   }
 }
 ```
@@ -65,7 +87,7 @@ You can create an `openapi-schematics.json` file in the root of your project to 
 {
   "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
   "path": "/src/app/core",
-  "baseApiServicesPath": "/src/app/core/api",
+  "baseApiPath": "/src/app/core/api/_api-base.service.ts",
   "framework": "angular"
 }
 ```
@@ -130,9 +152,9 @@ When mapping to another schema, the `nullable` property from the original type i
 |--------------------------|---------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `swaggerSchemaUrl`       | string  | api, types | Source of the Swagger/OpenAPI schema (required): an http(s) URL, or a path to a local JSON file (absolute, relative to the project root, or a `file://` URL). A local file is handy for CI pipelines without network access to the API - commit the schema and point to it |
 | `path`                   | string  | api, types | Path where generated files will be created, relative to the workspace root                                                                                       |
-| `baseApiPath`            | string  | api        | Path for base API file. For Angular: defaults to `path`. For RTK: defaults to `th-common/store/api-base.ts`. Supports tsconfig path alias resolution for imports |
+| `baseApiPath`            | string  | api        | Location of the base API file. For Angular: the `_api-base.service.ts` file path or its directory (both accepted); defaults to `path`. For RTK: the base api file path; defaults to `th-common/store/api-base.ts`. Supports tsconfig path alias resolution for imports |
 | `project`                | string  | types      | Generate in a specific Angular CLI workspace project                                                                                                             |
-| `apiPathKey`             | string  | api        | Filter API paths by a specific key/prefix                                                                                                                        |
+| `apiPathKey`             | string  | api        | Path prefix that selects which API paths are generated; stripped before grouping and method naming. Defaults to `/api/`                                          |
 | `apiServiceTemplatePath` | string  | api        | Custom template path for API service generation                                                                                                                  |
 | `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
 | `framework`              | string  | api        | Target framework: `"angular"` (default) or `"react-rtk"`                                                                                                         |
@@ -194,6 +216,7 @@ Each item in `apiList` has the following properties:
 | `isQuery`                | boolean  | True for GET/HEAD methods                                                                            |
 | `requestMethod`          | string   | HTTP method for httpClient (e.g., "get", "post")                                                     |
 | `responseTypeSymbol`     | string   | Response type (e.g., "IClaimDetailDTO", "void")                                                      |
+| `response`               | object   | Raw OpenAPI success response object, or undefined if the operation has none                          |
 | `bodyParam`              | object   | Parsed body parameter or null                                                                        |
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Array of parsed query parameters                                                                     |

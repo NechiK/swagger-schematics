@@ -10,7 +10,8 @@ import {
     ISchemaOneOf,
     ISchemaAnyOf,
     ISchemaNot,
-    ISchemaObject
+    ISchemaObject,
+    ISchemaProperties
 } from "../../interfaces/version_3_1/swagger.interface";
 import { TParam } from "../../interfaces/version_3_1/params.interface";
 import { safePluck } from "./pluck";
@@ -120,8 +121,8 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
     // Handle typed schemas
     if ('type' in schema) {
         // OpenAPI 3.1 (JSON Schema): type may be an array, e.g. ["string", "null"]
-        if (Array.isArray((schema as any).type)) {
-            return transformTypeArray(schema as TSchemaWithType, swagger, options);
+        if (hasTypeArray(schema)) {
+            return transformTypeArray(schema, swagger, options);
         }
         const typedSchema = schema as TSchemaWithType;
         switch (typedSchema.type) {
@@ -139,12 +140,22 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
 }
 
 /**
+ * The interfaces model the common OpenAPI single-string `type`, but 3.1
+ * (JSON Schema) also allows an array of type names, e.g. ["string", "null"].
+ */
+type TSchemaTypeArray = ISchemaBase & { type: string[] };
+
+function hasTypeArray(schema: object): schema is TSchemaTypeArray {
+    return Array.isArray((schema as { type?: unknown }).type);
+}
+
+/**
  * Transforms an OpenAPI 3.1 type array (e.g. ["string", "null"]) into a union type.
  * The "null" member only affects nullability (reported via isNullable), matching
  * how 3.0's nullable keyword is handled - it is not appended to the type symbol here.
  */
-function transformTypeArray(schema: TSchemaWithType, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const types = ((schema as any).type as string[]).filter(typeName => typeName !== 'null');
+function transformTypeArray(schema: TSchemaTypeArray, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const types = schema.type.filter(typeName => typeName !== 'null');
 
     if (types.length === 0) {
         return ['null'];
@@ -154,7 +165,7 @@ function transformTypeArray(schema: TSchemaWithType, swagger: ISwaggerSchema, op
     let firstImportRef: IImportRef | undefined;
 
     for (const typeName of types) {
-        const [symbol, importRef] = transformType({ ...(schema as any), type: typeName } as TSchema, swagger, options);
+        const [symbol, importRef] = transformType({ ...schema, type: typeName } as unknown as TSchema, swagger, options);
         symbols.push(symbol);
         firstImportRef = firstImportRef ?? importRef;
     }
@@ -183,11 +194,38 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
         return false;
     }
     const typed = schema as TSchemaWithType & { contentMediaType?: string; contentEncoding?: string };
-    const typeNames = Array.isArray((typed as any).type) ? (typed as any).type : [typed.type];
+    const typeNames: unknown[] = hasTypeArray(typed) ? typed.type : [typed.type];
     if (!typeNames.includes('string')) {
         return false;
     }
-    return (typed as any).format === 'binary' || isBinaryContentMediaType(typed);
+    return (typed as { format?: unknown }).format === 'binary' || isBinaryContentMediaType(typed);
+}
+
+/**
+ * Whether a rendered type symbol contains a top-level union - a `|` outside
+ * any brackets. `Record<string, string | null>` has none; `IA | null` does.
+ */
+function hasTopLevelUnion(typeSymbol: string): boolean {
+    let depth = 0;
+    for (const char of typeSymbol) {
+        if (char === '<' || char === '(' || char === '{' || char === '[') {
+            depth++;
+        } else if (char === '>' || char === ')' || char === '}' || char === ']') {
+            depth--;
+        } else if (char === '|' && depth === 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Parenthesizes a type symbol when it contains a top-level union, so it can be
+ * composed into `[]` array or `&` intersection positions without changing
+ * precedence: `IA | null` -> `(IA | null)`, `IBase` stays `IBase`.
+ */
+export function wrapUnion(typeSymbol: string): string {
+    return hasTopLevelUnion(typeSymbol) ? `(${typeSymbol})` : typeSymbol;
 }
 
 /**
@@ -195,13 +233,29 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
  * member expresses nullability rather than an intersection member, so it is
  * lifted out to a trailing `| null` (the intersection is parenthesized when it
  * has more than one member): allOf: [{type:null}, A, B] -> `(A & B) | null`.
+ * A schema carrying its own `properties` alongside allOf - the common
+ * inheritance shape - renders them as a trailing inline object literal,
+ * e.g. `IBase & { extra?: string }`.
  */
 function transformAllOf(schema: ISchemaAllOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const nonNullMembers = schema.allOf.filter(member => !isNullSchema(member));
     const nullable = nonNullMembers.length !== schema.allOf.length;
 
     const results = transformCompositionSchemas(nonNullMembers, swagger, options);
-    const typeSymbol = results.types.join(' & ');
+    const parts = results.types.map(wrapUnion);
+
+    const ownProperties = (schema as { properties?: ISchemaProperties }).properties;
+    if (ownProperties && Object.keys(ownProperties).length > 0) {
+        const { propertiesContent } = transformProperties(
+            ownProperties,
+            swagger,
+            options,
+            (schema as { required?: string[] }).required ?? []
+        );
+        parts.push(`{ ${propertiesContent.map(([name, type]) => `${name}: ${type}`).join('; ')} }`);
+    }
+
+    const typeSymbol = parts.join(' & ');
 
     if (!typeSymbol) {
         return ['null'];
@@ -211,7 +265,7 @@ function transformAllOf(schema: ISchemaAllOf, swagger: ISwaggerSchema, options?:
     if (!nullable) {
         return [typeSymbol, results.imports[0]];
     }
-    const wrapped = results.types.length > 1 ? `(${typeSymbol})` : typeSymbol;
+    const wrapped = parts.length > 1 ? `(${typeSymbol})` : typeSymbol;
     return [`${wrapped} | null`, results.imports[0]];
 }
 
@@ -276,10 +330,55 @@ function transformCompositionSchemas(schemas: TSchema[], swagger: ISwaggerSchema
  */
 export function transformTypeWithAllImports(property: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports {
     const [typeSymbol, importRef] = transformType(property, swagger, options);
-    if (!isRef(property) && isComposition(property as TSchemaByType)) {
-        return [typeSymbol, getCompositionImports(property, swagger, options)];
+    if (!isRef(property)) {
+        const schema = property as TSchemaByType;
+        if (isComposition(schema)) {
+            return [typeSymbol, getCompositionImports(property, swagger, options)];
+        }
+        // Arrays and Record values inline their element type, so a union
+        // element (e.g. items: oneOf [A, B]) contributes several imports.
+        if ('items' in schema && schema.items) {
+            return [typeSymbol, transformTypeWithAllImports(schema.items, swagger, options)[1]];
+        }
+        if ('additionalProperties' in schema && typeof schema.additionalProperties === 'object') {
+            return [typeSymbol, transformTypeWithAllImports(schema.additionalProperties, swagger, options)[1]];
+        }
     }
     return [typeSymbol, importRef ? [importRef] : []];
+}
+
+/**
+ * Renders an object schema's properties into [name, type] pairs (name carries
+ * the `?` optionality marker) and collects their import refs. Per spec a
+ * property is optional unless listed in `required`; nullability is expressed
+ * in the type itself. The legacyOptionalProperties escape hatch derives
+ * optionality from nullability instead, for back-ends without `required`.
+ */
+export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions, requiredProperties: string[] = []): {
+    propertiesContent: Array<[string, string]>;
+    refs: IImportRef[];
+} {
+    const transformed: Array<[string, string]> = [];
+    const refs: IImportRef[] = [];
+
+    for (const propertyKey in properties) {
+        const property = properties[propertyKey];
+        const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(property, swagger, options);
+        refs.push(...importRefs);
+
+        const nullable = isNullable(property, swagger);
+        const typeSymbol = nullable && !rawTypeSymbol.endsWith(' | null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
+        const isOptional = options?.legacyOptionalProperties
+            ? nullable
+            : !requiredProperties.includes(propertyKey);
+
+        transformed.push([`${propertyKey}${isOptional ? '?' : ''}`, typeSymbol]);
+    }
+
+    return {
+        propertiesContent: transformed,
+        refs
+    };
 }
 
 /**
@@ -292,9 +391,16 @@ export function getCompositionImports(property: TSchema, swagger: ISwaggerSchema
     }
 
     const schema = property as TSchemaByType;
-    
+
     if (isAllOf(schema)) {
-        return schema.allOf.flatMap(s => getCompositionImports(s, swagger, options));
+        const imports = schema.allOf.flatMap(s => getCompositionImports(s, swagger, options));
+        // Sibling `properties` next to allOf render inline (see transformAllOf),
+        // so their refs are part of this schema's imports too.
+        const ownProperties = (schema as { properties?: ISchemaProperties }).properties;
+        if (ownProperties && Object.keys(ownProperties).length > 0) {
+            imports.push(...transformProperties(ownProperties, swagger, options, (schema as { required?: string[] }).required ?? []).refs);
+        }
+        return imports;
     }
     if (isOneOf(schema)) {
         return schema.oneOf.flatMap(s => getCompositionImports(s, swagger, options));
@@ -482,7 +588,7 @@ function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema, o
         return ['any[]'];
     } else {
         const [typeSymbol, importRef] = transformType(arrayProperty, swagger, options);
-        return [`${typeSymbol}[]`, importRef];
+        return [`${wrapUnion(typeSymbol)}[]`, importRef];
     }
 }
 
@@ -494,8 +600,10 @@ export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): 
     const refPath = ref.split('/');
     refPath.shift(); // Remove '#'
     
-    // Use any to bypass strict type checking - safePluck handles undefined at runtime
-    const refPropertySchema = safePluck(swagger, refPath as any) as TSchemaByType | undefined;
+    // The ref path is only known at runtime - safePluck returns undefined when
+    // any segment is missing (e.g. a dangling or 2.0-style '#/definitions/' ref),
+    // so the tuple shape is asserted, not proven
+    const refPropertySchema = safePluck(swagger, refPath as unknown as [keyof ISwaggerSchema]) as unknown as TSchemaByType | undefined;
     const refPropertyKey = refPath[refPath.length - 1];
     
     return { refPropertySchema, refPropertyKey };
@@ -512,7 +620,7 @@ export function transformRefProperty(refProperty: TSchemaByType, refPropertyKey:
 export function isRefPropertyEnum(refProperty: TSchemaByType): boolean {
     if (!refProperty) return false;
     // Check if it's an enum (either integer or string enum)
-    return 'enum' in refProperty && Array.isArray((refProperty as any).enum);
+    return 'enum' in refProperty && Array.isArray(refProperty.enum);
 }
 
 export function isRef(property: TSchema | TParam): property is IRef {
@@ -530,7 +638,7 @@ export function isSchemaValueNullable(schema: TSchemaByType | undefined): boolea
     if ((schema as TSchemaWithType).nullable === true) {
         return true;
     }
-    const type = (schema as any).type;
+    const type = (schema as { type?: unknown }).type;
     return Array.isArray(type) && type.includes('null');
 }
 

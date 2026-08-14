@@ -1,0 +1,34 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`apiPathKey generation (Angular) the generated service renders consistently 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
+
+
+import { IWidgetDto } from './interfaces/widget-dto.interface';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class WidgetApiService extends ApiBaseService {
+  endpoint = 'Widget';
+
+  constructor() {
+    super();
+  }
+
+  getWidget(): Observable<IWidgetDto[]> {
+    return this.httpClient.get<IWidgetDto[]>(
+      this.getUrl('/')
+    );
+  }
+
+  getById(id: number): Observable<IWidgetDto> {
+    return this.httpClient.get<IWidgetDto>(
+      this.getUrl(\`/\${id}\`)
+    );
+  }
+}
+"
+`;

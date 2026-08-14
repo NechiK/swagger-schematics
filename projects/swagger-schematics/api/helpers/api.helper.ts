@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
-import { getApiMethodName, getApiResponseSymbol, getSuccessResponse, isBinaryResponse } from "../../types/utils/api";
+import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatBody } from "../../types/utils/params";
@@ -76,18 +76,32 @@ export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][
     }).filter(operation => !!operation) as [TPathOperationKey, TOperation][];
 }
 
-export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: ITransformTypeOptions): IParsedApiSchema => {
-    const defaultApiPathKey = '/api/';
+export type TTransformSwaggerSchemaOptions = ITransformTypeOptions & {
+    /** Path prefix that selects (and is stripped from) API paths. Default: '/api/'. */
+    apiPathKey?: string;
+};
+
+/** Ensures the configured prefix has both a leading and a trailing slash. */
+function normalizeApiPathPrefix(prefix: string): string {
+    let normalized = prefix.startsWith('/') ? prefix : `/${prefix}`;
+    if (!normalized.endsWith('/')) {
+        normalized += '/';
+    }
+    return normalized;
+}
+
+export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: TTransformSwaggerSchemaOptions): IParsedApiSchema => {
+    const apiPathPrefix = normalizeApiPathPrefix(options?.apiPathKey || '/api/');
 
     const apiPaths = swaggerSchema.paths;
     const apiPathKeys = Object.keys(apiPaths);
 
     const transformedSwaggerSchema = apiPathKeys.reduce((apiParsedSchema, apiPathKey: string) => {
-        if (!apiPathKey.match(/^\/api\//)) {
-            console.warn(`Path ${apiPathKey} doesn't match ${defaultApiPathKey} pattern. Skipping...`);
+        if (!apiPathKey.startsWith(apiPathPrefix)) {
+            console.warn(`Path ${apiPathKey} doesn't match ${apiPathPrefix} pattern. Skipping...`);
             return apiParsedSchema;
         }
-        const [nameSegment, ...segments]: string[] = apiPathKey.slice(defaultApiPathKey.length).split('/');
+        const [nameSegment, ...segments]: string[] = apiPathKey.slice(apiPathPrefix.length).split('/');
         const swaggerPath: IPath = apiPaths[apiPathKey];
         const apiPrefix: string = nameSegment;
         if (!apiParsedSchema.hasOwnProperty(apiPrefix)) {
@@ -100,10 +114,10 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
         const apiOperations = getPathOperations(swaggerPath);
 
-        apiParsedSchema[apiPrefix].apiList = apiParsedSchema[apiPrefix].apiList.concat(apiOperations.map((
+        apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
             [operationKey, operation]
         ): IParsedApiItem => {
-            const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey);
+            const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey, apiPathPrefix);
             const {
                 queryParams,
                 pathParams,
@@ -180,14 +194,14 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 requestMethod: operationKey,
                 bodyParam,
                 responseTypeSymbol,
-                response: getSuccessResponse(operation.responses),
+                response: resolveSuccessResponse(operation.responses, swaggerSchema)?.response,
                 // Operation metadata
                 deprecated: operation.deprecated,
                 summary: operation.summary,
                 description: operation.description,
                 operationId: operation.operationId,
                 hasNullableQueryParams,
-                isBinaryResponse: isBinaryResponse(operation),
+                isBinaryResponse: isBinaryResponse(operation, swaggerSchema),
             };
         }));
 

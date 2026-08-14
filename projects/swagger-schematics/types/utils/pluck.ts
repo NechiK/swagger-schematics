@@ -1,4 +1,4 @@
-export function isDefined(val: unknown): val is NonNullable<any> {
+export function isDefined<T>(val: T): val is NonNullable<T> {
     return val !== null && val !== undefined;
 }
 
@@ -104,10 +104,13 @@ export function safePluck<T extends object,
     ) {
         return undefined;
     }
-    let prop = stateObject[keysArr.shift() as K1];
+    let prop: unknown = stateObject[keysArr.shift() as K1];
 
-    keysArr.forEach(key => {
-            prop = (prop as any)[key];
-    });
-    return prop;
+    for (const key of keysArr) {
+        if (prop === null || prop === undefined) {
+            return undefined;
+        }
+        prop = (prop as Record<PropertyKey, unknown>)[key];
+    }
+    return prop as T[K1];
 }

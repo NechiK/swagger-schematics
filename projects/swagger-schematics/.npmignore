@@ -8,7 +8,11 @@ package-lock.json
 # Test files
 karma.conf.js
 tests
+__tests__
 jest.global-setup.js
+
+# Packed tarballs (never ship a build artifact inside the package)
+*.tgz
 
 # Ignores TypeScript files, but keeps definitions.
 *.ts

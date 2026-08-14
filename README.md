@@ -84,7 +84,7 @@ You can create an `openapi-schematics.json` file in the root of your project to 
 {
   "swaggerSchemaUrl": "https://api.example.com/swagger/v1/swagger.json",
   "path": "/src/app/core",
-  "baseApiServicesPath": "/src/app/core/api",
+  "baseApiPath": "/src/app/core/api/_api-base.service.ts",
   "framework": "angular"
 }
 ```

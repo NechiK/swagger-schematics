@@ -5,7 +5,6 @@
     "build:debug": "npm run build && (cd projects/swagger-schematics && npm link)",
     "test": "(cd projects/swagger-schematics && npm run test)",
     "version:prerelease": "(cd projects/swagger-schematics && npm version prerelease)",
-    "publish": "npm run build && (cd projects/swagger-schematics && npm publish --provenance --access public)",
     "publish:debug": "npm run build && (cd projects/swagger-schematics && npm pack)"
   }
 }

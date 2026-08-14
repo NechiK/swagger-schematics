@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Mirrors "engines" in projects/swagger-schematics/package.json:
+        # ^20.19.0 || ^22.12.0 || >=24.0.0
+        node-version: [20.19.0, 22.12.0, 24.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: projects/swagger-schematics/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefix projects/swagger-schematics
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

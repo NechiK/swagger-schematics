@@ -2,7 +2,7 @@ import {ISwaggerSchema} from '../../interfaces/version_3_1/swagger.interface';
 import {camelize, capitalize} from '@angular-devkit/core/src/utils/strings';
 import { TOperation, TPathOperationKey } from '../../interfaces/version_3_1/operation.interface';
 import { THttpStatusCode } from '../../interfaces/http-status-code.enum';
-import { TTypeWithImport, transformType, ITransformTypeOptions } from './transform-type';
+import { TTypeWithImports, transformTypeWithAllImports, ITransformTypeOptions, isBinarySchema } from './transform-type';
 import { IResponse, TResponse } from '../../interfaces/version_3_1/response.interface';
 
 /**
@@ -55,9 +55,9 @@ export function getOperationSecurity(apiMethod: TOperation): Record<string, stri
  * Gets the response type from the operation, checking multiple status codes
  * Priority: 200 -> 201 -> 202 -> 204 -> 2XX -> default
  */
-export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports {
     const responses = apiMethod.responses;
-    
+
     // Priority order for success responses
     const successCodes = [
         THttpStatusCode.OK,       // 200
@@ -65,55 +65,61 @@ export function getApiResponseSymbol(apiMethod: TOperation, swaggerData: ISwagge
         THttpStatusCode.Accepted, // 202
         THttpStatusCode.NoContent // 204
     ];
-    
+
     // Try specific success codes first
     for (const code of successCodes) {
         const response = responses[code];
         if (response) {
             // 204 No Content should return void
             if (code === THttpStatusCode.NoContent) {
-                return ['void'];
+                return ['void', []];
             }
             const result = extractResponseType(response, swaggerData, options);
             if (result) return result;
         }
     }
-    
+
     // Try wildcard 2XX
     const response2XX = (responses as any)['2XX'];
     if (response2XX) {
         const result = extractResponseType(response2XX, swaggerData, options);
         if (result) return result;
     }
-    
+
     // Try default response
     const defaultResponse = (responses as any)['default'];
     if (defaultResponse) {
         const result = extractResponseType(defaultResponse, swaggerData, options);
         if (result) return result;
     }
-    
-    return ['void'];
+
+    return ['void', []];
 }
 
 /**
  * Extracts the type from a response object
  */
-function extractResponseType(response: any, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport | null {
+function extractResponseType(response: any, swaggerData: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports | null {
     if (!response.content) {
         return null;
     }
-    
+
     // Try application/json first, then other content types
     const contentTypes = ['application/json', 'text/plain', '*/*'];
-    
+
     for (const contentType of contentTypes) {
         const content = response.content[contentType];
         if (content?.schema) {
-            return transformType(content.schema, swaggerData, options);
+            return transformTypeWithAllImports(content.schema, swaggerData, options);
         }
     }
-    
+
+    // OpenAPI 3.1 binary responses: application/octet-stream, with or without
+    // a schema (3.1 allows omitting the schema entirely for raw binary)
+    if (response.content['application/octet-stream']) {
+        return ['Blob', []];
+    }
+
     return null;
 }
 
@@ -151,8 +157,9 @@ export function getSuccessResponse(responses: TResponse): IResponse | undefined 
 }
 
 /**
- * Checks whether the operation's success response is binary content
- * (a schema of type string with format binary, e.g. a file download)
+ * Checks whether the operation's success response is binary content:
+ * a string schema with format: binary (3.0) or contentMediaType (3.1),
+ * or an application/octet-stream response (3.1, schema optional).
  */
 export function isBinaryResponse(apiMethod: TOperation): boolean {
     const response = getSuccessResponse(apiMethod.responses);
@@ -160,10 +167,10 @@ export function isBinaryResponse(apiMethod: TOperation): boolean {
     if (!content) {
         return false;
     }
-    return Object.values(content).some((media: any) => {
-        const schema = media?.schema;
-        return !!schema && !('$ref' in schema) && schema.type === 'string' && schema.format === 'binary';
-    });
+    if (content['application/octet-stream']) {
+        return true;
+    }
+    return Object.values(content).some((media: any) => isBinarySchema(media?.schema));
 }
 
 type TOperationPredictionProperties = 'summary' | 'description';

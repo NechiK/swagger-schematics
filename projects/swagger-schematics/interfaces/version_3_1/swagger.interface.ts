@@ -32,16 +32,24 @@ export interface ISchemaBase {
     description?: string;
     default?: any;
     example?: any;
+    /** OpenAPI 3.1 (JSON Schema): examples replaces the schema-level example keyword */
+    examples?: any[];
     required?: string[];
     minLength?: number;
     maxLength?: number;
     pattern?: string;
-    exclusiveMinimum?: boolean;
-    exclusiveMaximum?: boolean;
+    /** boolean in OpenAPI 3.0, number in OpenAPI 3.1 (JSON Schema) */
+    exclusiveMinimum?: boolean | number;
+    exclusiveMaximum?: boolean | number;
     minimum?: number;
     maximum?: number;
     multipleOf?: number;
+    /** OpenAPI 3.0 only - 3.1 expresses nullability via type arrays (e.g. ["string", "null"]) */
     nullable?: boolean;
+    /** OpenAPI 3.1 (JSON Schema): media type of string content, e.g. application/octet-stream for binary */
+    contentMediaType?: string;
+    /** OpenAPI 3.1 (JSON Schema): encoding of string content, e.g. base64 */
+    contentEncoding?: string;
     // Additional properties from OpenAPI spec
     readOnly?: boolean;
     writeOnly?: boolean;

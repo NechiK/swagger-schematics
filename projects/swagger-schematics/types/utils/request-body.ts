@@ -1,7 +1,7 @@
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { TOperationWithRequestBody } from "../../interfaces/version_3_1/operation.interface";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
-import { IImportRef, transformType, ITransformTypeOptions } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions } from "./transform-type";
 import { IParsedParam } from "./params";
 import { IContent, IMediaType, TKnownContentType } from "../../interfaces/version_3_1/content.interface";
 
@@ -16,15 +16,15 @@ const CONTENT_TYPE_PRIORITY: TKnownContentType[] = [
     '*/*'
 ];
 
-export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>, options?: ITransformTypeOptions): [IParsedParam<any> | null, IImportRef | undefined] {
+export function transformRequestBody(operation: TOperationWithRequestBody, swaggerData: ISwaggerSchema<string>, options?: ITransformTypeOptions): [IParsedParam<any> | null, IImportRef[]] {
     const apiRequestBody = operation.requestBody;
     let typeSymbol: string | undefined;
-    let importRef: IImportRef | undefined;
+    let importRefs: IImportRef[] = [];
     let parsedRequestBodyParams: IParsedParam<any> | null = null;
 
     if (apiRequestBody) {
         if ('$ref' in apiRequestBody) {
-            [typeSymbol, importRef] = transformType(apiRequestBody, swaggerData, options);
+            [typeSymbol, importRefs] = transformTypeWithAllImports(apiRequestBody, swaggerData, options);
         } else {
             const typedApiRequestBody = apiRequestBody as IRequestBody;
             const content = typedApiRequestBody.content;
@@ -37,7 +37,7 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
                 // File/form uploads are sent as FormData - the schema describes wire fields, not a JSON DTO
                 typeSymbol = 'FormData';
             } else if (mediaType?.schema) {
-                [typeSymbol, importRef] = transformType(mediaType.schema, swaggerData, options);
+                [typeSymbol, importRefs] = transformTypeWithAllImports(mediaType.schema, swaggerData, options);
             } else {
                 typeSymbol = 'any';
             }
@@ -52,7 +52,7 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
         };
     }
 
-    return [parsedRequestBodyParams, importRef];
+    return [parsedRequestBodyParams, importRefs];
 }
 
 /**

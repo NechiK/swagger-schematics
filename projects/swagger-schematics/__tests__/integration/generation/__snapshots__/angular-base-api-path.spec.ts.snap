@@ -23,7 +23,7 @@ export class DocumentApiService extends ApiBaseService {
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
-      { params: { page, force } }
+      { params: omitBy({ page, force }, isNil) }
     );
   }
 

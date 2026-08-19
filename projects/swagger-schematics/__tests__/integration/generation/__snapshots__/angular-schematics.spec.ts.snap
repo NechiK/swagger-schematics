@@ -47,7 +47,7 @@ export class ClaimApiService extends ApiBaseService {
     return this.httpClient.post<void>(
       this.getUrl('/'),
       body,
-      { params: { width, height } }
+      { params: omitBy({ width, height }, isNil) }
     );
   }
 
@@ -128,7 +128,7 @@ export class ClaimApiService extends ApiBaseService {
   deleteClaimByFilter({ status, force }: { status: string; force?: boolean }): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
-      { params: { status, force } }
+      { params: omitBy({ status, force }, isNil) }
     );
   }
 
@@ -165,7 +165,7 @@ export class DocumentApiService extends ApiBaseService {
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
-      { params: { page, force } }
+      { params: omitBy({ page, force }, isNil) }
     );
   }
 

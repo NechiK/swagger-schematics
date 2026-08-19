@@ -15,7 +15,7 @@ export const documentApi = baseApi.injectEndpoints({
       query: ({ page, force }) => ({
         url: '/document',
         method: 'GET',
-        params: { page, force },
+        params: omitBy({ page, force }, isNil),
       }),
     }),
     documentGetDownloadByDocumentId: builder.query<Blob, { documentId: number; thumbnail?: boolean | null }>({
@@ -101,7 +101,7 @@ export const claimApi = baseApi.injectEndpoints({
         url: '/claim',
         method: 'POST',
         body,
-        params: { width, height },
+        params: omitBy({ width, height }, isNil),
       }),
     }),
     claimCreateClaimByIdNote: builder.mutation<IClaimNoteViewDTO, { id: number; body: ICreateNoteDTO }>({
@@ -181,7 +181,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ status, force }) => ({
         url: '/claim/by-filter',
         method: 'DELETE',
-        params: { status, force },
+        params: omitBy({ status, force }, isNil),
       }),
     }),
     claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status?: string | null; priority?: number | null }>({

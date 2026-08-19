@@ -3,7 +3,7 @@
 let apiExportName = camelize(name) + 'Api';
 %>
 import { api as baseApi } from '<%= baseApiImportPath %>';
-<% if (apiList.some(item => item.hasNullableQueryParams)) { %>
+<% if (apiList.some(item => item.hasOmittableQueryParams)) { %>
 import { omitBy, isNil } from 'lodash-es';
 <% } %>
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
@@ -24,7 +24,7 @@ export const <%= apiExportName %> = baseApi.injectEndpoints({
         url: <%= fullUrl %>,
         method: '<%= item.httpMethod %>',
 <% if (item.bodyParam) { %>        <%= item.bodyParam.objectSymbol %>,
-<% } if (item.queryParams.length > 0 && item.hasNullableQueryParams) { %>        params: omitBy({ <%= queryParamsList.join(', ') %> }, isNil),
+<% } if (item.queryParams.length > 0 && item.hasOmittableQueryParams) { %>        params: omitBy({ <%= queryParamsList.join(', ') %> }, isNil),
 <% } else if (item.queryParams.length > 0) { %>        params: { <%= queryParamsList.join(', ') %> },
 <% } if (item.isBinaryResponse) { %>        responseHandler: (response) => response.blob(),
 <% } %>      }),

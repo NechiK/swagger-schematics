@@ -16,6 +16,8 @@ Guidance for Claude Code when working in this repository.
 
 ## Release flow
 
-1. Bump `version` in `projects/swagger-schematics/package.json` and add a `CHANGELOG.md` entry (see `.agents/skills/changelog/SKILL.md`).
-2. Merge the PR into `develop` — the publish workflow releases to npm via Trusted Publishing (OIDC, no tokens) and derives the dist-tag from the version (`-beta.x` → `beta`, stable → `latest`); already-published versions are skipped.
+Releases are automated on merge to `develop` (see `.github/workflows/npm-publish.yml` and `CONTRIBUTING.md`):
+
+1. **Default (auto-bump)**: don't touch the version or CHANGELOG in a PR. After merge, CI derives the bump from the squash-commit title (`feat` → minor, `feat!`/`BREAKING CHANGE` → major, anything else → patch; `docs`/`chore`/`ci`/`test`/`style` → no release), bumps the version, inserts a CHANGELOG entry from the PR title, commits `chore(release): vX.Y.Z` back to `develop`, and publishes to npm via Trusted Publishing (OIDC, no tokens). The dist-tag derives from the version (`-beta.x` → `beta`, stable → `latest`).
+2. **Manual override**: bumping `version` in `projects/swagger-schematics/package.json` inside the PR (with a `CHANGELOG.md` entry — see `.agents/skills/changelog/SKILL.md`) makes CI publish exactly that version and skip the auto-bump. Use this for pre-releases, promoting a beta to stable, or curated changelog entries. On a pre-release version, auto-bump only advances the prerelease counter.
 3. `git tag v<version> && git push origin v<version>` creates the GitHub release with notes extracted from the CHANGELOG (only when asked — see git rules).

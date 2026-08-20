@@ -315,3 +315,7 @@ export class <%= classify(name) %>ApiService {
 <% } %>
 }
 ```
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, PR conventions, and how automated releases work (spoiler: you never need to bump the version yourself).

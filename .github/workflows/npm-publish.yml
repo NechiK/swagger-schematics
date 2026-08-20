@@ -8,33 +8,109 @@ on:
     paths:
       - 'projects/swagger-schematics/**'
 
+# Serialize runs so two merges can't race on the auto-bump commit
+concurrency:
+  group: npm-publish-develop
+  cancel-in-progress: false
+
 jobs:
-  check-version:
+  version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
-      should-publish: ${{ steps.check.outputs.should-publish }}
-      version: ${{ steps.check.outputs.version }}
+      should-publish: ${{ steps.decide.outputs.should-publish }}
+      version: ${{ steps.decide.outputs.version }}
+      publish-ref: ${{ steps.decide.outputs.publish-ref }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Check whether the version is already published
-        id: check
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Decide version (auto-bump when the PR didn't bump it)
+        id: decide
         run: |
+          set -euo pipefail
           VERSION=$(node -p "require('./projects/swagger-schematics/package.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if npm view "swagger-schematics@$VERSION" version >/dev/null 2>&1; then
-            echo "swagger-schematics@$VERSION already published - skipping publish job"
-            echo "should-publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "swagger-schematics@$VERSION not on npm yet - publishing"
+          echo "publish-ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
+          # A version not yet on npm means the PR bumped it manually - respect it as-is
+          if ! npm view "swagger-schematics@$VERSION" version >/dev/null 2>&1; then
+            echo "swagger-schematics@$VERSION not on npm yet - publishing as-is (manual bump)"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "should-publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
+          SUBJECT=$(git log -1 --format=%s)
+          BODY=$(git log -1 --format=%b)
+          TYPE=$(printf '%s' "$SUBJECT" | grep -oE '^[a-z]+' || true)
+
+          case "$TYPE" in
+            docs|chore|ci|test|style)
+              echo "'$TYPE' commit with no manual version bump - nothing to release"
+              echo "should-publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+
+          if printf '%s' "$SUBJECT" | grep -qE '^[a-z]+(\([^)]*\))?!:' || printf '%s' "$BODY" | grep -q 'BREAKING CHANGE'; then
+            BUMP=major
+          elif [ "$TYPE" = "feat" ]; then
+            BUMP=minor
+          else
+            BUMP=patch
+          fi
+          # On a pre-release line (1.3.0-beta.2), advance the pre-release counter;
+          # promoting to stable or changing the base version stays a manual decision
+          if [[ "$VERSION" == *-* ]]; then
+            BUMP=prerelease
+          fi
+
+          NEW_VERSION=$(cd projects/swagger-schematics && npm version "$BUMP" --no-git-tag-version)
+          NEW_VERSION="${NEW_VERSION#v}"
+          echo "Auto-bumping $VERSION -> $NEW_VERSION ($BUMP, from commit type '${TYPE:-none}')"
+
+          if npm view "swagger-schematics@$NEW_VERSION" version >/dev/null 2>&1; then
+            echo "::error::swagger-schematics@$NEW_VERSION is already on npm - the repo version is out of sync; bump it manually"
+            exit 1
+          fi
+
+          # Insert a CHANGELOG entry from the squash-commit title
+          case "$TYPE" in
+            feat) SECTION="### ✨ Added" ;;
+            fix)  SECTION="### 🐛 Fixed" ;;
+            *)    SECTION="### ♻️ Changed" ;;
+          esac
+          BULLET=$(printf '%s' "$SUBJECT" | sed -E 's/^[a-z]+(\([^)]*\))?!?: *//')
+          printf '## [%s] - %s\n\n%s\n- %s\n\n\n' \
+            "$NEW_VERSION" "$(date -u +%F)" "$SECTION" "$BULLET" > /tmp/changelog-entry.md
+          awk 'FNR==NR { entry = entry $0 ORS; next }
+               !done && /^## \[/ { printf "%s", entry; done=1 }
+               { print }' \
+            /tmp/changelog-entry.md projects/swagger-schematics/CHANGELOG.md > /tmp/changelog.md
+          mv /tmp/changelog.md projects/swagger-schematics/CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add projects/swagger-schematics/package.json \
+                  projects/swagger-schematics/package-lock.json \
+                  projects/swagger-schematics/CHANGELOG.md
+          git commit -m "chore(release): v$NEW_VERSION [skip ci]"
+          git push origin HEAD:develop
+
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "publish-ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "should-publish=true" >> "$GITHUB_OUTPUT"
+
   npm-publish:
-    needs: check-version
-    if: needs.check-version.outputs.should-publish == 'true'
+    needs: version
+    if: needs.version.outputs.should-publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,6 +119,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.publish-ref }}
 
       - name: Use Node.js
         uses: actions/setup-node@v7
@@ -62,7 +140,7 @@ jobs:
 
       - name: Publish
         run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
+          VERSION="${{ needs.version.outputs.version }}"
           if [[ "$VERSION" == *-* ]]; then
             PRERELEASE="${VERSION#*-}"
             TAG="${PRERELEASE%%.*}"

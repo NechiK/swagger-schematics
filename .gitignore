@@ -63,3 +63,6 @@ projects/swagger-schematics/LICENSE
 # Local generator experiments (swagger-schematics ... --path=/demo-output)
 /demo-output/
 /openapi-schematics.json
+
+# Local per-directory environment (direnv)
+.envrc

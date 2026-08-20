@@ -47,3 +47,32 @@ describe('enumLine escaping', () => {
     expect(line('A', 3)).toBe('    A = 3');
   });
 });
+
+describe('enumLine x-enum-descriptions', () => {
+  const line = (name: string, value: string | number, description?: string) =>
+    enumLine([name, value, description], 0, [[name, value, description]], '2');
+
+  it('emits a JSDoc block above the member when described', () => {
+    expect(line('BillingReference', 1, 'Stores the line number on the work item.'))
+      .toBe('  /** Stores the line number on the work item. */\n  BillingReference = 1');
+  });
+
+  it('emits nothing when the member has no description', () => {
+    expect(line('A', 1)).toBe('  A = 1');
+  });
+
+  it('treats an empty description as absent', () => {
+    // Undocumented members legitimately carry '' in the positional array, so an
+    // empty entry must not produce a bare `/**  */`.
+    expect(line('A', 1, '')).toBe('  A = 1');
+  });
+
+  it('collapses newlines so the comment stays on one line', () => {
+    expect(line('A', 1, 'first\n   second'))
+      .toBe('  /** first second */\n  A = 1');
+  });
+
+  it('neutralises a comment terminator inside the description', () => {
+    expect(line('A', 1, 'ends */ here')).toBe('  /** ends *\\/ here */\n  A = 1');
+  });
+});

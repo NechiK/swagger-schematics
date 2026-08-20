@@ -157,8 +157,16 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
             const isQuery = ['get', 'head'].includes(operationKey);
 
-            const hasNullableQueryParams = queryParams.some(p => {
+            // A query parameter needs stripping if its value can legitimately be absent at the
+            // call site, which is broader than nullability. An OPTIONAL parameter
+            // (`required: false`) is the common case: it is typically NOT nullable — schema
+            // `{"type":"boolean"}` — so a nullability-only test returns false, `omitBy` is never
+            // emitted, and `undefined` reaches the HTTP layer where it is stringified into the URL
+            // as `?flag=undefined`. Servers reject that on model binding, so the caller sees a
+            // server error for what is really a serialisation bug in generated code.
+            const hasOmittableQueryParams = queryParams.some(p => {
                 const param = p.originalParam;
+                if (!param.required) return true;
                 return param.schema ? isNullable(param.schema, swaggerSchema) : false;
             });
 
@@ -189,7 +197,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 isQuery,
                 httpMethod: operationKey.toUpperCase(),
                 apiUrlFormatted: formatApiUrl(apiUrl),
-                queryParamsFormatted: formatQueryParams(queryParams, hasNullableQueryParams),
+                queryParamsFormatted: formatQueryParams(queryParams, hasOmittableQueryParams),
                 bodyFormatted: formatBody(bodyParam, operationKey),
                 requestMethod: operationKey,
                 bodyParam,
@@ -200,7 +208,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 summary: operation.summary,
                 description: operation.description,
                 operationId: operation.operationId,
-                hasNullableQueryParams,
+                hasOmittableQueryParams,
                 isBinaryResponse: isBinaryResponse(operation, swaggerSchema),
             };
         }));

@@ -10,6 +10,7 @@ export interface ISwaggerSchematicsEnumSchema extends ISwaggerSchematicsBaseSche
     data: {
         enum: Array<string | number>;
         'x-enum-varnames'?: string[];
+        'x-enum-descriptions'?: string[];
     }
 }
 

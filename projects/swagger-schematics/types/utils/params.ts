@@ -183,10 +183,15 @@ export interface IParsedApiItem {
     bodyFormatted: string;
 
     /**
-     * Whether any query parameter is nullable (has nullable: true or default: null).
-     * When true, params should be wrapped in omitBy(params, isNil) to strip null/undefined values.
+     * Whether any query parameter's value can legitimately be absent — because it is OPTIONAL
+     * (`required: false`) or nullable. When true, params must be wrapped in
+     * omitBy(params, isNil) to strip null/undefined before they reach the HTTP layer.
+     *
+     * Optionality matters as much as nullability, and is the more common case: an optional
+     * non-nullable parameter left unset arrives as `undefined` and is stringified into the URL
+     * as `?flag=undefined` rather than omitted.
      */
-    hasNullableQueryParams: boolean;
+    hasOmittableQueryParams: boolean;
 
     /**
      * Whether the success response is binary content (type: string, format: binary).
@@ -325,12 +330,12 @@ export function formatApiUrl(apiUrl: string): string {
 /**
  * Formats query params for HTTP options object.
  * Example: "params: { status, force }" or ""
- * When hasNullable is true, wraps in omitBy to strip null/undefined values.
+ * When hasOmittable is true, wraps in omitBy to strip null/undefined values.
  */
-export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasNullable?: boolean): string {
+export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasOmittable?: boolean): string {
     if (queryParams.length === 0) return '';
     const paramsObj = `{ ${queryParams.map(p => p.objectSymbol).join(', ')} }`;
-    return hasNullable
+    return hasOmittable
         ? `params: omitBy(${paramsObj}, isNil)`
         : `params: ${paramsObj}`;
 }

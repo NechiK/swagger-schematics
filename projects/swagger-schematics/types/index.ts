@@ -103,6 +103,8 @@ export default function(options: SwaggerSchema): Rule {
               const parsed = parseName(`${openApiSchematicsConfig.path}/enums`, schemaData.name);
               const enumValuesList = schemaData.data.enum;
               const enumNamesList = schemaData.data['x-enum-varnames'];
+              // Sibling of x-enum-varnames: per-member documentation, positional against `enum`.
+              const enumDescriptionsList = schemaData.data['x-enum-descriptions'];
               itemSource = apply(enumTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,
@@ -114,9 +116,12 @@ export default function(options: SwaggerSchema): Rule {
                           // Fall back to the value per index - x-enum-varnames may be
                           // shorter than enum in malformed specs
                           const rawName = enumNamesList?.[currentIndex] ?? currentValue;
-                          parsedEnumValues.push([enums.toEnumMemberName(rawName, currentIndex), currentValue]);
+                          // Undocumented members legitimately carry an empty string in the
+                          // positional array, so treat empty as absent rather than emitting `/**  */`.
+                          const description = enumDescriptionsList?.[currentIndex] || undefined;
+                          parsedEnumValues.push([enums.toEnumMemberName(rawName, currentIndex), currentValue, description]);
                           return parsedEnumValues;
-                      }, [] as Array<[string | number, string | number]>),
+                      }, [] as Array<[string | number, string | number, string | undefined]>),
                       indentSize
                   }),
                   move(parsed.path)

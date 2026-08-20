@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { ApiBaseService } from "<%= baseApiImportPath %>";
 import { Observable } from "rxjs";
-<% if (apiList.some(item => item.hasNullableQueryParams)) { %>
+<% if (apiList.some(item => item.hasOmittableQueryParams)) { %>
 import { omitBy, isNil } from 'lodash-es';
 <% } %>
 

@@ -81,6 +81,7 @@ export interface ISchemaString extends ISchemaBase {
     format?: TStringFormat;
     enum?: string[];
     'x-enum-varnames'?: string[];
+    'x-enum-descriptions'?: string[];
 }
 
 export interface ISchemaInteger extends ISchemaBase {
@@ -88,6 +89,7 @@ export interface ISchemaInteger extends ISchemaBase {
     format?: 'int32' | 'int64';
     enum?: number[];
     'x-enum-varnames'?: string[];
+    'x-enum-descriptions'?: string[];
 }
 
 export interface ISchemaNumber extends ISchemaBase {

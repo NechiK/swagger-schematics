@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.2.1] - 2026-08-19
+
+### 🐛 Fixed
+- **Optional query parameters are omitted instead of serialized as the string `undefined`** - the guard deciding whether to wrap params in `omitBy(params, isNil)` tested whether a parameter was *nullable*, but the property that matters is whether its value can be **absent**. An optional parameter is usually not nullable — `required: false` with schema `{"type":"boolean"}` — so the guard returned `false`, nothing was stripped, and a caller who left the value out produced `?excludeInactive=undefined` in the URL (Angular's `HttpParams` stringifies `undefined`). Servers reject that during model binding, so the caller saw a **server error** for what was a serialization bug in generated code. Per the OpenAPI spec `required` defaults to `false` for query parameters, so an absent `required` is treated as optional; a required, non-nullable parameter still emits a plain `params: { ... }`
+
+### ✨ Added
+- **`x-enum-descriptions` are emitted as JSDoc on generated enum members** - the generator already read `x-enum-varnames` to *name* members; it now reads the sibling extension for the *description*, so per-member documentation written on the server reaches the consumer's editor as hover text instead of stopping at the OpenAPI document:
+  - The extension is **positional** against `enum` / `x-enum-varnames`, so an undocumented member legitimately carries `''` — empty is treated as absent rather than emitting a bare `/**  */`
+  - Newlines are collapsed so a multi-line summary stays on one comment line
+  - A literal `*/` inside a description is neutralized, so it cannot terminate the comment early and break the generated file
+
+### ♻️ Changed
+- ⚠️ **BREAKING**: `IParsedApiItem.hasNullableQueryParams` is renamed to `hasOmittableQueryParams` - it now reports whether any query parameter's value can be absent (optional **or** nullable), not just whether one is nullable. Keeping the old name would leave a field that returns `true` for a non-nullable parameter, which is how the next reader is misled; its own doc comment already described the broader intent ("strip null/undefined values"). Template authors referencing `item.hasNullableQueryParams` must rename
+
 ## [1.2.0] - 2026-08-14
 
 ### 🐛 Fixed

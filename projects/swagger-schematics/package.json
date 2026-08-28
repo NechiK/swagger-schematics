@@ -90,15 +90,15 @@
   "devDependencies": {
     "@types/jest": "30.0.0",
     "@types/json-schema": "7.0.15",
-    "@types/node": "26.2.0",
-    "@typescript-eslint/parser": "8.67.0",
-    "eslint": "10.8.1",
+    "@types/node": "26.3.0",
+    "@typescript-eslint/parser": "8.68.0",
+    "eslint": "10.9.1",
     "fs-extra": "11.4.0",
     "jest": "30.4.2",
     "json-schema-to-typescript": "15.0.4",
     "ts-jest": "29.4.12",
     "ts-node": "10.9.2",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.67.0"
+    "typescript-eslint": "8.68.0"
   }
 }

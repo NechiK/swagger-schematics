@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`x-aggregatable in generated interfaces renders a type that declares nothing exactly as before — no JSDoc, no union 1`] = `
+"
+
+export interface IPlainDto {
+  id: number;
+  name?: string | null;
+}
+"
+`;

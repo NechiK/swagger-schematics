@@ -357,14 +357,22 @@ export function transformTypeWithAllImports(property: TSchema, swagger: ISwagger
 export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions, requiredProperties: string[] = []): {
     propertiesContent: Array<[string, string]>;
     refs: IImportRef[];
+    /** Properties carrying `x-aggregatable`, with the operations each admits — the server's [Aggregatable] declaration, read here so the client can know before it calls. */
+    aggregatable: Array<[string, string[]]>;
 } {
     const transformed: Array<[string, string]> = [];
     const refs: IImportRef[] = [];
+    const aggregatable: Array<[string, string[]]> = [];
 
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
         const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(property, swagger, options);
         refs.push(...importRefs);
+
+        const declaredOps = (property as { 'x-aggregatable'?: unknown })['x-aggregatable'];
+        if (Array.isArray(declaredOps) && declaredOps.length > 0 && declaredOps.every(op => typeof op === 'string')) {
+            aggregatable.push([propertyKey, declaredOps as string[]]);
+        }
 
         const nullable = isNullable(property, swagger);
         const typeSymbol = nullable && !rawTypeSymbol.endsWith(' | null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
@@ -377,7 +385,8 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
 
     return {
         propertiesContent: transformed,
-        refs
+        refs,
+        aggregatable
     };
 }
 

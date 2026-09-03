@@ -32,12 +32,33 @@ export function transformRefsToImport(refs: IImportRef[], optionsPath: string, s
     }).join('\n');
 }
 
-export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string) {
+/**
+ * Render an interface's property lines. A property the server declared aggregatable
+ * (`x-aggregatable`, Trailhead API framework story 36355) gets a JSDoc line naming the
+ * operations it admits, so the declaration is visible at the property in the editor.
+ */
+export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string, aggregatable: Array<[string, string[]]> = []) {
     const indentString = ' '.repeat(parseInt(indentSize, 10));
+    const opsByProperty = new Map(aggregatable);
     return `${interfaceProperties.map(([property, type], index) => {
         const isNotLast = index !== interfaceProperties.length - 1;
-        return `${indentString}${property}: ${type};${isNotLast ? '\n' : ''}`
+        const ops = opsByProperty.get(property.replace(/\?$/, ''));
+        const doc = ops ? `${indentString}/** @aggregatable ${ops.join(', ')} */\n` : '';
+        return `${doc}${indentString}${property}: ${type};${isNotLast ? '\n' : ''}`
     }).join('')}`;
+}
+
+/**
+ * The names a search may aggregate on this result type, as a string-literal union — so a client
+ * building an `aggregates` request gets a compile-time check on the column name. Empty when the
+ * type declares nothing, so interfaces without aggregates render exactly as before.
+ */
+export function aggregatableColumnsType(interfaceName: string, aggregatable: Array<[string, string[]]> = []) {
+    if (aggregatable.length === 0) {
+        return '';
+    }
+    const union = aggregatable.map(([property]) => `'${property}'`).join(' | ');
+    return `\n\n/** Columns of ${interfaceName} a paged search can aggregate (see each property's @aggregatable). */\nexport type ${interfaceName}AggregatableColumn = ${union};`;
 }
 
 export function buildImport(fromPath: string, toPath: string, symbolName: string) {

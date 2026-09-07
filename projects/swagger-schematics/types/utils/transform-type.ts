@@ -357,7 +357,7 @@ export function transformTypeWithAllImports(property: TSchema, swagger: ISwagger
 export function transformProperties(properties: ISchemaProperties, swagger: ISwaggerSchema, options?: ITransformTypeOptions, requiredProperties: string[] = []): {
     propertiesContent: Array<[string, string]>;
     refs: IImportRef[];
-    /** Properties carrying `x-aggregatable`, with the operations each admits — the server's [Aggregatable] declaration, read here so the client can know before it calls. */
+    /** Properties carrying `x-aggregatable`, with the operations each admits — the server's declaration, read here so the client can know before it calls. */
     aggregatable: Array<[string, string[]]>;
 } {
     const transformed: Array<[string, string]> = [];

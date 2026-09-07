@@ -4,9 +4,9 @@ import { createSwaggerSchema, createGetOperation } from '../../helpers/factories
 export type TAggregatableMockApiPath = '/api/Journal' | '/api/Plain';
 
 /**
- * A result type whose server declared two properties aggregatable via `x-aggregatable`
- * (Trailhead API framework story 36355), beside one it did not — and a second type that
- * declares nothing, so "renders exactly as before" is a discriminating claim.
+ * A result type whose server declared two properties aggregatable via `x-aggregatable`, beside
+ * one it did not — and a second type that declares nothing, so "renders exactly as before" is a
+ * discriminating claim.
  */
 export const AGGREGATABLE_SWAGGER_SCHEMA: ISwaggerSchema<TAggregatableMockApiPath> = createSwaggerSchema<TAggregatableMockApiPath>({
   paths: {

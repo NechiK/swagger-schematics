@@ -34,8 +34,8 @@ export function transformRefsToImport(refs: IImportRef[], optionsPath: string, s
 
 /**
  * Render an interface's property lines. A property the server declared aggregatable
- * (`x-aggregatable`, Trailhead API framework story 36355) gets a JSDoc line naming the
- * operations it admits, so the declaration is visible at the property in the editor.
+ * (`x-aggregatable`) gets a JSDoc line naming the operations it admits, so the
+ * declaration is visible at the property in the editor.
  */
 export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string, aggregatable: Array<[string, string[]]> = []) {
     const indentString = ' '.repeat(parseInt(indentSize, 10));

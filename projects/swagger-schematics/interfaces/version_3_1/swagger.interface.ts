@@ -28,7 +28,7 @@ export interface IServerVariable {
 }
 
 export interface ISchemaBase {
-    /** Story 36355 (Trailhead API framework): the aggregate operations this property admits, e.g. ['Sum','Avg']. Absent = not aggregatable. */
+    /** The aggregate operations this property admits, e.g. ['Sum','Avg']. Absent = not aggregatable. */
     'x-aggregatable'?: string[];
     title?: string;
     description?: string;

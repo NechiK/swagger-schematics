@@ -4,8 +4,7 @@ import { resetFetchMocks, runFullSchematics, ANGULAR_SCHEMATIC_OPTIONS } from '@
 import { AGGREGATABLE_SWAGGER_SCHEMA } from '@fixtures/swagger/aggregatable-schema.fixture';
 
 /**
- * `x-aggregatable` (Trailhead API framework story 36355) is the server's declaration of which
- * result columns a paged search may aggregate. The generator surfaces it twice: a JSDoc line on the
+ * `x-aggregatable` is the server's declaration of which result columns a paged search may aggregate. The generator surfaces it twice: a JSDoc line on the
  * property naming the admitted operations, and a string-literal union of the column names so an
  * `aggregates` request gets a compile-time check. A type that declares nothing must render exactly
  * as it did before — that is the control that makes the other assertions discriminating.

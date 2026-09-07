@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.3.0] - 2026-09-07
+
+### ✨ Added
+- **`x-aggregatable` on a schema property is surfaced in the generated interface** - a server that declares which result columns a paged search may aggregate now reaches the consumer's editor, instead of the declaration stopping at the OpenAPI document:
+  - The property gets a JSDoc line naming the operations it admits, e.g. `/** @aggregatable Sum, Avg, Min, Max, CountDistinct */`, in the order the server listed them
+  - A string-literal union of the declared column names is exported beside the interface as `export type I<Name>AggregatableColumn = 'a' | 'b';`, so code building an aggregate request gets a compile-time check on the column name
+  - The extension is read from the property schema and must be a non-empty array of strings; anything else is ignored
+  - A type that declares nothing renders **exactly** as before - no JSDoc, no union (snapshot-pinned), so the change is inert for documents that do not use the extension
+  - `ISchemaBase` gains the optional `'x-aggregatable'?: string[]` field, and `transformProperties()` returns a third member, `aggregatable`, alongside `propertiesContent` and `refs`
+
+
 ## [1.2.1] - 2026-08-19
 
 ### 🐛 Fixed

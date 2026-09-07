@@ -28,6 +28,8 @@ export interface IServerVariable {
 }
 
 export interface ISchemaBase {
+    /** The aggregate operations this property admits, e.g. ['Sum','Avg']. Absent = not aggregatable. */
+    'x-aggregatable'?: string[];
     title?: string;
     description?: string;
     default?: unknown;

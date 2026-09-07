@@ -167,6 +167,51 @@ When mapping to another schema, the `nullable` property from the original type i
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.
 
 
+## OpenAPI Vendor Extensions
+
+Some `x-` extensions in the source document are read and reflected in the generated code. All of them are optional: a document that omits an extension generates exactly what it generated before, so none of this is opt-in configuration - it follows the schema.
+
+| Extension | Where | What is generated |
+|---|---|---|
+| `x-enum-varnames` | on an enum schema | Names the generated enum members instead of deriving them from the values. Positional against `enum`; an entry missing from the array falls back to the value-derived name |
+| `x-enum-descriptions` | on an enum schema | A JSDoc line above the member it documents, so the description written on the server becomes hover text in the consumer's editor. Positional against `enum`; an empty string is treated as undocumented rather than emitting an empty comment |
+| `x-aggregatable` | on a schema **property** | The operations the server admits for that column, as `/** @aggregatable Sum, Avg */` on the property, plus a string-literal union of the declared column names exported beside the interface |
+
+### `x-aggregatable`
+
+For an API whose paged search endpoints can return aggregates, the server can declare which result columns each operation is allowed on:
+
+```json
+{
+  "JournalDto": {
+    "type": "object",
+    "required": ["hours"],
+    "properties": {
+      "hours": { "type": "number", "x-aggregatable": ["Sum", "Avg", "Min", "Max", "CountDistinct"] },
+      "notes": { "type": "string" }
+    }
+  }
+}
+```
+
+generates:
+
+```typescript
+export interface IJournalDto {
+  /** @aggregatable Sum, Avg, Min, Max, CountDistinct */
+  hours: number;
+  notes?: string;
+}
+
+/** Columns of IJournalDto a paged search can aggregate (see each property's @aggregatable). */
+export type IJournalDtoAggregatableColumn = 'hours';
+```
+
+The union is emitted only when at least one property declares the extension, so an interface with no aggregatable columns is generated as it always was. The value must be a non-empty array of strings; anything else is ignored.
+
+Note that this describes only *which* columns may be aggregated. Building the request and reading the result is the API's own contract - if your API publishes its aggregate request/result schemas, the generator turns those into types like any other.
+
+
 ## Custom Templates
 
 You can provide your own EJS templates to fully customize the generated code. Use the `apiServiceTemplatePath` and `baseApiTemplatePath` options to specify paths to your custom templates.

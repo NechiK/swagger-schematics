@@ -158,7 +158,7 @@ export default function(options: SwaggerSchema): Rule {
           } else {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
-            const {propertiesContent, refs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
+            const {propertiesContent, refs, aggregatable} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
                 typeMapping: openApiSchematicsConfig.typeMapping,
                 legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
             }, (schemaData.data as { required?: string[] }).required ?? []);
@@ -174,6 +174,7 @@ export default function(options: SwaggerSchema): Rule {
                     optionsPath: openApiSchematicsConfig.path,
                     sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                     propertiesContent,
+                    aggregatable,
                     importRefs,
                     indentSize
                 }),

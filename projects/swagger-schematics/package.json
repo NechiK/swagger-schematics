@@ -81,10 +81,10 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
-    "@angular-devkit/core": "20.3.34",
-    "@angular-devkit/schematics": "20.3.34",
-    "@angular-devkit/schematics-cli": "20.3.34",
-    "@schematics/angular": "20.3.34",
+    "@angular-devkit/core": "22.1.7",
+    "@angular-devkit/schematics": "21.2.23",
+    "@angular-devkit/schematics-cli": "21.2.23",
+    "@schematics/angular": "22.1.7",
     "editorconfig": "3.0.2"
   },
   "devDependencies": {

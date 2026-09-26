@@ -20,7 +20,7 @@ import { SwaggerApiSchema } from './schema';
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
-import { FRAMEWORK_CONFIGS, TFrameworkType } from '../interfaces/swagger-schematics/framework';
+import { FRAMEWORK_CONFIGS, resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
 import { getBaseApiImportPath, resolveAngularBaseApiDir } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
@@ -62,12 +62,8 @@ export default function(options: SwaggerApiSchema) {
             throw new SchematicsException(`Path for API services is not defined in the configuration.`);
         }
 
-        if (!config.framework) {
-            throw new SchematicsException(`Framework is not defined in the configuration. Please set 'framework' to 'angular' or 'react-rtk'.`);
-        }
-
-        const framework = config.framework;
-        const frameworkConfig = FRAMEWORK_CONFIGS[framework as TFrameworkType];
+        const framework = resolveFramework(config.framework);
+        const frameworkConfig = FRAMEWORK_CONFIGS[framework];
 
         const swagger: ISwaggerSchema = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
 

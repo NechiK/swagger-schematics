@@ -26,14 +26,14 @@ npm i -D swagger-schematics
 2. Run the CLI
 
 ```bash
-npx swagger-schematics all swaggerUrl --path=/src/app/core
+npx swagger-schematics all swaggerUrl --path=/src/app/core --framework=angular
 ```
 
 Or run the schematics individually:
 
 ```bash
 npx swagger-schematics types swaggerUrl --path=/src/app/core
-npx swagger-schematics api swaggerUrl --path=/src/app/core
+npx swagger-schematics api swaggerUrl --path=/src/app/core --framework=angular
 ```
 
 Useful flags: `--dry-run` (report files without writing), `--help`, `--version`.
@@ -46,7 +46,7 @@ The previous invocation keeps working:
 
 ```bash
 npx schematics swagger-schematics:types swaggerUrl --path=/src/app/core
-npx schematics swagger-schematics:api swaggerUrl --path=/src/app/core
+npx schematics swagger-schematics:api swaggerUrl --path=/src/app/core --framework=angular
 ```
 
 Note: the `schematics` binary comes from `@angular-devkit/schematics-cli` in your
@@ -157,7 +157,7 @@ When mapping to another schema, the `nullable` property from the original type i
 | `apiPathKey`             | string  | api        | Path prefix that selects which API paths are generated; stripped before grouping and method naming. Defaults to `/api/`                                          |
 | `apiServiceTemplatePath` | string  | api        | Custom template path for API service generation                                                                                                                  |
 | `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
-| `framework`              | string  | api        | Target framework: `"angular"` (default) or `"react-rtk"`                                                                                                         |
+| `framework`              | string  | api        | Target framework: `"angular"` or `"react-rtk"`. **Required** for `api` (no default) - set it in `openapi-schematics.json` or pass `--framework`                |
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |

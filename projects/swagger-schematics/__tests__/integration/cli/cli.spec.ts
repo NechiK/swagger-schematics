@@ -95,6 +95,61 @@ describe('swagger-schematics CLI', () => {
     expect(serviceContent).toContain('export class WidgetApiService extends ApiBaseService');
   }, 120000);
 
+  it('should fail with a clear error when framework is not set', () => {
+    fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
+      swaggerSchemaUrl: './schema.json',
+      path: '/src/app/core'
+    }));
+
+    const output = runCli('api', true);
+
+    expect(output).toContain('EXIT:1');
+    expect(output).toContain("Framework is not defined in the configuration. Please set 'framework' to 'angular' or 'react-rtk'.");
+  }, 120000);
+
+  it('should fail with a clear error for an unsupported framework in the config file', () => {
+    fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
+      swaggerSchemaUrl: './schema.json',
+      path: '/src/app/core',
+      framework: 'react'
+    }));
+
+    const output = runCli('api', true);
+
+    expect(output).toContain('EXIT:1');
+    expect(output).toContain("Framework 'react' is not supported. Please set 'framework' to 'angular' or 'react-rtk'.");
+    expect(output).not.toContain('TypeError');
+  }, 120000);
+
+  it.each([
+    ['missing', {}, 'Framework is not defined in the configuration.'],
+    ['unsupported', { framework: 'react' }, "Framework 'react' is not supported."]
+  ])('should fail the all command on a %s framework before writing any types', (_case, frameworkConfig, message) => {
+    fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
+      swaggerSchemaUrl: './schema.json',
+      path: '/src/app/core',
+      ...frameworkConfig
+    }));
+
+    const output = runCli('all', true);
+
+    expect(output).toContain('EXIT:1');
+    expect(output).toContain(message);
+    expect(output).not.toContain('CREATE');
+    expect(fs.existsSync(path.join(projectDir, 'src'))).toBe(false);
+  }, 120000);
+
+  it('should accept the framework from a CLI flag for the all command', () => {
+    fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
+      swaggerSchemaUrl: './schema.json',
+      path: '/src/app/core'
+    }));
+
+    const output = runCli('all --framework=angular');
+
+    expect(output).toContain('CREATE src/app/core/widget-api.service.ts');
+  }, 120000);
+
   it('should report but not write files with --dry-run', () => {
     const output = runCli('types --dry-run');
 

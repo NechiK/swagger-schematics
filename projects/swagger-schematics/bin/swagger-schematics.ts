@@ -4,6 +4,9 @@ import { createConsoleLogger } from '@angular-devkit/core/node';
 import { NodeWorkflow } from '@angular-devkit/schematics/tools';
 import { parseCliArgs, helpText, TCliCommand } from './cli-args';
 import { logSchematicError } from '../helpers/error-logging.helper';
+import { getOpenapiSchematicsConfig } from '../helpers/config';
+import { resolveFramework } from '../interfaces/swagger-schematics/framework';
+import { SwaggerApiSchema } from '../api/schema';
 import { version } from '../package.json';
 
 const COLLECTION_PATH = path.join(__dirname, '..', 'collection.json');
@@ -83,6 +86,16 @@ async function main(): Promise<void> {
     const schematics: Array<'types' | 'api'> = args.command === 'all'
         ? ['types', 'api']
         : [args.command as Exclude<TCliCommand, 'all'>];
+
+    if (args.command === 'all') {
+        // `all` runs types before api: validate what api needs up front, so a
+        // missing or unsupported framework fails before any types are written.
+        const config = getOpenapiSchematicsConfig({
+            ...args.options,
+            swaggerSchemaUrl: args.options.swaggerSchemaUrl ?? args.positionals[0]
+        } as SwaggerApiSchema);
+        resolveFramework(config.framework);
+    }
 
     for (const schematic of schematics) {
         await runSchematic(schematic, args.options, args.positionals, args.dryRun);

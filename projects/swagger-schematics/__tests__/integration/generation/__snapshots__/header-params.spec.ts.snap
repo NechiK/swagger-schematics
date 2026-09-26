@@ -1,0 +1,98 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`header parameters in generated code Angular: passes headers in the HttpClient options for GET, PUT and DELETE 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
+
+import { omitBy, isNil } from 'lodash-es';
+
+
+import { IOrderDto } from './interfaces/order-dto.interface';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class OrdersApiService extends ApiBaseService {
+  endpoint = 'Orders';
+
+  constructor() {
+    super();
+  }
+
+  getById(id: number, { xTenantId, ifNoneMatch }: { xTenantId: string; ifNoneMatch?: string }): Observable<IOrderDto> {
+    return this.httpClient.get<IOrderDto>(
+      this.getUrl(\`/\${id}\`),
+      { headers: { 'X-Tenant-Id': String(xTenantId), ...(ifNoneMatch != null ? { 'If-None-Match': String(ifNoneMatch) } : {}) } }
+    );
+  }
+
+  putOrdersById(id: number, body: IOrderDto, { ifMatch, xVersion }: { ifMatch?: string; xVersion?: number | null } = {}): Observable<void> {
+    return this.httpClient.put<void>(
+      this.getUrl(\`/\${id}\`),
+      body,
+      { headers: { ...(ifMatch != null ? { 'If-Match': String(ifMatch) } : {}), ...(xVersion != null ? { 'X-Version': String(xVersion) } : {}) } }
+    );
+  }
+
+  deleteOrdersById(id: number, { idempotencyKey }: { idempotencyKey: string }): Observable<void> {
+    return this.httpClient.delete<void>(
+      this.getUrl(\`/\${id}\`),
+      { headers: { 'Idempotency-Key': String(idempotencyKey) } }
+    );
+  }
+
+  getOrders({ page }: { page?: number }, { xTrace }: { xTrace?: string } = {}): Observable<IOrderDto[]> {
+    return this.httpClient.get<IOrderDto[]>(
+      this.getUrl('/'),
+      { params: omitBy({ page }, isNil), headers: { ...(xTrace != null ? { 'X-Trace': String(xTrace) } : {}) } }
+    );
+  }
+}
+"
+`;
+
+exports[`header parameters in generated code RTK: passes headers in the query definition 1`] = `
+"
+import { api as baseApi } from '@th-common/store/api-base';
+
+import { omitBy, isNil } from 'lodash-es';
+
+import { IOrderDto } from './interfaces/order-dto.interface';
+
+export const ordersApi = baseApi.injectEndpoints({
+  overrideExisting: false,
+  endpoints: (builder) => ({
+    ordersGetById: builder.query<IOrderDto, { id: number; xTenantId: string; ifNoneMatch?: string }>({
+      query: ({ id, xTenantId, ifNoneMatch }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'GET',
+        headers: { 'X-Tenant-Id': String(xTenantId), ...(ifNoneMatch != null ? { 'If-None-Match': String(ifNoneMatch) } : {}) },
+      }),
+    }),
+    ordersPutOrdersById: builder.mutation<void, { id: number; ifMatch?: string; xVersion?: number | null; body: IOrderDto }>({
+      query: ({ id, ifMatch, xVersion, body }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'PUT',
+        body,
+        headers: { ...(ifMatch != null ? { 'If-Match': String(ifMatch) } : {}), ...(xVersion != null ? { 'X-Version': String(xVersion) } : {}) },
+      }),
+    }),
+    ordersDeleteOrdersById: builder.mutation<void, { id: number; idempotencyKey: string }>({
+      query: ({ id, idempotencyKey }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'DELETE',
+        headers: { 'Idempotency-Key': String(idempotencyKey) },
+      }),
+    }),
+    ordersGetOrders: builder.query<IOrderDto[], { page?: number; xTrace?: string }>({
+      query: ({ page, xTrace }) => ({
+        url: '/orders',
+        method: 'GET',
+        params: omitBy({ page }, isNil),
+        headers: { ...(xTrace != null ? { 'X-Trace': String(xTrace) } : {}) },
+      }),
+    }),
+  }),
+});"
+`;

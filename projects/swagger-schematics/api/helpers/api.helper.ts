@@ -3,7 +3,7 @@ import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/ve
 import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
-import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatBody } from "../../types/utils/params";
+import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
 import { IImportRef, ITransformTypeOptions, isNullable } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 
@@ -67,7 +67,9 @@ export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][
                         ...operation,
                         parameters: (operation.parameters || []).map(param => ({
                             ...param,
-                            name: camelize(param.name || '')
+                            // A header's name is sent on the wire, so it keeps its exact
+                            // spelling; transformOperationParams camelizes its variable name
+                            name: param.in === 'header' ? (param.name || '') : camelize(param.name || '')
                         }))
                     }
                 ] as [TPathOperationKey, TOperation];
@@ -127,8 +129,17 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 pathParams,
                 headerParams,
                 cookieParams,
+                skippedHeaderParams,
                 importRefs: paramImportRefs
             } = transformOperationParams(operation, swaggerSchema, options);
+
+            if (!options?.silent) {
+                skippedHeaderParams.forEach(headerName => {
+                    console.warn(`Header parameter '${headerName}' of ${operationKey.toUpperCase()} ${apiPathKey} is skipped: ` +
+                        `only letters, digits, '-' and '_' are supported in header names (and not a reserved word). ` +
+                        `The generated method will not send it.`);
+                });
+            }
 
             if (paramImportRefs.length > 0) {
                 apiParsedSchema[apiPrefix].importRefs.push(...paramImportRefs);
@@ -187,22 +198,26 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 apiMethodParams: transformParamsToApiMethodParams({
                     pathParams,
                     queryParams,
+                    headerParams,
                     bodyParam,
                 }),
                 apiMethodParamNames: extractApiMethodParamNames({
                     pathParams,
                     queryParams,
+                    headerParams,
                     bodyParam,
                 }),
                 apiMethodRequestType: buildApiMethodRequestType({
                     pathParams,
                     queryParams,
+                    headerParams,
                     bodyParam,
                 }),
                 isQuery,
                 httpMethod: operationKey.toUpperCase(),
                 apiUrlFormatted: formatApiUrl(apiUrl),
                 queryParamsFormatted: formatQueryParams(queryParams, hasOmittableQueryParams),
+                headerParamsFormatted: formatHeaderParams(headerParams),
                 bodyFormatted: formatBody(bodyParam, operationKey),
                 requestMethod: operationKey,
                 bodyParam,

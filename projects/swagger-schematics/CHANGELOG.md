@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `apiPath` on each parsed API item (`IParsedApiItem`): the operation's path as written in the document (e.g. `/api/Users/{id}`), available to custom templates
 
 ### 🐛 Fixed
+- **Header parameters are sent** - operations declaring `in: header` parameters (e.g. .NET `[FromHeader]` for `X-Tenant-Id`, `If-Match`, `Idempotency-Key`) generated methods without them, so the header was silently never sent. They are now part of the generated method and the request:
+  - Angular: a trailing object parameter, `{ ifMatch }: { ifMatch?: string }`, sent in the HttpClient options as `headers`. When every header is optional the object defaults to `{}`, so existing calls keep compiling; a required header makes it required
+  - RTK: added to the query argument and sent as `headers` in the query definition
+  - Header names are sent exactly as declared; the variable is the name in camelCase (`X-Tenant-Id` -> `xTenantId`)
+  - A header name with anything beyond letters, digits, `-` and `_` (valid in HTTP but not seen in real APIs, e.g. `X-Odd'Name`), or one that becomes a reserved word (`delete`), is skipped with a warning naming the header and the endpoint, rather than renamed or failing the run
+  - Values are sent as strings, and an optional header is added only when it has a value (HttpClient throws on an `undefined` header value, and `null` would be sent as the string "null")
+  - `Accept`, `Content-Type` and `Authorization` header parameters are ignored, as the OpenAPI spec requires. Cookie parameters stay out of the generated method: browsers attach cookies themselves and do not let scripts set the `Cookie` header
+  - New template fields `headerParamsFormatted` on each parsed API item; `transformParamsToApiMethodParams()`, `extractApiMethodParamNames()` and `buildApiMethodRequestType()` accept `headerParams`
 - **`swagger-schematics all` loads the schema once** - `types` and `api` each fetched the document, so every run made two requests (or two file reads), and a backend deploy landing between them could generate types and services from different versions of the API. The CLI now loads the schema once per run and gives each schematic its own copy of it
   - A failed load is not reused, and the legacy `npx schematics swagger-schematics:…` commands (one process per schematic) are unaffected
   - `enableSwaggerSchemaCache()` is exported from `helpers/swagger-schema.helper` for programmatic callers; the cache is off unless turned on, so a long-lived process that regenerates after the API changed still loads the new document

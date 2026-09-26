@@ -6,7 +6,7 @@ import { IParsedApiItem } from '../../types/utils/params';
  * Returns an array of argument strings for flexible template formatting
  */
 export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
-    const { apiMethodType, bodyFormatted, queryParamsFormatted, isBinaryResponse } = item;
+    const { apiMethodType, bodyFormatted, queryParamsFormatted, headerParamsFormatted, isBinaryResponse } = item;
     const parts: string[] = [];
     // Binary responses need responseType: 'blob' in the options object
     const responseTypeFormatted = isBinaryResponse ? `responseType: 'blob'` : '';
@@ -14,7 +14,7 @@ export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
     if (apiMethodType === 'post' || apiMethodType === 'put') {
         // POST/PUT: body is second argument, options object is third
         parts.push(bodyFormatted || 'null');
-        const options = [queryParamsFormatted, responseTypeFormatted].filter(Boolean);
+        const options = [queryParamsFormatted, headerParamsFormatted, responseTypeFormatted].filter(Boolean);
         if (options.length > 0) {
             parts.push(`{ ${options.join(', ')} }`);
         }
@@ -27,6 +27,9 @@ export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
         if (queryParamsFormatted) {
             options.push(queryParamsFormatted);
         }
+        if (headerParamsFormatted) {
+            options.push(headerParamsFormatted);
+        }
         if (responseTypeFormatted) {
             options.push(responseTypeFormatted);
         }
@@ -35,7 +38,7 @@ export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
         }
     } else {
         // GET, HEAD, etc: options object with params
-        const options = [queryParamsFormatted, responseTypeFormatted].filter(Boolean);
+        const options = [queryParamsFormatted, headerParamsFormatted, responseTypeFormatted].filter(Boolean);
         if (options.length > 0) {
             parts.push(`{ ${options.join(', ')} }`);
         }

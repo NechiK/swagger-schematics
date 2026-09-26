@@ -180,6 +180,13 @@ export interface IParsedApiItem {
     queryParamsFormatted: string;
 
     /**
+     * Pre-formatted header params for HTTP options, sent under their exact names.
+     * Optional ones are left out when null/undefined; values are sent as strings.
+     * Example: "headers: { 'If-Match': String(ifMatch) }" or empty string if none.
+     */
+    headerParamsFormatted: string;
+
+    /**
      * Body parameter name or empty object for POST/PUT without body.
      * Example: "body" or "{}" or empty string for non-body methods.
      */
@@ -204,34 +211,83 @@ export interface IParsedApiItem {
     isBinaryResponse: boolean;
 }
 
+/** Header parameters the OpenAPI spec says to ignore (compared lowercase). */
+const IGNORED_HEADER_PARAMS = ['accept', 'content-type', 'authorization'];
+
+const RESERVED_WORDS = new Set([
+    'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else',
+    'enum', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof',
+    'new', 'null', 'return', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void',
+    'while', 'with', 'yield', 'let', 'static', 'implements', 'interface', 'package', 'private', 'protected',
+    'public', 'await'
+]);
+
+/**
+ * The generated variable for a header: its name in camelCase ('X-Tenant-Id' ->
+ * xTenantId). Returns null for a name that doesn't map to a usable variable:
+ * anything beyond letters, digits, '-' and '_' (valid in HTTP, but not seen in
+ * real APIs), or one that turns into a reserved word. Such headers are skipped
+ * with a warning rather than renamed into something nobody would expect.
+ */
+export function toHeaderParamSymbol(headerName: string): string | null {
+    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(headerName)) {
+        return null;
+    }
+    const symbol = headerName
+        .split(/[-_]+/)
+        .filter(Boolean)
+        .map((word, index) => index === 0
+            ? word.charAt(0).toLowerCase() + word.slice(1)
+            : word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
+    return RESERVED_WORDS.has(symbol) ? null : symbol;
+}
+
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     queryParams: IParsedParam<IQueryParam>[];
     pathParams: IParsedParam<IPathParam>[];
     headerParams: IParsedParam<IHeaderParam>[];
     cookieParams: IParsedParam<ICookieParam>[];
+    /** Header names left out because they don't map to a usable variable (see toHeaderParamSymbol) */
+    skippedHeaderParams: string[];
     importRefs: IImportRef[];
 } => {
     const queryParams: IParsedParam<IQueryParam>[] = [];
     const pathParams: IParsedParam<IPathParam>[] = [];
     const headerParams: IParsedParam<IHeaderParam>[] = [];
     const cookieParams: IParsedParam<ICookieParam>[] = [];
+    const skippedHeaderParams: string[] = [];
     const importRefs: IImportRef[] = [];
 
     if (operation.parameters) {
         operation.parameters.forEach(apiParam => {
+            // Per the OpenAPI spec, header parameters named Accept, Content-Type or
+            // Authorization SHALL be ignored: the HTTP client and interceptors own those
+            if (apiParam.in === 'header' && IGNORED_HEADER_PARAMS.includes(apiParam.name.toLowerCase())) {
+                return;
+            }
+            const headerSymbol = apiParam.in === 'header' ? toHeaderParamSymbol(apiParam.name) : null;
+            if (apiParam.in === 'header' && !headerSymbol) {
+                skippedHeaderParams.push(apiParam.name);
+                return;
+            }
+
             // Resolve the parameter's type once - typeSymbol and functionSymbol
             // derive from the same resolution, so they cannot drift
             const { typeSymbol, isParamNullable, importRefs: paramImportRefs } = resolveParamType(apiParam, swagger, options);
 
             importRefs.push(...paramImportRefs);
 
+            // Headers keep their wire name in originalParam (e.g. 'If-Match'); the
+            // generated variable is its camelized form (ifMatch)
+            const symbol = headerSymbol ?? apiParam.name;
             const isOptional = !apiParam.required || isParamNullable;
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
-                functionSymbol: `${apiParam.name}${isOptional ? '?' : ''}: ${typeSymbol}`,
-                interpolationSymbol: `\${${apiParam.name}}`,
+                functionSymbol: `${symbol}${isOptional ? '?' : ''}: ${typeSymbol}`,
+                interpolationSymbol: `\${${symbol}}`,
                 typeSymbol,
-                objectSymbol: apiParam.name,
+                objectSymbol: symbol,
             };
 
             switch (apiParam.in) {
@@ -255,6 +311,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
         pathParams,
         headerParams,
         cookieParams,
+        skippedHeaderParams,
         importRefs
     };
 }
@@ -262,28 +319,36 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 export function transformParamsToApiMethodParams(params: {
     pathParams: IParsedParam<IPathParam>[];
     queryParams: IParsedParam<IQueryParam>[];
+    headerParams?: IParsedParam<IHeaderParam>[];
     bodyParam: TParsedBodyParam | null;
 }): string {
+    const headerParams = params.headerParams ?? [];
+    // Headers come last, and default to {} when all are optional, so a call
+    // written before the operation declared them keeps compiling
+    const headersObject = transformParamsToObject(headerParams);
     const methodParams: string[] = [
         params.pathParams.map(param => param.functionSymbol).join(', '),
         transformParamsToObject(params.queryParams),
-        params.bodyParam ? params.bodyParam.functionSymbol : ''
+        params.bodyParam ? params.bodyParam.functionSymbol : '',
+        headersObject && headerParams.every(isParamOptional) ? `${headersObject} = {}` : headersObject
     ].filter(item => !!item);
     return methodParams.join(', ');
 }
 
 /**
  * Extracts just the parameter names (without types) for use in destructuring.
- * @returns Array of parameter names in order: pathParams, queryParams, bodyParam
+ * @returns Array of parameter names in order: pathParams, queryParams, headerParams, bodyParam
  */
 export function extractApiMethodParamNames(params: {
     pathParams: IParsedParam<IPathParam>[];
     queryParams: IParsedParam<IQueryParam>[];
+    headerParams?: IParsedParam<IHeaderParam>[];
     bodyParam: TParsedBodyParam | null;
 }): string[] {
     const names: string[] = [
         ...params.pathParams.map(param => param.objectSymbol),
         ...params.queryParams.map(param => param.objectSymbol),
+        ...(params.headerParams ?? []).map(param => param.objectSymbol),
     ];
     if (params.bodyParam) {
         names.push(params.bodyParam.objectSymbol);
@@ -298,6 +363,7 @@ export function extractApiMethodParamNames(params: {
 export function buildApiMethodRequestType(params: {
     pathParams: IParsedParam<IPathParam>[];
     queryParams: IParsedParam<IQueryParam>[];
+    headerParams?: IParsedParam<IHeaderParam>[];
     bodyParam: TParsedBodyParam | null;
 }): string {
     const typeParts: string[] = [];
@@ -306,7 +372,7 @@ export function buildApiMethodRequestType(params: {
         typeParts.push(`${p.objectSymbol}: ${p.typeSymbol}`);
     });
     
-    params.queryParams.forEach(p => {
+    [...params.queryParams, ...(params.headerParams ?? [])].forEach(p => {
         typeParts.push(`${p.objectSymbol}${isParamOptional(p) ? '?' : ''}: ${p.typeSymbol}`);
     });
     
@@ -341,6 +407,26 @@ export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasO
     return hasOmittable
         ? `params: omitBy(${paramsObj}, isNil)`
         : `params: ${paramsObj}`;
+}
+
+/**
+ * Formats header params for HTTP options, under their exact wire names.
+ * Values are sent as strings (both HttpClient and fetch take string headers).
+ * An optional header is added only when it has a value: HttpClient throws on
+ * an undefined header value, and a null one would be sent as "null".
+ * Example: "headers: { 'If-Match': String(ifMatch), ...(tenant != null ? { 'X-Tenant': String(tenant) } : {}) }"
+ */
+export function formatHeaderParams(headerParams: IParsedParam<IHeaderParam>[]): string {
+    if (headerParams.length === 0) return '';
+    const entries = headerParams.map(param => {
+        // Names are letters, digits, '-' and '_' only (see toHeaderParamSymbol), so plain quotes are safe
+        const name = `'${param.originalParam.name}'`;
+        const value = `String(${param.objectSymbol})`;
+        return isParamOptional(param)
+            ? `...(${param.objectSymbol} != null ? { ${name}: ${value} } : {})`
+            : `${name}: ${value}`;
+    });
+    return `headers: { ${entries.join(', ')} }`;
 }
 
 /**

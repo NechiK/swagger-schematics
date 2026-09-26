@@ -308,6 +308,8 @@ Each item in `apiList` has the following properties:
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Array of parsed query parameters                                                                     |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
+| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); empty when none |
+| `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
 | `pathParams`             | array    | Array of parsed path parameters                                                                      |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |
 | `summary`                | string   | Operation summary from OpenAPI spec                                                                  |

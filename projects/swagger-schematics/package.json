@@ -1,6 +1,6 @@
 {
   "name": "swagger-schematics",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Generate TypeScript types and API services (Angular HttpClient / RTK Query) from OpenAPI/Swagger schemas",
   "bin": {
     "swagger-schematics": "bin/swagger-schematics.js"

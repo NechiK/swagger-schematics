@@ -51,6 +51,9 @@ export type TParsedBodyParam = IParsedParam<IRequestBody | IRef>;
 export interface IParsedApiItem {
     /** The URL of the API. */
     apiUrl: string;
+
+    /** The operation's path exactly as written in the OpenAPI document, e.g. '/api/Users/{id}'. */
+    apiPath: string;
     
     /** 
      * An array containing parsed query parameters.

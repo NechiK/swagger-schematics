@@ -8,11 +8,13 @@ import { enableSwaggerSchemaCache } from '../helpers/swagger-schema.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { SwaggerApiSchema } from '../api/schema';
+import { runChangeSummary } from '../helpers/api-changes/change-summary';
+import { IFileCounts } from '../helpers/api-changes/format';
 import { version } from '../package.json';
 
 const COLLECTION_PATH = path.join(__dirname, '..', 'collection.json');
 
-async function runSchematic(schematic: 'types' | 'api', options: Record<string, string | boolean>, positionals: string[], dryRun: boolean): Promise<void> {
+async function runSchematic(schematic: 'types' | 'api', options: Record<string, string | boolean>, positionals: string[], dryRun: boolean, files: IFileCounts): Promise<void> {
     const logger = createConsoleLogger();
 
     const workflow = new NodeWorkflow(process.cwd(), {
@@ -33,9 +35,11 @@ async function runSchematic(schematic: 'types' | 'api', options: Record<string, 
         switch (event.kind) {
             case 'create':
             case 'update':
+                files[event.kind === 'create' ? 'created' : 'updated']++;
                 logger.info(`${event.kind.toUpperCase()} ${eventPath} (${event.content.byteLength} bytes)`);
                 break;
             case 'delete':
+                files.deleted++;
                 logger.info(`DELETE ${eventPath}`);
                 break;
             case 'rename':
@@ -88,21 +92,36 @@ async function main(): Promise<void> {
         ? ['types', 'api']
         : [args.command as Exclude<TCliCommand, 'all'>];
 
+    let config: SwaggerApiSchema | null = null;
     if (args.command === 'all') {
         // `all` runs types before api: validate what api needs up front, so a
         // missing or unsupported framework fails before any types are written.
-        const config = getOpenapiSchematicsConfig({
+        config = getOpenapiSchematicsConfig({
             ...args.options,
             swaggerSchemaUrl: args.options.swaggerSchemaUrl ?? args.positionals[0]
         } as SwaggerApiSchema);
         resolveFramework(config.framework);
+    } else if (args.changeReport || args.options.schemaSnapshotPath) {
+        console.warn('[swagger-schematics] The API change summary runs with the all command only; ' +
+            'no snapshot or change report is written for a single schematic.');
     }
 
     // `all` runs types and api in this process: load the schema once for both
     enableSwaggerSchemaCache();
 
+    const files: IFileCounts = { created: 0, updated: 0, deleted: 0 };
     for (const schematic of schematics) {
-        await runSchematic(schematic, args.options, args.positionals, args.dryRun);
+        await runSchematic(schematic, args.options, args.positionals, args.dryRun, files);
+    }
+
+    if (config) {
+        const logger = createConsoleLogger();
+        try {
+            await runChangeSummary({ config, reportPath: args.changeReport, dryRun: args.dryRun, files, logger });
+        } catch (error) {
+            // The code is already generated; a summary failure must not turn the run red
+            logger.warn(`Could not build the API change summary: ${(error as Error).message}`);
+        }
     }
 }
 

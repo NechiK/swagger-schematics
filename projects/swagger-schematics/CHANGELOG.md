@@ -6,12 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.4.1] - 2026-09-26
+## [1.5.0] - 2026-09-26
+
+### ✨ Added
+- **API change summary** - with the new `schemaSnapshotPath` option, every `swagger-schematics all` run compares the schema with the snapshot the previous run saved and prints what changed, in the names found in the generated code (`IUserDto.email`, `UsersApiService.getById()`, `usersApi.getById`):
+  - **Breaking**: a removed interface, enum, type, property, enum member or endpoint, or a changed property declaration (type, optionality, nullability), enum member value, type alias or endpoint signature. **Added**: new interfaces, properties, enum members and endpoints
+  - Names, types and signatures come from the generator's own naming and type rendering, so they match the generated files
+  - The snapshot is saved with sorted keys, so it only changes when the schema does. Commit it with the generated code; the first run only creates it
+  - `--dry-run` prints the summary and writes neither the snapshot nor the report
+  - Runs with `all` only: a single `types` or `api` run would update the snapshot for half the API
+- **`--change-report=<file>`** writes the same summary as markdown, e.g. for a pull request description from a CI pipeline. It stays under 4000 characters (the Azure DevOps limit) and ends with a count of the changes left out
+- `apiPath` on each parsed API item (`IParsedApiItem`): the operation's path as written in the document (e.g. `/api/Users/{id}`), available to custom templates
 
 ### 🐛 Fixed
 - **`swagger-schematics all` loads the schema once** - `types` and `api` each fetched the document, so every run made two requests (or two file reads), and a backend deploy landing between them could generate types and services from different versions of the API. The CLI now loads the schema once per run and gives each schematic its own copy of it
   - A failed load is not reused, and the legacy `npx schematics swagger-schematics:…` commands (one process per schematic) are unaffected
   - `enableSwaggerSchemaCache()` is exported from `helpers/swagger-schema.helper` for programmatic callers; the cache is off unless turned on, so a long-lived process that regenerates after the API changed still loads the new document
+
+### ♻️ Changed
+- The types schematic and the change summary share `getGeneratedSchemaKind()` (`types/utils/schema-kind.ts`) to decide what each component schema generates; generated output is unchanged
+- `transformSwaggerSchema()` accepts `silent: true` to skip its "Skipping..." warnings
 
 
 ## [1.4.0] - 2026-09-26

@@ -54,7 +54,8 @@ describe('swagger-schematics CLI', () => {
 
   const runCli = (cliArgs: string, expectFailure = false): string => {
     try {
-      return execSync(`"${tsNodeBin}" --transpile-only "${binSource}" ${cliArgs}`, {
+      // 2>&1: warnings (stderr) are part of what a user sees, so assert on them too
+      return execSync(`"${tsNodeBin}" --transpile-only "${binSource}" ${cliArgs} 2>&1`, {
         cwd: projectDir,
         encoding: 'utf8',
         timeout: 120000,
@@ -173,6 +174,80 @@ describe('swagger-schematics CLI', () => {
     expect(output).toContain('EXIT:1');
     expect(output).toContain('Swagger schema file not found');
   }, 120000);
+
+  describe('API change summary', () => {
+    const snapshotFile = () => path.join(projectDir, 'src/app/core/openapi.snapshot.json');
+    const reportFile = () => path.join(projectDir, 'api-changes.md');
+
+    beforeEach(() => {
+      fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
+        swaggerSchemaUrl: './schema.json',
+        path: '/src/app/core',
+        framework: 'angular',
+        schemaSnapshotPath: '/src/app/core/openapi.snapshot.json'
+      }));
+    });
+
+    const changeSchema = () => {
+      const changed = JSON.parse(JSON.stringify(SCHEMA));
+      delete changed.components.schemas.WidgetDto.properties.name;
+      changed.components.schemas.WidgetDto.properties.id = { type: 'string' };
+      changed.components.schemas.TagDto = { type: 'object', properties: { label: { type: 'string' } } };
+      fs.writeFileSync(path.join(projectDir, 'schema.json'), JSON.stringify(changed));
+    };
+
+    it('should save a snapshot on the first run and explain there is nothing to compare yet', () => {
+      const output = runCli('all --change-report=api-changes.md');
+
+      expect(output).toContain("No schema snapshot at /src/app/core/openapi.snapshot.json yet");
+      expect(JSON.parse(fs.readFileSync(snapshotFile(), 'utf8'))).toEqual(SCHEMA);
+      expect(fs.readFileSync(reportFile(), 'utf8')).toContain('No previous schema snapshot');
+    }, 120000);
+
+    it('should print and report what changed since the snapshot, then update it', () => {
+      runCli('all');
+      changeSchema();
+
+      const output = runCli('all --change-report=api-changes.md');
+
+      expect(output).toContain('API changes since the last snapshot: 2 breaking, 1 added');
+      expect(output).toContain('⚠ Property changed');
+      expect(output).toContain('IWidgetDto.id  id: number → id: string');
+      expect(output).toContain('IWidgetDto.name');
+      expect(output).toContain('+ Interface added');
+      expect(output).toContain('Wrote the API change report to api-changes.md');
+
+      const report = fs.readFileSync(reportFile(), 'utf8');
+      expect(report).toContain('## API changes: 2 breaking, 1 added');
+      expect(report).toContain('- Property removed: `IWidgetDto.name`');
+      expect(report).toContain('- Interface added: `ITagDto`');
+      expect(report).toContain('_Files: 1 created, ');
+
+      expect(JSON.parse(fs.readFileSync(snapshotFile(), 'utf8')).components.schemas.TagDto).toBeDefined();
+      expect(runCli('all')).toContain('API changes since the last snapshot: none');
+    }, 180000);
+
+    it('should print the summary but write no snapshot or report on --dry-run', () => {
+      runCli('all');
+      const snapshotBefore = fs.readFileSync(snapshotFile(), 'utf8');
+      changeSchema();
+
+      const output = runCli('all --dry-run --change-report=api-changes.md');
+
+      expect(output).toContain('API changes since the last snapshot: 2 breaking, 1 added');
+      expect(output).toContain('Dry run: the schema snapshot and change report were not written.');
+      expect(fs.readFileSync(snapshotFile(), 'utf8')).toBe(snapshotBefore);
+      expect(fs.existsSync(reportFile())).toBe(false);
+    }, 180000);
+
+    it('should not touch the snapshot when a single schematic runs', () => {
+      const output = runCli('types --change-report=api-changes.md');
+
+      expect(output).toContain('The API change summary runs with the all command only');
+      expect(fs.existsSync(snapshotFile())).toBe(false);
+      expect(fs.existsSync(reportFile())).toBe(false);
+    }, 120000);
+  });
 
   it('should fail with exit code 1 for an unknown command', () => {
     const output = runCli('generate', true);

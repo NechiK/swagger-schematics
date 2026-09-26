@@ -164,6 +164,7 @@ When mapping to another schema, the `nullable` property from the original type i
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
 | `legacyOptionalProperties` | boolean | types      | Legacy optionality for back-ends that don't emit a `required` array yet. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`) |
+| `schemaSnapshotPath`     | string  | `all` (CLI) | Where to keep a copy of the schema, relative to the project root, e.g. `/src/app/core/openapi.snapshot.json`. Turns on the [API change summary](#api-change-summary): each `swagger-schematics all` run compares the new schema with it, prints what changed, and updates it. Commit it with the generated code |
 | `removeStaleFiles`       | boolean | api, types | Delete previously generated files whose schema or endpoint group is no longer in the document (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
@@ -180,6 +181,32 @@ To know which files it owns, the generator keeps a `.swagger-schematics-manifest
 - **`--dry-run`** reports the deletions as `DELETE` lines without touching the files.
 - An endpoint group whose paths declare no operations no longer generates an empty service.
 
+
+### API change summary
+
+Set `schemaSnapshotPath` and every `swagger-schematics all` run tells you what the back-end changed, in the names you use in code:
+
+```
+API changes since the last snapshot: 3 breaking, 2 added
+  ⚠ Property changed   IOrderDto.total  total?: number → total?: string
+  ⚠ Property removed   IUserDto.middleName
+  ⚠ Endpoint removed   DELETE /api/Orders/{id}  OrdersApiService.deleteOrdersById()
+  + Interface added    IRoleDto
+  + Endpoint added     GET /api/Users/{id}/roles  UsersApiService.getRolesByUsersId()
+```
+
+- The run compares the schema with the snapshot the previous run saved, then saves the new one. **Commit the snapshot** with the generated code; the first run only creates it.
+- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone.
+- Names, types and signatures come from the generator itself, so they match the generated files (`IUserDto`, `UsersApiService.getById()`, or `usersApi.getById` for RTK).
+- A renamed property or endpoint shows as removed plus added.
+- `--dry-run` prints the summary without writing anything, which is a quick way to see what the back-end changed before regenerating.
+- Only the `swagger-schematics all` command runs it: a single `types` or `api` run would update the snapshot for half the API.
+
+For a CI pipeline, add `--change-report=<file>` to also write the summary as markdown, e.g. to use as a pull request description. It stays under 4000 characters (the Azure DevOps limit) and ends with a count of the rest when the list is longer:
+
+```bash
+npx swagger-schematics all --change-report=api-changes.md
+```
 
 ## OpenAPI Vendor Extensions
 
@@ -271,6 +298,7 @@ Each item in `apiList` has the following properties:
 | `apiMethodType`          | string   | HTTP method lowercase (e.g., "get", "post")                                                          |
 | `httpMethod`             | string   | HTTP method uppercase (e.g., "GET", "POST")                                                          |
 | `apiUrl`                 | string   | URL path with interpolation (e.g., "${id}/notes")                                                    |
+| `apiPath`                | string   | The operation's path as written in the document (e.g., "/api/Users/{id}")                          |
 | `apiUrlFormatted`        | string   | URL formatted for code (e.g., `` `/${id}/notes` ``)                                                  |
 | `isQuery`                | boolean  | True for GET/HEAD methods                                                                            |
 | `requestMethod`          | string   | HTTP method for httpClient (e.g., "get", "post")                                                     |

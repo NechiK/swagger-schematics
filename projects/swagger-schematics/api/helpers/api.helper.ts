@@ -79,6 +79,8 @@ export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][
 export type TTransformSwaggerSchemaOptions = ITransformTypeOptions & {
     /** Path prefix that selects (and is stripped from) API paths. Default: '/api/'. */
     apiPathKey?: string;
+    /** Don't log skipped paths and groups (the change summary re-parses documents the schematic already reported on). */
+    silent?: boolean;
 };
 
 /** Ensures the configured prefix has both a leading and a trailing slash. */
@@ -98,7 +100,9 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
     const transformedSwaggerSchema = apiPathKeys.reduce((apiParsedSchema, apiPathKey: string) => {
         if (!apiPathKey.startsWith(apiPathPrefix)) {
-            console.warn(`Path ${apiPathKey} doesn't match ${apiPathPrefix} pattern. Skipping...`);
+            if (!options?.silent) {
+                console.warn(`Path ${apiPathKey} doesn't match ${apiPathPrefix} pattern. Skipping...`);
+            }
             return apiParsedSchema;
         }
         const [nameSegment, ...segments]: string[] = apiPathKey.slice(apiPathPrefix.length).split('/');
@@ -172,6 +176,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
             return {
                 apiUrl,
+                apiPath: apiPathKey,
                 queryParams,
                 pathParams,
                 headerParams,
@@ -223,7 +228,9 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         // methods - drop it, so a controller whose endpoints were all removed
         // leaves no empty file behind.
         if (!schema.apiList.length) {
-            console.warn(`API group '${apiKey}' has no operations. Skipping...`);
+            if (!options?.silent) {
+                console.warn(`API group '${apiKey}' has no operations. Skipping...`);
+            }
             delete transformedSwaggerSchema[apiKey];
             return;
         }

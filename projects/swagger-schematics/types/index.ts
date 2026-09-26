@@ -10,7 +10,7 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
-import { isComposition, isPrimitiveWrapper } from "./utils/transform-type";
+import { getGeneratedSchemaKind } from "./utils/schema-kind";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
@@ -53,39 +53,11 @@ export default function(options: SwaggerSchema): Rule {
       const schemas = swagger.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
-        const schema = schemas[schemaKey];
-        
-        // Skip $ref schemas
-        if ('$ref' in schema) {
-            return;
-        }
-        
-        const typedSchema = schema as TSchemaByType;
-
-        // Skip primitive-wrapper schemas (e.g. a strongly-typed GUID/int/Stream:
-        // { type: 'string', format: 'uuid' }). They are inlined at every reference
-        // to their primitive (string/number/Blob), so a standalone file would be an
-        // unused, empty interface.
-        if (isPrimitiveWrapper(typedSchema)) {
+        const schemaType = getGeneratedSchemaKind(schemas[schemaKey]);
+        if (!schemaType) {
             return;
         }
 
-        // Handle composition schemas (allOf, oneOf, anyOf, not) as type-aliases.
-        // 'not' has no TypeScript equivalent and is emitted as `unknown` with an
-        // explanatory comment (see transformCompositionSchema) rather than skipped,
-        // so a $ref pointing at it does not dangle.
-        if (isComposition(typedSchema)) {
-            return {
-                name: schemaKey,
-                type: 'type-alias' as const,
-                data: schemas[schemaKey]
-            } as TSwaggerSchematicsSchema;
-        }
-        
-        // Check if it's an enum (integer or string with enum values)
-        const isEnum = 'enum' in typedSchema && Array.isArray(typedSchema.enum);
-        const schemaType = isEnum ? 'enum' : 'interface';
-        
         return {
             name: schemaKey,
             type: schemaType,

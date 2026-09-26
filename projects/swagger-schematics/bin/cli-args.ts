@@ -7,6 +7,8 @@ export interface IParsedCliArgs {
     /** Positional arguments after the command (first one is the schema source) */
     positionals: string[];
     dryRun: boolean;
+    /** `--change-report <file>`: write the API change summary as markdown (CLI-only, not passed to the schematics) */
+    changeReport?: string;
     help: boolean;
     version: boolean;
     /** Set when the first non-flag argument is not a known command */
@@ -112,6 +114,15 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
         parsed.positionals.push(token);
     }
 
+    if ('changeReport' in parsed.options) {
+        const changeReport = parsed.options.changeReport;
+        delete parsed.options.changeReport;
+        if (typeof changeReport !== 'string') {
+            throw new Error('--change-report needs a file path, e.g. --change-report=api-changes.md');
+        }
+        parsed.changeReport = changeReport;
+    }
+
     return parsed;
 }
 
@@ -131,6 +142,9 @@ Options:
   --<option>=<value>  Any schematic option (see README), e.g. --path=/src/app/core,
                       --framework=angular, --eslint-fix. Kebab-case is accepted
   --dry-run           Report generated files without writing them
+  --change-report=<file>
+                      With 'all': write the API change summary as markdown,
+                      e.g. for a pull request description (see schemaSnapshotPath)
   -h, --help          Show this help
   -v, --version       Show the package version
 

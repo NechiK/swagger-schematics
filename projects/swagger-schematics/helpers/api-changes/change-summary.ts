@@ -47,7 +47,11 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
                 typeMapping: config.typeMapping,
                 legacyOptionalProperties: config.legacyOptionalProperties,
                 apiPathKey: config.apiPathKey,
-                scopeEndpointsWithTags: config.scopeEndpointsWithTags
+                scopeEndpointsWithTags: config.scopeEndpointsWithTags,
+                // The same filters as the generation, so skipped APIs don't show as changes
+                includeApis: config.includeApis,
+                excludeApis: config.excludeApis,
+                excludeDeprecated: config.excludeDeprecated
             };
             changes = diffApiModels(buildApiModel(previous.schema, modelOptions), buildApiModel(current, modelOptions));
         } else if (previous.reason === 'invalid') {

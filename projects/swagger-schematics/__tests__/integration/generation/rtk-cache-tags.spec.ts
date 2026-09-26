@@ -84,6 +84,16 @@ describe('RTK cache tags', () => {
     expect(untagged.readContent(`${OUT}/orders.api.ts`)).not.toContain('TApiTag');
   });
 
+  it('generates no enum for an empty schema, so the stale-files safety net still keeps the slices', async () => {
+    const tagged = await runFullSchematics(SCHEMA, OPTIONS);
+
+    setupSwaggerMock(OPTIONS.swaggerSchemaUrl, { ...SCHEMA, paths: {} } as ISwaggerSchema);
+    const emptied = await runApiSchematic(OPTIONS, tagged);
+
+    expect(emptied.files).toContain(`${OUT}/orders.api.ts`);
+    expect(emptied.files).toContain(TAG_ENUM);
+  });
+
   it('is ignored with a warning for Angular', async () => {
     const warnings: string[] = [];
     const subscription = schematicRunner.logger.subscribe(entry => {

@@ -56,6 +56,31 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
     }
 }
 
+/**
+ * Generates `_provide-api.ts` (a standalone `provideApi({ baseUrl })`) next to
+ * the Angular base files. It builds on the API_BASE_URL token, so it is only
+ * generated when `_api-base-url.token.ts` exists; a custom base template
+ * without the token gets no provider rather than one that doesn't compile.
+ * Runs after the base API rule, so a token created in this run counts.
+ *
+ * Like the base files it is not recorded in the stale-files manifest: it does
+ * not come from the schema, and counting it would defeat the "a schema that
+ * produced nothing deletes nothing" safety net.
+ */
+function createProvideApiRule(baseApiDir: string): Rule {
+    return (tree: Tree, context: SchematicContext) => {
+        const tokenPath = `${baseApiDir}/_api-base-url.token.ts`;
+        if (!tree.exists(tokenPath)) {
+            context.logger.info(`provideApi: ${tokenPath} not found, so _provide-api.ts is not generated.`);
+            return;
+        }
+        return mergeWith(apply(url('./templates/angular/provider'), [
+            applyTemplates({}),
+            move(baseApiDir)
+        ]), MergeStrategy.Overwrite);
+    };
+}
+
 export default function(options: SwaggerApiSchema) {
     const apiRule: Rule = async (tree: Tree, context: SchematicContext) => {
         const config = getOpenapiSchematicsConfig(options);
@@ -76,7 +101,10 @@ export default function(options: SwaggerApiSchema) {
 
         const parsedApiSchemas = transformSwaggerSchema(swagger, {
             typeMapping: config.typeMapping,
-            apiPathKey: config.apiPathKey
+            apiPathKey: config.apiPathKey,
+            includeApis: config.includeApis,
+            excludeApis: config.excludeApis,
+            excludeDeprecated: config.excludeDeprecated
         });
 
         // Select templates based on framework
@@ -105,7 +133,8 @@ export default function(options: SwaggerApiSchema) {
         }
         const useCacheTags = !!config.rtkCacheTags && framework === 'react-rtk';
         const cacheTagFor = (apiSchemaKey: string) => toEnumMemberName(strings.classify(apiSchemaKey), 0);
-        if (useCacheTags) {
+        // No slices, no enum: an empty schema must generate nothing (see the stale-files safety net)
+        if (useCacheTags && Object.keys(parsedApiSchemas).length) {
             const cacheTagsSource = apply(url('./templates/react-rtk/cache-tags'), [
                 applyTemplates({ cacheTags: Object.keys(parsedApiSchemas).map(cacheTagFor) }),
                 move(config.path),
@@ -154,6 +183,11 @@ export default function(options: SwaggerApiSchema) {
         const baseApiRule = generateBaseApiRule(tree, framework, config, baseApiTemplates);
         if (baseApiRule) {
             rules.push(baseApiRule);
+        }
+
+        // Angular: provideApi() next to the base files, regenerated every run
+        if (framework === 'angular') {
+            rules.push(createProvideApiRule(baseApiPath.replace(/\/[^/]*$/, '')));
         }
 
         const eslintFixRule = createEslintFixRule(config);

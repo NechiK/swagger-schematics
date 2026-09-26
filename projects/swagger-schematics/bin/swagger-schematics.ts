@@ -14,7 +14,7 @@ import { version } from '../package.json';
 
 const COLLECTION_PATH = path.join(__dirname, '..', 'collection.json');
 
-async function runSchematic(schematic: 'types' | 'api', options: Record<string, string | boolean>, positionals: string[], dryRun: boolean, files: IFileCounts): Promise<void> {
+async function runSchematic(schematic: 'types' | 'api', options: Record<string, string | boolean | string[]>, positionals: string[], dryRun: boolean, files: IFileCounts): Promise<void> {
     const logger = createConsoleLogger();
 
     const workflow = new NodeWorkflow(process.cwd(), {

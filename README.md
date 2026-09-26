@@ -164,6 +164,9 @@ When mapping to another schema, the `nullable` property from the original type i
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
 | `legacyOptionalProperties` | boolean | types      | Legacy optionality for back-ends that don't emit a `required` array yet. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`) |
+| `includeApis`            | string[] | api       | Generate only these APIs: controller names as in the path (`Orders` for `/api/Orders/...`), case-insensitive, `*` as a wildcard. On the CLI, comma-separated. Unset: every API (see [Filtering APIs](#filtering-apis)) |
+| `excludeApis`            | string[] | api       | Skip these APIs, same matching as `includeApis`, e.g. `["Admin", "Internal*"]` |
+| `excludeDeprecated`      | boolean | api        | Skip operations marked `deprecated` (e.g. .NET `[Obsolete]`). Defaults to `false` |
 | `rtkCacheTags`           | boolean | api        | React RTK only: generate [cache tags](#rtk-cache-tags) so queries refetch after a mutation in the same slice. Defaults to `false` |
 | `schemaSnapshotPath`     | string  | `all` (CLI) | Where to keep a copy of the schema, relative to the project root, e.g. `/src/app/core/openapi.snapshot.json`. Turns on the [API change summary](#api-change-summary): each `swagger-schematics all` run compares the new schema with it, prints what changed, and updates it. Commit it with the generated code |
 | `removeStaleFiles`       | boolean | api, types | Delete previously generated files whose schema or endpoint group is no longer in the document (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
@@ -208,6 +211,40 @@ For a CI pipeline, add `--change-report=<file>` to also write the summary as mar
 ```bash
 npx swagger-schematics all --change-report=api-changes.md
 ```
+
+### Filtering APIs
+
+Every API in the document is generated unless you narrow it down, e.g. when one back-end serves several front-ends:
+
+```json
+{
+  "includeApis": ["Orders", "Users", "Catalog"],
+  "excludeApis": ["Admin", "Internal*"],
+  "excludeDeprecated": true
+}
+```
+
+- Names are the controller segment of the path (`Orders` for `/api/Orders/{id}`), matched case-insensitively; `*` matches anything, and the PascalCase form works too (`ReplacementQueue` for `/api/replacement-queue`)
+- `includeApis` keeps only the listed APIs; `excludeApis` then drops from what is left
+- `excludeDeprecated` skips deprecated operations; an API left with none is skipped entirely
+- An entry that matches no API is reported as a warning, to catch typos
+- The service of an API that becomes excluded is deleted on the next run (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)), and the [API change summary](#api-change-summary) applies the same filters
+- Filtering applies to API services only: the `types` schematic still generates every schema in the document
+
+### Angular: `provideApi()`
+
+Next to the base API files, the api schematic generates `_provide-api.ts`, so a standalone app configures the generated services in one line:
+
+```ts
+bootstrapApplication(AppComponent, {
+  providers: [provideHttpClient(), provideApi({ baseUrl: environment.apiUrl })],
+});
+
+// Or resolve the URL at runtime: the function runs in an injection context
+provideApi({ baseUrl: () => inject(AppConfig).apiUrl });
+```
+
+It provides the `API_BASE_URL` token the generated services read, and is regenerated on every run. It is generated only when `_api-base-url.token.ts` exists, so a custom base template without that token gets no provider.
 
 ### RTK cache tags
 

@@ -73,6 +73,24 @@
     "rtkCacheTags": {
       "type": "boolean",
       "description": "React RTK only: generate RTK Query cache tags, one per API slice. Queries provide their slice's tag and mutations invalidate it, so a list refetches after a create/update/delete in the same slice. The tags are the members of a generated TApiTag enum ('api-tag.enum.ts' in 'path'). Defaults to false."
+    },
+    "includeApis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Generate only these APIs: controller names as they appear in the path (e.g. 'Orders' for /api/Orders/...), case-insensitive, '*' as a wildcard. On the CLI, comma-separated. Unset or empty: every API is generated."
+    },
+    "excludeApis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Skip these APIs (same matching as includeApis), e.g. ['Admin', 'Internal*']. On the CLI, comma-separated."
+    },
+    "excludeDeprecated": {
+      "type": "boolean",
+      "description": "Skip operations marked 'deprecated' (e.g. .NET [Obsolete] endpoints). Defaults to false."
     }
   },
   "required": []

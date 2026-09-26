@@ -13,6 +13,9 @@ export interface IApiModelOptions {
     legacyOptionalProperties?: boolean;
     apiPathKey?: string;
     scopeEndpointsWithTags?: boolean;
+    includeApis?: string[];
+    excludeApis?: string[];
+    excludeDeprecated?: boolean;
 }
 
 export type TTypeModel =
@@ -104,6 +107,9 @@ function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IAp
     const groups = transformSwaggerSchema(swagger, {
         typeMapping: options.typeMapping,
         apiPathKey: options.apiPathKey,
+        includeApis: options.includeApis,
+        excludeApis: options.excludeApis,
+        excludeDeprecated: options.excludeDeprecated,
         silent: true
     });
     const endpoints: IApiModel['endpoints'] = {};

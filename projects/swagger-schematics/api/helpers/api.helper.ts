@@ -83,7 +83,28 @@ export type TTransformSwaggerSchemaOptions = ITransformTypeOptions & {
     apiPathKey?: string;
     /** Don't log skipped paths and groups (the change summary re-parses documents the schematic already reported on). */
     silent?: boolean;
+    /** Generate only these APIs (controller names, `*` wildcard, case-insensitive). Empty or unset: all. */
+    includeApis?: string[];
+    /** Skip these APIs (same matching as includeApis). */
+    excludeApis?: string[];
+    /** Skip operations marked `deprecated`. */
+    excludeDeprecated?: boolean;
 };
+
+/**
+ * Whether an API (the controller segment of the path, e.g. 'Orders' or
+ * 'replacement-queue') matches a filter pattern: case-insensitive, `*` matches
+ * anything, and the classified name counts too ('ReplacementQueue').
+ */
+export function matchesApiName(apiKey: string, pattern: string): boolean {
+    const regex = new RegExp(`^${pattern.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`, 'i');
+    return regex.test(apiKey) || regex.test(classify(apiKey));
+}
+
+function isApiIncluded(apiKey: string, options?: TTransformSwaggerSchemaOptions): boolean {
+    const included = !options?.includeApis?.length || options.includeApis.some(pattern => matchesApiName(apiKey, pattern));
+    return included && !(options?.excludeApis ?? []).some(pattern => matchesApiName(apiKey, pattern));
+}
 
 /** Ensures the configured prefix has both a leading and a trailing slash. */
 function normalizeApiPathPrefix(prefix: string): string {
@@ -99,6 +120,10 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
 
     const apiPaths = swaggerSchema.paths ?? {};
     const apiPathKeys = Object.keys(apiPaths);
+    // Every API in the document before filtering, to report filter patterns that match nothing
+    const allApiKeys = new Set<string>();
+    // APIs whose paths declare operations at all, to tell "empty in the document" from "all filtered out"
+    const declaresOperations = new Set<string>();
 
     const transformedSwaggerSchema = apiPathKeys.reduce((apiParsedSchema, apiPathKey: string) => {
         if (!apiPathKey.startsWith(apiPathPrefix)) {
@@ -110,6 +135,10 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         const [nameSegment, ...segments]: string[] = apiPathKey.slice(apiPathPrefix.length).split('/');
         const swaggerPath: IPath = apiPaths[apiPathKey];
         const apiPrefix: string = nameSegment;
+        allApiKeys.add(apiPrefix);
+        if (!isApiIncluded(apiPrefix, options)) {
+            return apiParsedSchema;
+        }
         if (!apiParsedSchema.hasOwnProperty(apiPrefix)) {
             apiParsedSchema[apiPrefix] = {
                 name: apiPrefix,
@@ -118,7 +147,13 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             };
         }
 
-        const apiOperations = getPathOperations(swaggerPath);
+        const declaredOperations = getPathOperations(swaggerPath);
+        if (declaredOperations.length) {
+            declaresOperations.add(apiPrefix);
+        }
+        const apiOperations = options?.excludeDeprecated
+            ? declaredOperations.filter(([, operation]) => !operation.deprecated)
+            : declaredOperations;
 
         apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
             [operationKey, operation]
@@ -243,7 +278,8 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         // methods - drop it, so a controller whose endpoints were all removed
         // leaves no empty file behind.
         if (!schema.apiList.length) {
-            if (!options?.silent) {
+            // Emptied by excludeDeprecated is intended, not worth a warning
+            if (!options?.silent && !declaresOperations.has(apiKey)) {
                 console.warn(`API group '${apiKey}' has no operations. Skipping...`);
             }
             delete transformedSwaggerSchema[apiKey];
@@ -252,6 +288,14 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         // Remove import duplicates
         schema.importRefs = removeImportDuplicates(schema.importRefs);
     });
+
+    if (!options?.silent) {
+        (['includeApis', 'excludeApis'] as const).forEach(optionName => {
+            (options?.[optionName] ?? [])
+                .filter(pattern => !Array.from(allApiKeys).some(apiKey => matchesApiName(apiKey, pattern)))
+                .forEach(pattern => console.warn(`${optionName} entry '${pattern}' matches no API in the document.`));
+        });
+    }
 
     return transformedSwaggerSchema;
 };

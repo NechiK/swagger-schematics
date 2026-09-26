@@ -1,0 +1,34 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`provideApi (Angular) generates provideApi next to the base files, building on API_BASE_URL 1`] = `
+"import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
+
+import { API_BASE_URL } from './_api-base-url.token';
+
+export interface IApiConfig {
+  /**
+   * The API's base URL, e.g. \`environment.apiUrl\`. A function runs in an
+   * injection context, so it can \`inject()\` a runtime configuration service.
+   */
+  baseUrl: string | (() => string);
+}
+
+/**
+ * Configures the generated API services in a standalone Angular app:
+ *
+ * \`\`\`ts
+ * bootstrapApplication(AppComponent, {
+ *   providers: [provideHttpClient(), provideApi({ baseUrl: environment.apiUrl })],
+ * });
+ * \`\`\`
+ */
+export function provideApi(config: IApiConfig): EnvironmentProviders {
+  const { baseUrl } = config;
+  return makeEnvironmentProviders([
+    typeof baseUrl === 'function'
+      ? { provide: API_BASE_URL, useFactory: baseUrl }
+      : { provide: API_BASE_URL, useValue: baseUrl },
+  ]);
+}
+"
+`;

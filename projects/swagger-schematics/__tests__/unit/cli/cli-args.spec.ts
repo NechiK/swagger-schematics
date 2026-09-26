@@ -33,6 +33,13 @@ describe('parseCliArgs', () => {
     expect(() => parseCliArgs(['all', '--change-report'])).toThrow('--change-report needs a file path');
   });
 
+  it('should split array options on commas', () => {
+    expect(parseCliArgs(['api', '--exclude-apis=Admin, Internal*', '--include-apis', 'Orders']).options).toEqual({
+      excludeApis: ['Admin', 'Internal*'],
+      includeApis: ['Orders']
+    });
+  });
+
   it('should camelize kebab-case option names', () => {
     const args = parseCliArgs(['api', '--swagger-schema-url=./s.json', '--scope-endpoints-with-tags']);
 

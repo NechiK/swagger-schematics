@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.5.0] - 2026-09-26
 
 ### ✨ Added
+- **Filtering APIs** - `includeApis`, `excludeApis` (controller names, case-insensitive, `*` wildcard, PascalCase form accepted; comma-separated on the CLI) and `excludeDeprecated`. Every API is generated unless a filter is set:
+  - An API that becomes excluded has its service deleted on the next run; the API change summary applies the same filters
+  - A filter entry matching no API is reported as a warning; an API emptied by `excludeDeprecated` is skipped quietly
+  - Filtering applies to API services only; the types schematic still generates every schema
+- **`provideApi()` for standalone Angular apps** - `_provide-api.ts` is generated next to the base API files: `provideApi({ baseUrl })` provides the `API_BASE_URL` token, with `baseUrl` a string or a function run in an injection context (e.g. `() => inject(AppConfig).apiUrl`). Regenerated every run; skipped when `_api-base-url.token.ts` doesn't exist (a custom base template without the token)
 - **RTK cache tags** (`rtkCacheTags`, React RTK only, off by default) - lists refetch by themselves after a create, update or delete in the same slice, instead of every team adding tags by hand:
   - A generated `TApiTag` enum (`api-tag.enum.ts` in `path`) with one member per slice; each slice registers its tag with `enhanceEndpoints({ addTagTypes })`, so the base API file needs no changes
   - GET and HEAD endpoints `providesTags` their slice's tag; POST, PUT, PATCH and DELETE `invalidatesTags` it

@@ -2,8 +2,8 @@ export type TCliCommand = 'types' | 'api' | 'all';
 
 export interface IParsedCliArgs {
     command?: TCliCommand;
-    /** Options passed through to the schematic (camelCase keys) */
-    options: Record<string, string | boolean>;
+    /** Options passed through to the schematic (camelCase keys); array options are split on commas */
+    options: Record<string, string | boolean | string[]>;
     /** Positional arguments after the command (first one is the schema source) */
     positionals: string[];
     dryRun: boolean;
@@ -29,6 +29,18 @@ const BOOLEAN_OPTIONS: ReadonlySet<string> = new Set(
     [typesSchema, apiSchema].flatMap(schema =>
         Object.entries((schema as { properties?: Record<string, { type?: string }> }).properties ?? {})
             .filter(([, definition]) => definition.type === 'boolean')
+            .map(([name]) => name)
+    )
+);
+
+/**
+ * Option names the schematic schemas declare as arrays: on the command line
+ * they are written comma-separated (`--exclude-apis=Admin,Internal*`).
+ */
+const ARRAY_OPTIONS: ReadonlySet<string> = new Set(
+    [typesSchema, apiSchema].flatMap(schema =>
+        Object.entries((schema as { properties?: Record<string, { type?: string }> }).properties ?? {})
+            .filter(([, definition]) => definition.type === 'array')
             .map(([name]) => name)
     )
 );
@@ -113,6 +125,13 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
 
         parsed.positionals.push(token);
     }
+
+    ARRAY_OPTIONS.forEach(name => {
+        const value = parsed.options[name];
+        if (typeof value === 'string') {
+            parsed.options[name] = value.split(',').map(item => item.trim()).filter(Boolean);
+        }
+    });
 
     if ('changeReport' in parsed.options) {
         const changeReport = parsed.options.changeReport;

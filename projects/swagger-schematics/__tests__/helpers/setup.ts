@@ -51,6 +51,9 @@ export interface SchematicOptions {
   legacyOptionalProperties?: boolean;
   removeStaleFiles?: boolean;
   rtkCacheTags?: boolean;
+  includeApis?: string[];
+  excludeApis?: string[];
+  excludeDeprecated?: boolean;
 }
 
 export const ANGULAR_SCHEMATIC_OPTIONS: SchematicOptions = loadJsonFixture('angular-options.fixture.json');

@@ -61,12 +61,20 @@ export default function(options: SwaggerApiSchema) {
             throw new SchematicsException(`Path for API services is not defined in the configuration.`);
         }
 
+        // Required with no default: an Angular fallback would silently emit
+        // Angular services into a React project. Checked here rather than via
+        // schema.json 'required'/'enum', because schema validation runs before
+        // openapi-schematics.json is merged in and never sees its values.
+        const supportedFrameworks = Object.keys(FRAMEWORK_CONFIGS).map(name => `'${name}'`).join(' or ');
         if (!config.framework) {
-            throw new SchematicsException(`Framework is not defined in the configuration. Please set 'framework' to 'angular' or 'react-rtk'.`);
+            throw new SchematicsException(`Framework is not defined in the configuration. Please set 'framework' to ${supportedFrameworks}.`);
+        }
+        if (!Object.prototype.hasOwnProperty.call(FRAMEWORK_CONFIGS, config.framework)) {
+            throw new SchematicsException(`Framework '${config.framework}' is not supported. Please set 'framework' to ${supportedFrameworks}.`);
         }
 
-        const framework = config.framework;
-        const frameworkConfig = FRAMEWORK_CONFIGS[framework as TFrameworkType];
+        const framework = config.framework as TFrameworkType;
+        const frameworkConfig = FRAMEWORK_CONFIGS[framework];
 
         const swagger: ISwaggerSchema = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
 

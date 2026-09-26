@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### 🐛 Fixed
+- **An unsupported `framework` fails with a clear error** - a value from `openapi-schematics.json` that isn't `angular` or `react-rtk` (e.g. `"react"`) crashed with `TypeError: Cannot read properties of undefined (reading 'templates')`: the schema's `enum` only validates CLI options, and config-file values are merged in after that validation. It now fails with `Framework 'react' is not supported. Please set 'framework' to 'angular' or 'react-rtk'.`
+- **README: `framework` is required for `api`** - the options table documented `angular` as the default and the CLI examples omitted `--framework`, but the api schematic has required it since React RTK support was added, so the documented commands failed with "Framework is not defined". The docs now match the behavior; there is intentionally no default, so a React project that forgets the option gets an error instead of Angular services
+
+
 ## [1.3.0] - 2026-09-07
 
 ### ✨ Added

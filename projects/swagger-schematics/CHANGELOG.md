@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 - **An unsupported `framework` fails with a clear error** - a value from `openapi-schematics.json` that isn't `angular` or `react-rtk` (e.g. `"react"`) crashed with `TypeError: Cannot read properties of undefined (reading 'templates')`: the schema's `enum` only validates CLI options, and config-file values are merged in after that validation. It now fails with `Framework 'react' is not supported. Please set 'framework' to 'angular' or 'react-rtk'.`
+- **`swagger-schematics all` checks `framework` before generating anything** - `all` runs `types` before `api`, so a missing or unsupported `framework` used to fail only after the types were written, leaving generated types without their services. The CLI now validates it (from `--framework` or `openapi-schematics.json`) up front and writes nothing on failure
 - **README: `framework` is required for `api`** - the options table documented `angular` as the default and the CLI examples omitted `--framework`, but the api schematic has required it since React RTK support was added, so the documented commands failed with "Framework is not defined". The docs now match the behavior; there is intentionally no default, so a React project that forgets the option gets an error instead of Angular services
 
 

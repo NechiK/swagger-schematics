@@ -1,5 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
+import { TParam } from "../../interfaces/version_3_1/params.interface";
 import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
@@ -56,16 +57,24 @@ export const buildScopedApiMethodName = (apiMethodName: string, tagName: string)
 };
 
 export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][] => {
+    // Parameters on the path item apply to every operation under it; an operation's own
+    // parameter with the same name and location overrides it (OpenAPI spec). $ref
+    // parameters aren't resolved here, same as at operation level.
+    const pathLevelParams = (path.parameters ?? []).filter((param): param is TParam => !('$ref' in param));
+
     return Object.keys(path).map((pathKey: string) => {
         if (!PATH_KEYS.includes(pathKey as keyof IPathBase)) {
             const operationKey = pathKey as TPathOperationKey;
             const operation = path[operationKey];
             if (operation) {
+                const ownParams = operation.parameters || [];
+                const inheritedParams = pathLevelParams.filter(pathParam =>
+                    !ownParams.some(own => own.name === pathParam.name && own.in === pathParam.in));
                 return [
                     operationKey,
                     {
                         ...operation,
-                        parameters: (operation.parameters || []).map(param => ({
+                        parameters: [...inheritedParams, ...ownParams].map(param => ({
                             ...param,
                             // A header's name is sent on the wire, so it keeps its exact
                             // spelling; transformOperationParams camelizes its variable name
@@ -99,6 +108,17 @@ export type TTransformSwaggerSchemaOptions = ITransformTypeOptions & {
 export function matchesApiName(apiKey: string, pattern: string): boolean {
     const regex = new RegExp(`^${pattern.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`, 'i');
     return regex.test(apiKey) || regex.test(classify(apiKey));
+}
+
+/**
+ * Whether the document declares any operation under the API path prefix,
+ * before filtering. Tells "the filters left nothing to generate" (intended:
+ * stale services should go) from "the document is empty or wrong" (keep them).
+ */
+export function documentDeclaresOperations(swaggerSchema: ISwaggerSchema, apiPathKey?: string): boolean {
+    const apiPathPrefix = normalizeApiPathPrefix(apiPathKey || '/api/');
+    return Object.entries(swaggerSchema.paths ?? {})
+        .some(([pathKey, pathItem]) => pathKey.startsWith(apiPathPrefix) && getPathOperations(pathItem as IPath).length > 0);
 }
 
 function isApiIncluded(apiKey: string, options?: TTransformSwaggerSchemaOptions): boolean {
@@ -169,10 +189,9 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             } = transformOperationParams(operation, swaggerSchema, options);
 
             if (!options?.silent) {
-                skippedHeaderParams.forEach(headerName => {
-                    console.warn(`Header parameter '${headerName}' of ${operationKey.toUpperCase()} ${apiPathKey} is skipped: ` +
-                        `only letters, digits, '-' and '_' are supported in header names (and not a reserved word). ` +
-                        `The generated method will not send it.`);
+                skippedHeaderParams.forEach(({ name, reason }) => {
+                    console.warn(`Header parameter '${name}' of ${operationKey.toUpperCase()} ${apiPathKey} is skipped: ` +
+                        `${reason}. The generated method will not send it.`);
                 });
             }
 

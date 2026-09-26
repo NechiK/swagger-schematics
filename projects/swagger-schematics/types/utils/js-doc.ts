@@ -45,7 +45,8 @@ export function renderJsDoc(source: IDocSource | undefined, indent = '', tags: s
         ...(summary.length && distinctDescription.length ? [''] : []),
         ...distinctDescription,
         ...(source?.deprecated ? ['@deprecated'] : []),
-        ...tags
+        // Tags carry schema data too (e.g. @aggregatable operation names): same escaping, one line each
+        ...tags.flatMap(tag => toCommentLines(tag).join(' ').trim() || [])
     ];
 
     if (!lines.length) {

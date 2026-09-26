@@ -30,7 +30,9 @@ export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ a
 <% } if (item.headerParamsFormatted) { %>        <%= item.headerParamsFormatted %>,
 <% } if (item.isBinaryResponse) { %>        responseHandler: (response) => response.blob(),
 <% } %>      }),
-<% if (cacheTag) { %>      <%= item.isQuery ? 'providesTags' : 'invalidatesTags' %>: [TApiTag.<%= cacheTag %>],
+<% /* GET/HEAD provide the tag, POST/PUT/PATCH/DELETE invalidate it; OPTIONS/TRACE touch no data */
+   let tagProperty = !cacheTag ? null : item.isQuery ? 'providesTags' : ['post', 'put', 'patch', 'delete'].includes(item.apiMethodType) ? 'invalidatesTags' : null;
+   if (tagProperty) { %>      <%= tagProperty %>: [TApiTag.<%= cacheTag %>],
 <% } %>    }),
 <% } %>  }),
 });

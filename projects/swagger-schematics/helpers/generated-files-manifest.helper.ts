@@ -33,6 +33,12 @@ export interface IStaleFilesOptions {
     /** `removeStaleFiles` option: false keeps stale files and only reports them. */
     remove: boolean;
     /**
+     * The run generating nothing is intended (the document has content, but options such as
+     * API filters left nothing to generate), so stale files are removed as usual instead of
+     * being kept by the empty-schema safety net.
+     */
+    emptyIsIntended?: boolean;
+    /**
      * Where this schematic's files usually live. Used only on the first run
      * (no manifest yet) to point at probable leftovers - they are listed, never deleted.
      */
@@ -144,7 +150,7 @@ export function createStaleFilesRule(options: IStaleFilesOptions): Rule {
                 .filter(entry => !currentSet.has(entry) && isInsideOutputDir(entry))
                 .filter(entry => tree.exists(join(outputDir, entry)));
 
-            if (stale.length && !current.length) {
+            if (stale.length && !current.length && !options.emptyIsIntended) {
                 context.logger.warn(`${options.section}: the schema produced no files, so the ${stale.length} ` +
                     `previously generated file(s) were kept. Check that the schema source is correct.`);
                 next = previousEntries;

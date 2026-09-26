@@ -85,6 +85,15 @@ describe('API filtering', () => {
     expect(filtered.files).toContain(`${OUT}/orders-api.service.ts`);
   });
 
+  it('deletes every service when the filters leave nothing to generate (the document is not empty)', async () => {
+    const tree = await runFullSchematics(SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+
+    setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SCHEMA);
+    const filtered = await runApiSchematic({ ...ANGULAR_SCHEMATIC_OPTIONS, includeApis: ['Legacy'], excludeDeprecated: true }, tree);
+
+    expect(filtered.files.filter(file => file.endsWith('-api.service.ts'))).toEqual([]);
+  });
+
   it('keeps filtered APIs out of the change summary model', () => {
     const model = buildApiModel(SCHEMA, { framework: 'angular', excludeApis: ['Admin'], excludeDeprecated: true });
     const labels = Object.keys(model.endpoints);

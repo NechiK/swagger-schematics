@@ -1,5 +1,6 @@
 import { transformSwaggerSchema } from '@lib/api/helpers/api.helper';
 import { toHeaderParamSymbol } from '@lib/types/utils/params';
+import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 import { HEADER_PARAMS_SWAGGER_SCHEMA } from '@fixtures/swagger/header-params-schema.fixture';
 
 describe('header parameters', () => {
@@ -100,5 +101,55 @@ describe('header parameters', () => {
 
     expect(parsed.headerParamsFormatted).toBe('');
     expect(parsed.apiMethodParams).toBe('');
+  });
+
+  describe('variable names and clashes', () => {
+    it.each(['eval', 'arguments'])('rejects %p, which strict code cannot bind', header => {
+      expect(toHeaderParamSymbol(header)).toBeNull();
+    });
+
+    const operationWith = (parameters: unknown[], extra: Record<string, unknown> = {}) =>
+      ({ openapi: '3.0.1', info: { title: 'T', version: '1' }, components: { schemas: {} }, paths: { '/api/Things/{id}': { post: { tags: ['Things'], parameters, responses: { '204': { description: 'ok' } }, ...extra } } } }) as unknown as ISwaggerSchema;
+
+    const parse = (schema: ISwaggerSchema) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation();
+      try {
+        return { item: transformSwaggerSchema(schema).Things.apiList[0], warnings: warn.mock.calls.map(call => String(call[0])) };
+      } finally {
+        warn.mockRestore();
+      }
+    };
+
+    it('skips a header whose variable repeats a query parameter, with a warning', () => {
+      const { item, warnings } = parse(operationWith([
+        { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+        { name: 'xTenantId', in: 'query', schema: { type: 'string' } },
+        { name: 'X-Tenant-Id', in: 'header', schema: { type: 'string' } }
+      ]));
+
+      expect(item.headerParams).toEqual([]);
+      expect(item.apiMethodParamNames).toEqual(['id', 'xTenantId']);
+      expect(warnings).toContainEqual(expect.stringContaining("'X-Tenant-Id' of POST /api/Things/{id} is skipped: its variable name 'xTenantId' is already used"));
+    });
+
+    it('keeps the first of two headers with the same variable and skips the second', () => {
+      const { item } = parse(operationWith([
+        { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+        { name: 'X-Foo', in: 'header', schema: { type: 'string' } },
+        { name: 'x_foo', in: 'header', schema: { type: 'string' } }
+      ]));
+
+      expect(item.headerParams.map(p => p.originalParam.name)).toEqual(['X-Foo']);
+    });
+
+    it("skips a header named like the request body's variable", () => {
+      const { item } = parse(operationWith(
+        [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }, { name: 'Body', in: 'header', schema: { type: 'string' } }],
+        { requestBody: { content: { 'application/json': { schema: { type: 'string' } } } } }
+      ));
+
+      expect(item.headerParams).toEqual([]);
+      expect(item.apiMethodParams).toBe('id: number, body: string');
+    });
   });
 });

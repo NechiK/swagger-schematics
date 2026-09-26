@@ -69,6 +69,11 @@ describe('buildApiModel', () => {
       .toBe('usersApi.usersGetById');
   });
 
+  it('shows what callers pass: positional parameters for Angular, the request object for RTK', () => {
+    expect(buildApiModel(SCHEMA, { framework: 'angular' }).endpoints['GET /api/Users/{id}'].signature).toBe('(id: number) => IUserDto');
+    expect(buildApiModel(SCHEMA, { framework: 'react-rtk' }).endpoints['GET /api/Users/{id}'].signature).toBe('({ id: number }) => IUserDto');
+  });
+
   it('applies typeMapping like the generator', () => {
     const mapped = buildApiModel(SCHEMA, { framework: 'angular', typeMapping: { UserDto: 'unknown' } });
     expect(mapped.endpoints['GET /api/Users/{id}'].signature).toBe('(id: number) => unknown');

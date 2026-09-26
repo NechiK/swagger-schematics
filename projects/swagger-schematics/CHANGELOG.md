@@ -10,13 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 - **Filtering APIs** - `includeApis`, `excludeApis` (controller names, case-insensitive, `*` wildcard, PascalCase form accepted; comma-separated on the CLI) and `excludeDeprecated`. Every API is generated unless a filter is set:
-  - An API that becomes excluded has its service deleted on the next run; the API change summary applies the same filters
+  - An API that becomes excluded has its service deleted on the next run, including when the filters exclude every API (the empty-schema safety net applies only when the document itself declares no operations); the API change summary applies the same filters
   - A filter entry matching no API is reported as a warning; an API emptied by `excludeDeprecated` is skipped quietly
   - Filtering applies to API services only; the types schematic still generates every schema
 - **`provideApi()` for standalone Angular apps** - `_provide-api.ts` is generated next to the base API files: `provideApi({ baseUrl })` provides the `API_BASE_URL` token, with `baseUrl` a string or a function run in an injection context (e.g. `() => inject(AppConfig).apiUrl`). Regenerated every run; skipped when `_api-base-url.token.ts` doesn't exist (a custom base template without the token)
 - **RTK cache tags** (`rtkCacheTags`, React RTK only, off by default) - lists refetch by themselves after a create, update or delete in the same slice, instead of every team adding tags by hand:
   - A generated `TApiTag` enum (`api-tag.enum.ts` in `path`) with one member per slice; each slice registers its tag with `enhanceEndpoints({ addTagTypes })`, so the base API file needs no changes
-  - GET and HEAD endpoints `providesTags` their slice's tag; POST, PUT, PATCH and DELETE `invalidatesTags` it
+  - GET and HEAD endpoints `providesTags` their slice's tag; POST, PUT, PATCH and DELETE `invalidatesTags` it; OPTIONS and TRACE get no tag
   - Cross-slice tags are added with `enhanceEndpoints` using the same enum (README shows replacing and adding); turning the option off removes the enum and the tags
   - Checked against `@reduxjs/toolkit` 2.x types: generated slices, overrides and `util.invalidateTags` compile under `strict` with no casts beyond the documented `providesTags` spread
 - **JSDoc from the schema's documentation** - descriptions written on the server now reach the consumer's editor as hover text instead of stopping at the OpenAPI document:
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Multi-line descriptions (e.g. .NET `<remarks>`) keep their paragraphs; a literal `*/` in the text can't end the comment early
   - Undocumented code renders exactly as before; existing output gains only comment lines
   - `renderJsDoc(source, indent)` is available to custom API templates, and `transformProperties()` also returns `docs`
-- **API change summary** - with the new `schemaSnapshotPath` option, every `swagger-schematics all` run compares the schema with the snapshot the previous run saved and prints what changed, in the names found in the generated code (`IUserDto.email`, `UsersApiService.getById()`, `usersApi.getById`):
+- **API change summary** - with the new `schemaSnapshotPath` option, every `swagger-schematics all` run compares the schema with the snapshot the previous run saved and prints what changed, in the names found in the generated code (`IUserDto.email`, `UsersApiService.getById()`, `usersApi.getById`); endpoint signatures show what callers pass (positional parameters for Angular, the request object for RTK):
   - **Breaking**: a removed interface, enum, type, property, enum member or endpoint, or a changed property declaration (type, optionality, nullability), enum member value, type alias or endpoint signature. **Added**: new interfaces, properties, enum members and endpoints
   - Names, types and signatures come from the generator's own naming and type rendering, so they match the generated files
   - The snapshot is saved with sorted keys, so it only changes when the schema does. Commit it with the generated code; the first run only creates it
@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `apiPath` on each parsed API item (`IParsedApiItem`): the operation's path as written in the document (e.g. `/api/Users/{id}`), available to custom templates
 
 ### 🐛 Fixed
+- **Path-level parameters are applied to every operation** - OpenAPI allows `parameters` on the path item, shared by all its operations, but only each operation's own `parameters` were read. A path-level `{id}` generated a method interpolating an undefined `${id}`, and path-level query and header parameters were dropped. They are now merged into each operation, and an operation's own parameter with the same name and location overrides the path-level one
+- **`@aggregatable` values can't break out of the property comment** - the operation names from `x-aggregatable` went into the JSDoc unescaped, so a `*/` or a newline in them ended the comment early. JSDoc tags now get the same escaping as descriptions
 - **Angular services with optional query params compile under `strict`** - `params: omitBy({ page }, isNil)` returns lodash's `Dictionary<T | undefined>`, which HttpClient's `params` type rejects under `strict` with `@types/lodash-es` installed. Each optional or nullable query param is now added only when it has a value, `params: { status, ...(page != null ? { page } : {}) }`:
   - Same query string as before, checked against Angular's `HttpParams`: `null`/`undefined` are left out (so no `?page=undefined`), while `0`, `false`, `''` and arrays are kept
   - Angular services no longer import `lodash-es`; RTK slices keep `omitBy` (RTK types `params` loosely, so they are unaffected)
@@ -44,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Angular: a trailing object parameter, `{ ifMatch }: { ifMatch?: string }`, sent in the HttpClient options as `headers`. When every header is optional the object defaults to `{}`, so existing calls keep compiling; a required header makes it required
   - RTK: added to the query argument and sent as `headers` in the query definition
   - Header names are sent exactly as declared; the variable is the name in camelCase (`X-Tenant-Id` -> `xTenantId`)
-  - A header name with anything beyond letters, digits, `-` and `_` (valid in HTTP but not seen in real APIs, e.g. `X-Odd'Name`), or one that becomes a reserved word (`delete`), is skipped with a warning naming the header and the endpoint, rather than renamed or failing the run
+  - A header name with anything beyond letters, digits, `-` and `_` (valid in HTTP but not seen in real APIs, e.g. `X-Odd'Name`), one that becomes a reserved or strict-mode-illegal name (`delete`, `eval`, `arguments`), or one whose variable clashes with another parameter of the operation (query `xTenantId` next to header `X-Tenant-Id`, or `X-Foo` next to `x_foo`), is skipped with a warning naming the header, the endpoint and the reason, rather than renamed or failing the run
   - Values are sent as strings, and an optional header is added only when it has a value (HttpClient throws on an `undefined` header value, and `null` would be sent as the string "null")
   - `Accept`, `Content-Type` and `Authorization` header parameters are ignored, as the OpenAPI spec requires. Cookie parameters stay out of the generated method: browsers attach cookies themselves and do not let scripts set the `Cookie` header
   - New template fields `headerParamsFormatted` on each parsed API item; `transformParamsToApiMethodParams()`, `extractApiMethodParamNames()` and `buildApiMethodRequestType()` accept `headerParams`

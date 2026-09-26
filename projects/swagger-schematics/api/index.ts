@@ -17,7 +17,7 @@ import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
 import { SwaggerApiSchema } from './schema';
-import { transformSwaggerSchema } from './helpers/api.helper';
+import { documentDeclaresOperations, transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { renderJsDoc } from '../types/utils/js-doc';
 import { toEnumMemberName } from '../types/utils/enum';
@@ -196,6 +196,8 @@ export default function(options: SwaggerApiSchema) {
             outputPath: config.path,
             generatedFiles,
             remove: config.removeStaleFiles !== false,
+            // Filters that exclude every API are a choice, not a broken schema: their services go
+            emptyIsIntended: documentDeclaresOperations(swagger, config.apiPathKey),
             ownedFilePatterns: [{ dir: config.path, suffixes: [apiFileExt], exclude: [baseApiPath] }]
         });
         return chain([...rules, eslintFixRule, staleFilesRule]);

@@ -124,7 +124,10 @@ function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IAp
             endpoints[label] = {
                 label,
                 symbol,
-                signature: `(${item.apiMethodParams}) => ${item.responseTypeSymbol}`
+                // What callers pass: Angular methods take positional parameters, RTK endpoints one request object
+                signature: options.framework === 'react-rtk'
+                    ? `(${item.apiMethodRequestType}) => ${item.responseTypeSymbol}`
+                    : `(${item.apiMethodParams}) => ${item.responseTypeSymbol}`
             };
         });
     });

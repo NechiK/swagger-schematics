@@ -29,7 +29,11 @@ const SCHEMA = {
       patch: { tags: ['Orders'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }], responses: noContent },
       delete: { tags: ['Orders'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }], responses: noContent }
     },
-    '/api/replacement-queue': { get: { tags: ['Queue'], responses: noContent } }
+    '/api/replacement-queue': { get: { tags: ['Queue'], responses: noContent } },
+    '/api/Probe': {
+      options: { tags: ['Probe'], responses: noContent },
+      trace: { tags: ['Probe'], responses: noContent }
+    }
   },
   components: { schemas: {} }
 } as unknown as ISwaggerSchema;
@@ -46,7 +50,8 @@ describe('RTK cache tags', () => {
       "/** RTK Query cache tags, one per API slice. Queries provide their slice's tag; mutations invalidate it. */",
       'export enum TApiTag {',
       "  Orders = 'Orders',",
-      "  ReplacementQueue = 'ReplacementQueue'",
+      "  ReplacementQueue = 'ReplacementQueue',",
+      "  Probe = 'Probe'",
       '}',
       ''
     ].join('\n'));
@@ -63,6 +68,15 @@ describe('RTK cache tags', () => {
     expect(slice.match(/invalidatesTags: \[TApiTag\.Orders\]/g)).toHaveLength(4);
     expect(tree.readContent(`${OUT}/replacement-queue.api.ts`)).toContain('providesTags: [TApiTag.ReplacementQueue]');
     expect(slice).toMatchSnapshot();
+  });
+
+  it('gives OPTIONS and TRACE endpoints no tags: they read or change no data', async () => {
+    const tree = await runFullSchematics(SCHEMA, OPTIONS);
+    const probe = tree.readContent(`${OUT}/probe.api.ts`);
+
+    expect(probe).toContain('addTagTypes: [TApiTag.Probe]');
+    expect(probe).not.toContain('providesTags');
+    expect(probe).not.toContain('invalidatesTags');
   });
 
   it('generates no tags unless enabled', async () => {

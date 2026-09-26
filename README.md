@@ -228,7 +228,7 @@ Every API in the document is generated unless you narrow it down, e.g. when one 
 - `includeApis` keeps only the listed APIs; `excludeApis` then drops from what is left
 - `excludeDeprecated` skips deprecated operations; an API left with none is skipped entirely
 - An entry that matches no API is reported as a warning, to catch typos
-- The service of an API that becomes excluded is deleted on the next run (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)), and the [API change summary](#api-change-summary) applies the same filters
+- The service of an API that becomes excluded is deleted on the next run (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)), also when the filters exclude every API, and the [API change summary](#api-change-summary) applies the same filters
 - Filtering applies to API services only: the `types` schematic still generates every schema in the document
 
 ### Angular: `provideApi()`
@@ -272,7 +272,7 @@ export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [TApiTag.Orders
 });
 ```
 
-- GET and HEAD endpoints provide their slice's tag; POST, PUT, PATCH and DELETE invalidate it
+- GET and HEAD endpoints provide their slice's tag; POST, PUT, PATCH and DELETE invalidate it; OPTIONS and TRACE get no tag
 - Tags are per slice: updating order 5 also refetches an `Orders` query for order 7 if one is on screen, and a change in one slice doesn't refresh another
 - Tag types are registered by each slice (`enhanceEndpoints({ addTagTypes })`), so the base API file needs no changes
 - Turning the option off again removes the enum and the tags

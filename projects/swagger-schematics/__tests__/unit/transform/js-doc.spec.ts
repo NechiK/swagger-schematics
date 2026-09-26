@@ -1,4 +1,5 @@
 import { renderJsDoc } from '@lib/types/utils/js-doc';
+import { interfacePropertyLine } from '@lib/types/helpers/template.helper';
 
 describe('renderJsDoc', () => {
   it('renders nothing when there is nothing to document', () => {
@@ -45,5 +46,21 @@ describe('renderJsDoc', () => {
     const doc = renderJsDoc({ summary: 'Matches /* and */ literally' });
     expect(doc).toBe('/** Matches /* and *\\/ literally */\n');
     expect(doc.indexOf('*/')).toBe(doc.lastIndexOf('*/'));
+  });
+
+  describe('JSDoc tags carry schema data, so they are escaped like text', () => {
+    it("neutralizes '*/' and newlines in extra tags", () => {
+      const doc = renderJsDoc({}, '', ['@aggregatable Sum*/ export const x = 1; /*', 'Avg\nMax']);
+
+      expect(doc.indexOf('*/')).toBe(doc.lastIndexOf('*/'));
+      expect(doc).toContain('@aggregatable Sum*\\/ export const x = 1; /*');
+      expect(doc).toContain(' * Avg Max\n');
+    });
+
+    it('keeps an x-aggregatable value from breaking out of the property comment', () => {
+      const lines = interfacePropertyLine([['total?', 'number']], '2', [['total', ['Sum */ injected()', 'Avg']]]);
+
+      expect(lines).toBe('  /** @aggregatable Sum *\\/ injected(), Avg */\n  total?: number;');
+    });
   });
 });

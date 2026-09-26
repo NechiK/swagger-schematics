@@ -219,7 +219,9 @@ const RESERVED_WORDS = new Set([
     'enum', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof',
     'new', 'null', 'return', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void',
     'while', 'with', 'yield', 'let', 'static', 'implements', 'interface', 'package', 'private', 'protected',
-    'public', 'await'
+    'public', 'await',
+    // Not keywords, but illegal as binding names in strict code (modules and classes are strict)
+    'eval', 'arguments'
 ]);
 
 /**
@@ -248,16 +250,22 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
     pathParams: IParsedParam<IPathParam>[];
     headerParams: IParsedParam<IHeaderParam>[];
     cookieParams: IParsedParam<ICookieParam>[];
-    /** Header names left out because they don't map to a usable variable (see toHeaderParamSymbol) */
-    skippedHeaderParams: string[];
+    /** Header parameters left out, with why: no usable variable name (see toHeaderParamSymbol) or a clash with another parameter */
+    skippedHeaderParams: Array<{ name: string; reason: string }>;
     importRefs: IImportRef[];
 } => {
     const queryParams: IParsedParam<IQueryParam>[] = [];
     const pathParams: IParsedParam<IPathParam>[] = [];
     const headerParams: IParsedParam<IHeaderParam>[] = [];
     const cookieParams: IParsedParam<ICookieParam>[] = [];
-    const skippedHeaderParams: string[] = [];
+    const skippedHeaderParams: Array<{ name: string; reason: string }> = [];
     const importRefs: IImportRef[] = [];
+    // Names every non-header parameter (and the request body) already uses: a header's variable
+    // must not repeat one, or the generated method / RTK argument gets a duplicate binding
+    const usedSymbols = new Set<string>([
+        'body',
+        ...(operation.parameters ?? []).filter(param => param.in !== 'header').map(param => param.name)
+    ]);
 
     if (operation.parameters) {
         operation.parameters.forEach(apiParam => {
@@ -268,8 +276,21 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
             }
             const headerSymbol = apiParam.in === 'header' ? toHeaderParamSymbol(apiParam.name) : null;
             if (apiParam.in === 'header' && !headerSymbol) {
-                skippedHeaderParams.push(apiParam.name);
+                skippedHeaderParams.push({
+                    name: apiParam.name,
+                    reason: `only letters, digits, '-' and '_' are supported in header names (and not a reserved word)`
+                });
                 return;
+            }
+            if (headerSymbol && usedSymbols.has(headerSymbol)) {
+                skippedHeaderParams.push({
+                    name: apiParam.name,
+                    reason: `its variable name '${headerSymbol}' is already used by another parameter of the operation`
+                });
+                return;
+            }
+            if (headerSymbol) {
+                usedSymbols.add(headerSymbol);
             }
 
             // Resolve the parameter's type once - typeSymbol and functionSymbol

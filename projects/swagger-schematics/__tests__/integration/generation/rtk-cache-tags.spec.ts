@@ -61,12 +61,12 @@ describe('RTK cache tags', () => {
     const tree = await runFullSchematics(SCHEMA, OPTIONS);
     const slice = tree.readContent(`${OUT}/orders.api.ts`);
 
-    expect(slice).toContain("import { TApiTag } from './api-tag.enum';");
-    expect(slice).toContain('export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [TApiTag.Orders] }).injectEndpoints({');
+    expect(slice).toContain("import { TApiTag as CacheTag } from './api-tag.enum';");
+    expect(slice).toContain('export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [CacheTag.Orders] }).injectEndpoints({');
     // GET and HEAD provide; POST, PUT, PATCH and DELETE invalidate
-    expect(slice.match(/providesTags: \[TApiTag\.Orders\]/g)).toHaveLength(2);
-    expect(slice.match(/invalidatesTags: \[TApiTag\.Orders\]/g)).toHaveLength(4);
-    expect(tree.readContent(`${OUT}/replacement-queue.api.ts`)).toContain('providesTags: [TApiTag.ReplacementQueue]');
+    expect(slice.match(/providesTags: \[CacheTag\.Orders\]/g)).toHaveLength(2);
+    expect(slice.match(/invalidatesTags: \[CacheTag\.Orders\]/g)).toHaveLength(4);
+    expect(tree.readContent(`${OUT}/replacement-queue.api.ts`)).toContain('providesTags: [CacheTag.ReplacementQueue]');
     expect(slice).toMatchSnapshot();
   });
 
@@ -74,9 +74,32 @@ describe('RTK cache tags', () => {
     const tree = await runFullSchematics(SCHEMA, OPTIONS);
     const probe = tree.readContent(`${OUT}/probe.api.ts`);
 
-    expect(probe).toContain('addTagTypes: [TApiTag.Probe]');
+    expect(probe).toContain('addTagTypes: [CacheTag.Probe]');
     expect(probe).not.toContain('providesTags');
     expect(probe).not.toContain('invalidatesTags');
+  });
+
+  it("doesn't clash with a schema enum named ApiTag, which is imported as TApiTag", async () => {
+    const withApiTagEnum = {
+      ...SCHEMA,
+      paths: {
+        '/api/Labels': {
+          get: {
+            tags: ['Labels'],
+            responses: { '200': { description: 'ok', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiTag' } } } } }
+          }
+        }
+      },
+      components: { schemas: { ApiTag: { type: 'string', enum: ['A', 'B'] } } }
+    } as unknown as ISwaggerSchema;
+
+    const tree = await runFullSchematics(withApiTagEnum, OPTIONS);
+    const slice = tree.readContent(`${OUT}/labels.api.ts`);
+
+    expect(slice).toContain("import { TApiTag } from './enums/api-tag.enum';");
+    expect(slice).toContain("import { TApiTag as CacheTag } from './api-tag.enum';");
+    expect(slice).toContain('builder.query<TApiTag, void>');
+    expect(slice).toContain('providesTags: [CacheTag.Labels]');
   });
 
   it('generates no tags unless enabled', async () => {

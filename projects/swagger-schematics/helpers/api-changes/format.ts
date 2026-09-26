@@ -58,12 +58,19 @@ function markdownLine(change: IApiChange): string {
  * Markdown report for a pull request description, cut to `maxLength` with a
  * "...and N more" line when the change list is long.
  */
-export function formatMarkdownReport(changes: IApiChange[] | null, files: IFileCounts, maxLength = MAX_REPORT_LENGTH): string {
+export function formatMarkdownReport(
+    changes: IApiChange[] | null,
+    files: IFileCounts,
+    maxLength = MAX_REPORT_LENGTH,
+    snapshotConfigured = true
+): string {
     const footer = `\n_${filesLine(files)}_\n`;
 
     if (changes === null) {
-        return `## API changes\n\nNo previous schema snapshot to compare against, so the changes can't be listed yet. ` +
-            `This run saved one; the next run lists what changed.\n${footer}`;
+        return snapshotConfigured
+            ? `## API changes\n\nNo previous schema snapshot to compare against, so the changes can't be listed yet. ` +
+                `This run saved one; the next run lists what changed.\n${footer}`
+            : `## API changes\n\nSet \`schemaSnapshotPath\` to list API changes; without a schema snapshot this report only counts files.\n${footer}`;
     }
     if (!changes.length) {
         return `## API changes: none\n\nNothing in the schema changed the generated types or endpoints.\n${footer}`;

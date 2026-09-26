@@ -32,10 +32,12 @@ function sortKeys(value: unknown): unknown {
         return value.map(sortKeys);
     }
     if (value && typeof value === 'object') {
+        // Null prototype: a key named `__proto__` (legal in JSON) stays an own property instead of
+        // replacing the object's prototype and vanishing from the snapshot
         return Object.keys(value as Record<string, unknown>).sort().reduce((sorted, key) => {
             sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
             return sorted;
-        }, {} as Record<string, unknown>);
+        }, Object.create(null) as Record<string, unknown>);
     }
     return value;
 }

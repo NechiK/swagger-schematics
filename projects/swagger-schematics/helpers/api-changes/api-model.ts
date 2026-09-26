@@ -78,7 +78,9 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
         if (kind === 'enum') {
             const values = (schema as { enum: Array<string | number> }).enum;
             const names = (schema as { 'x-enum-varnames'?: string[] })['x-enum-varnames'];
-            const members: Record<string, string> = {};
+            // Null prototype: members named like Object.prototype keys (constructor, toString,
+            // __proto__) are real entries, not inherited ones, when the diff compares them
+            const members: Record<string, string> = Object.create(null);
             values.forEach((value, index) => {
                 members[toEnumMemberName(names?.[index] ?? value, index)] = JSON.stringify(value);
             });
@@ -92,7 +94,7 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
                 transformOptions,
                 (schema as { required?: string[] }).required ?? []
             );
-            const properties: Record<string, string> = {};
+            const properties: Record<string, string> = Object.create(null);
             propertiesContent.forEach(([name, type]) => {
                 properties[name.replace(/\?$/, '')] = `${name}: ${type}`;
             });

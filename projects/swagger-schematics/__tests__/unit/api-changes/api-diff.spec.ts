@@ -1,5 +1,6 @@
 import { diffApiModels } from '@lib/helpers/api-changes/api-diff';
-import { IApiModel } from '@lib/helpers/api-changes/api-model';
+import { IApiModel, buildApiModel } from '@lib/helpers/api-changes/api-model';
+import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 const endpoint = (label: string, symbol: string, signature: string) => ({ label, symbol, signature });
 
@@ -62,5 +63,25 @@ describe('diffApiModels', () => {
 
   it('finds nothing between identical models', () => {
     expect(diffApiModels(CURRENT, CURRENT)).toEqual([]);
+  });
+
+  it('treats members and properties named like Object.prototype keys as real entries', () => {
+    const schemaWith = (schemas: Record<string, unknown>) =>
+      ({ openapi: '3.0.1', info: { title: 'T', version: '1' }, paths: {}, components: { schemas } }) as unknown as ISwaggerSchema;
+    const before = buildApiModel(schemaWith({
+      Kind: { type: 'string', enum: ['A'] },
+      Dto: { type: 'object', properties: { id: { type: 'integer' } } }
+    }), { framework: 'angular' });
+    const after = buildApiModel(schemaWith({
+      Kind: { type: 'string', enum: ['A', 'constructor', 'toString'] },
+      Dto: { type: 'object', properties: { id: { type: 'integer' }, constructor: { type: 'string' } } }
+    }), { framework: 'angular' });
+
+    expect(diffApiModels(before, after)).toEqual([
+      { severity: 'added', kind: 'Property added', subject: 'IDto.constructor', ref: 'constructor?: string' },
+      { severity: 'added', kind: 'Enum member added', subject: 'TKind.constructor', ref: '"constructor"' },
+      { severity: 'added', kind: 'Enum member added', subject: 'TKind.toString', ref: '"toString"' }
+    ]);
+    expect(diffApiModels(after, before).map(change => change.kind)).toEqual(['Property removed', 'Enum member removed', 'Enum member removed']);
   });
 });

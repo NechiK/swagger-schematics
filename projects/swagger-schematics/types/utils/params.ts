@@ -263,7 +263,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
     // Names every non-header parameter (and the request body) already uses: a header's variable
     // must not repeat one, or the generated method / RTK argument gets a duplicate binding
     const usedSymbols = new Set<string>([
-        'body',
+        ...('requestBody' in operation && operation.requestBody ? ['body'] : []),
         ...(operation.parameters ?? []).filter(param => param.in !== 'header').map(param => param.name)
     ]);
 

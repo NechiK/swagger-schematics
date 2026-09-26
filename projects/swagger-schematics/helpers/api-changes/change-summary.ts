@@ -76,7 +76,7 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
     }
 
     if (run.reportPath) {
-        writeTextFile(path.resolve(process.cwd(), run.reportPath), formatMarkdownReport(changes, run.files));
+        writeTextFile(path.resolve(process.cwd(), run.reportPath), formatMarkdownReport(changes, run.files, undefined, !!snapshotPath));
         logger.info(`Wrote the API change report to ${run.reportPath}`);
     }
 

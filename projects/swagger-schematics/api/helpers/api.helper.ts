@@ -1,6 +1,7 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
 import { TParam } from "../../interfaces/version_3_1/params.interface";
+import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
@@ -56,18 +57,34 @@ export const buildScopedApiMethodName = (apiMethodName: string, tagName: string)
     return prefix + suffix;
 };
 
-export const getPathOperations = (path: IPath): [TPathOperationKey, TOperation][] => {
+/**
+ * Resolves `{ $ref: '#/components/parameters/Name' }` against the document; an
+ * inline parameter passes through. A reference that can't be resolved (or no
+ * document to resolve it in) is dropped, as unusable.
+ */
+function resolveParams(params: Array<TParam | IRef>, swagger?: ISwaggerSchema): TParam[] {
+    return params.flatMap(param => {
+        if (!('$ref' in param)) {
+            return [param];
+        }
+        const match = /^#\/components\/parameters\/(.+)$/.exec(param.$ref);
+        const resolved = match ? swagger?.components?.parameters?.[match[1]] : undefined;
+        return resolved ? [resolved] : [];
+    });
+}
+
+export const getPathOperations = (path: IPath, swagger?: ISwaggerSchema): [TPathOperationKey, TOperation][] => {
     // Parameters on the path item apply to every operation under it; an operation's own
-    // parameter with the same name and location overrides it (OpenAPI spec). $ref
-    // parameters aren't resolved here, same as at operation level.
-    const pathLevelParams = (path.parameters ?? []).filter((param): param is TParam => !('$ref' in param));
+    // parameter with the same name and location overrides it (OpenAPI spec). Both levels
+    // may use $ref to #/components/parameters.
+    const pathLevelParams = resolveParams(path.parameters ?? [], swagger);
 
     return Object.keys(path).map((pathKey: string) => {
         if (!PATH_KEYS.includes(pathKey as keyof IPathBase)) {
             const operationKey = pathKey as TPathOperationKey;
             const operation = path[operationKey];
             if (operation) {
-                const ownParams = operation.parameters || [];
+                const ownParams = resolveParams((operation.parameters || []) as Array<TParam | IRef>, swagger);
                 const inheritedParams = pathLevelParams.filter(pathParam =>
                     !ownParams.some(own => own.name === pathParam.name && own.in === pathParam.in));
                 return [
@@ -118,7 +135,7 @@ export function matchesApiName(apiKey: string, pattern: string): boolean {
 export function documentDeclaresOperations(swaggerSchema: ISwaggerSchema, apiPathKey?: string): boolean {
     const apiPathPrefix = normalizeApiPathPrefix(apiPathKey || '/api/');
     return Object.entries(swaggerSchema.paths ?? {})
-        .some(([pathKey, pathItem]) => pathKey.startsWith(apiPathPrefix) && getPathOperations(pathItem as IPath).length > 0);
+        .some(([pathKey, pathItem]) => pathKey.startsWith(apiPathPrefix) && getPathOperations(pathItem as IPath, swaggerSchema).length > 0);
 }
 
 function isApiIncluded(apiKey: string, options?: TTransformSwaggerSchemaOptions): boolean {
@@ -167,7 +184,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             };
         }
 
-        const declaredOperations = getPathOperations(swaggerPath);
+        const declaredOperations = getPathOperations(swaggerPath, swaggerSchema);
         if (declaredOperations.length) {
             declaresOperations.add(apiPrefix);
         }

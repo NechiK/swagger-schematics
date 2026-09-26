@@ -142,6 +142,16 @@ describe('header parameters', () => {
       expect(item.headerParams.map(p => p.originalParam.name)).toEqual(['X-Foo']);
     });
 
+    it('keeps a header named Body when the operation has no request body', () => {
+      const schema = {
+        openapi: '3.0.1', info: { title: 'T', version: '1' }, components: { schemas: {} },
+        paths: { '/api/Things': { get: { tags: ['Things'], parameters: [{ name: 'Body', in: 'header', schema: { type: 'string' } }], responses: { '204': { description: 'ok' } } } } }
+      } as unknown as ISwaggerSchema;
+      const item = transformSwaggerSchema(schema, { silent: true }).Things.apiList[0];
+
+      expect(item.headerParams.map(p => p.objectSymbol)).toEqual(['body']);
+    });
+
     it("skips a header named like the request body's variable", () => {
       const { item } = parse(operationWith(
         [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }, { name: 'Body', in: 'header', schema: { type: 'string' } }],

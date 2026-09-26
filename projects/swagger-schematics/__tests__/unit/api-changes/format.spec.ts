@@ -41,6 +41,13 @@ describe('formatMarkdownReport', () => {
     ].join('\n'));
   });
 
+  it("doesn't claim a snapshot was saved when none is configured", () => {
+    const report = formatMarkdownReport(null, FILES, undefined, false);
+
+    expect(report).toContain('Set `schemaSnapshotPath` to list API changes');
+    expect(report).not.toContain('This run saved one');
+  });
+
   it('explains a missing baseline and an unchanged schema', () => {
     expect(formatMarkdownReport(null, FILES)).toContain('No previous schema snapshot');
     expect(formatMarkdownReport([], FILES)).toContain('## API changes: none');

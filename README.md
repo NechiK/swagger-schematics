@@ -257,16 +257,19 @@ export enum TApiTag {
   Users = 'Users'
 }
 
-// orders.api.ts (generated)
-export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [TApiTag.Orders] }).injectEndpoints({
+// orders.api.ts (generated; the enum is imported under an alias so it can never
+// clash with a schema type of the same name)
+import { TApiTag as CacheTag } from './api-tag.enum';
+
+export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [CacheTag.Orders] }).injectEndpoints({
   endpoints: (builder) => ({
     getOrders: builder.query<IOrderDto[], void>({
       query: () => ({ url: '/orders', method: 'GET' }),
-      providesTags: [TApiTag.Orders],
+      providesTags: [CacheTag.Orders],
     }),
     putOrdersById: builder.mutation<void, { id: number; body: IOrderDto }>({
       query: ({ id, body }) => ({ url: `/orders/${id}`, method: 'PUT', body }),
-      invalidatesTags: [TApiTag.Orders],
+      invalidatesTags: [CacheTag.Orders],
     }),
   }),
 });

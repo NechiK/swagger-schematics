@@ -20,4 +20,13 @@ describe('schema snapshot', () => {
     expect(resolveProjectPath('/src/api/openapi.snapshot.json')).toBe(expected);
     expect(resolveProjectPath('src/api/openapi.snapshot.json')).toBe(expected);
   });
+
+  it('keeps a key named __proto__ (legal in JSON) instead of dropping it', () => {
+    const schema = JSON.parse('{"components":{"schemas":{"__proto__":{"type":"string"},"Order":{"type":"object"}}}}');
+
+    const reparsed = JSON.parse(serializeSchemaSnapshot(schema));
+
+    expect(Object.keys(reparsed.components.schemas)).toEqual(['Order', '__proto__']);
+    expect(reparsed.components.schemas.__proto__).toEqual({ type: 'string' });
+  });
 });

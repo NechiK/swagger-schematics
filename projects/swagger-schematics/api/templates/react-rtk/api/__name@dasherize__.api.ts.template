@@ -6,10 +6,11 @@ import { api as baseApi } from '<%= baseApiImportPath %>';
 <% if (apiList.some(item => item.hasOmittableQueryParams)) { %>
 import { omitBy, isNil } from 'lodash-es';
 <% } %>
-<% if (cacheTag) { %>import { TApiTag } from './api-tag.enum';
+<% /* Imported as CacheTag: generated type imports always start with I or T (a schema enum 'ApiTag' is TApiTag), so this alias can't clash */
+   if (cacheTag) { %>import { TApiTag as CacheTag } from './api-tag.enum';
 <% } %><%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
 
-export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ addTagTypes: [TApiTag.${cacheTag}] })` : 'baseApi' %>.injectEndpoints({
+export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ addTagTypes: [CacheTag.${cacheTag}] })` : 'baseApi' %>.injectEndpoints({
   overrideExisting: false,
   endpoints: (builder) => ({
 <% for (let item of apiList) {
@@ -32,7 +33,7 @@ export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ a
 <% } %>      }),
 <% /* GET/HEAD provide the tag, POST/PUT/PATCH/DELETE invalidate it; OPTIONS/TRACE touch no data */
    let tagProperty = !cacheTag ? null : item.isQuery ? 'providesTags' : ['post', 'put', 'patch', 'delete'].includes(item.apiMethodType) ? 'invalidatesTags' : null;
-   if (tagProperty) { %>      <%= tagProperty %>: [TApiTag.<%= cacheTag %>],
+   if (tagProperty) { %>      <%= tagProperty %>: [CacheTag.<%= cacheTag %>],
 <% } %>    }),
 <% } %>  }),
 });

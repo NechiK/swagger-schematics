@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [1.4.0] - 2026-09-26
 
 ### 🐛 Fixed
 - **Files for removed schemas and endpoints are deleted on regeneration** - when the back-end removed a DTO, an enum or a whole controller, the previously generated file stayed on disk. The app kept compiling against code the API no longer has, so the breaking change surfaced only at runtime. Each run now deletes the files the previous run generated that the current schema no longer produces:

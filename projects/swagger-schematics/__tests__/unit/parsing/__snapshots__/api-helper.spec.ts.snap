@@ -291,7 +291,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "typeSymbol": "number",
           },
         ],
-        "queryParamsFormatted": "params: omitBy({ width, height }, isNil)",
+        "queryParamsFormatted": "params: { ...(width != null ? { width } : {}), ...(height != null ? { height } : {}) }",
         "requestMethod": "post",
         "response": {
           "description": "Success",
@@ -1014,7 +1014,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "typeSymbol": "boolean",
           },
         ],
-        "queryParamsFormatted": "params: omitBy({ status, force }, isNil)",
+        "queryParamsFormatted": "params: { status, ...(force != null ? { force } : {}) }",
         "requestMethod": "delete",
         "response": {
           "content": {
@@ -1106,7 +1106,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "typeSymbol": "number | null",
           },
         ],
-        "queryParamsFormatted": "params: omitBy({ name, status, priority }, isNil)",
+        "queryParamsFormatted": "params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) }",
         "requestMethod": "get",
         "response": {
           "content": {

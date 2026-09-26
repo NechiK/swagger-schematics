@@ -397,16 +397,23 @@ export function formatApiUrl(apiUrl: string): string {
 }
 
 /**
- * Formats query params for HTTP options object.
+ * Formats query params for the Angular HttpClient options object.
  * Example: "params: { status, force }" or ""
- * When hasOmittable is true, wraps in omitBy to strip null/undefined values.
+ *
+ * HttpParams stringifies every value, so an optional or nullable param left
+ * unset would reach the URL as `?page=undefined` / `?page=null`. When
+ * hasOmittable is true, each such param is added only when it has a value:
+ * "params: { status, ...(page != null ? { page } : {}) }". This drops exactly
+ * what lodash `omitBy(isNil)` did (0, false, '' and arrays are kept) but keeps
+ * the object's type, so it compiles under `strict` against HttpClient's
+ * `params` type, which omitBy's `Dictionary<T | undefined>` result does not.
  */
 export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasOmittable?: boolean): string {
     if (queryParams.length === 0) return '';
-    const paramsObj = `{ ${queryParams.map(p => p.objectSymbol).join(', ')} }`;
-    return hasOmittable
-        ? `params: omitBy(${paramsObj}, isNil)`
-        : `params: ${paramsObj}`;
+    const entries = queryParams.map(param => hasOmittable && isParamOptional(param)
+        ? `...(${param.objectSymbol} != null ? { ${param.objectSymbol} } : {})`
+        : param.objectSymbol);
+    return `params: { ${entries.join(', ')} }`;
 }
 
 /**

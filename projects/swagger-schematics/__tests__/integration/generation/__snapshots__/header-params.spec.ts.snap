@@ -5,9 +5,6 @@ exports[`header parameters in generated code Angular: passes headers in the Http
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 import { IOrderDto } from './interfaces/order-dto.interface';
 
 @Injectable({
@@ -45,7 +42,7 @@ export class OrdersApiService extends ApiBaseService {
   getOrders({ page }: { page?: number }, { xTrace }: { xTrace?: string } = {}): Observable<IOrderDto[]> {
     return this.httpClient.get<IOrderDto[]>(
       this.getUrl('/'),
-      { params: omitBy({ page }, isNil), headers: { ...(xTrace != null ? { 'X-Trace': String(xTrace) } : {}) } }
+      { params: { ...(page != null ? { page } : {}) }, headers: { ...(xTrace != null ? { 'X-Trace': String(xTrace) } : {}) } }
     );
   }
 }

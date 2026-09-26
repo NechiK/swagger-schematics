@@ -5,9 +5,6 @@ exports[`Angular custom baseApiPath accepts a file-path value 1`] = `
 import { ApiBaseService } from "../core/base/_api-base.service";
 import { Observable } from "rxjs";
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 
 
 @Injectable({
@@ -24,7 +21,7 @@ export class DocumentApiService extends ApiBaseService {
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
-      { params: omitBy({ page, force }, isNil) }
+      { params: { ...(page != null ? { page } : {}), force } }
     );
   }
 
@@ -32,7 +29,7 @@ export class DocumentApiService extends ApiBaseService {
   getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${documentId}/download\`),
-      { params: omitBy({ thumbnail }, isNil), responseType: 'blob' }
+      { params: { ...(thumbnail != null ? { thumbnail } : {}) }, responseType: 'blob' }
     );
   }
 

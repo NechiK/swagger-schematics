@@ -5,9 +5,6 @@ exports[`OpenAPI 3.1 support API generation with 3.1 binary responses should gen
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 import { IReportDto } from './interfaces/report-dto.interface';
 
 @Injectable({
@@ -24,7 +21,7 @@ export class ReportApiService extends ApiBaseService {
   getReport({ filter }: { filter?: string | null }): Observable<IReportDto[]> {
     return this.httpClient.get<IReportDto[]>(
       this.getUrl('/'),
-      { params: omitBy({ filter }, isNil) }
+      { params: { ...(filter != null ? { filter } : {}) } }
     );
   }
 

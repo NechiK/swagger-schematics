@@ -5,9 +5,6 @@ exports[`Schematics Integration API Service Generation should generate full API 
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
 import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
 import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
@@ -50,7 +47,7 @@ export class ClaimApiService extends ApiBaseService {
     return this.httpClient.post<void>(
       this.getUrl('/'),
       body,
-      { params: omitBy({ width, height }, isNil) }
+      { params: { ...(width != null ? { width } : {}), ...(height != null ? { height } : {}) } }
     );
   }
 
@@ -141,7 +138,7 @@ export class ClaimApiService extends ApiBaseService {
   deleteClaimByFilter({ status, force }: { status: string; force?: boolean }): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
-      { params: omitBy({ status, force }, isNil) }
+      { params: { status, ...(force != null ? { force } : {}) } }
     );
   }
 
@@ -149,7 +146,7 @@ export class ClaimApiService extends ApiBaseService {
   getClaimSearch({ name, status, priority }: { name: string; status?: string | null; priority?: number | null }): Observable<IClaimDetailDTO[]> {
     return this.httpClient.get<IClaimDetailDTO[]>(
       this.getUrl('/search'),
-      { params: omitBy({ name, status, priority }, isNil) }
+      { params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) } }
     );
   }
 }
@@ -160,9 +157,6 @@ exports[`Schematics Integration Binary Response Support should generate the full
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
-
-import { omitBy, isNil } from 'lodash-es';
-
 
 
 
@@ -180,7 +174,7 @@ export class DocumentApiService extends ApiBaseService {
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
-      { params: omitBy({ page, force }, isNil) }
+      { params: { ...(page != null ? { page } : {}), force } }
     );
   }
 
@@ -188,7 +182,7 @@ export class DocumentApiService extends ApiBaseService {
   getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${documentId}/download\`),
-      { params: omitBy({ thumbnail }, isNil), responseType: 'blob' }
+      { params: { ...(thumbnail != null ? { thumbnail } : {}) }, responseType: 'blob' }
     );
   }
 

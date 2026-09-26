@@ -5,7 +5,6 @@ exports[`JSDoc in generated code Angular: documents service methods with summary
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-
 import { IOrderDto } from './interfaces/order-dto.interface';
 
 @Injectable({

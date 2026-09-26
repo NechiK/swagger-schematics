@@ -18,7 +18,7 @@ describe('header parameters in generated code', () => {
 
     expect(service).toContain("{ headers: { 'X-Tenant-Id': String(xTenantId), ...(ifNoneMatch != null ? { 'If-None-Match': String(ifNoneMatch) } : {}) } }");
     expect(service).toContain("{ headers: { 'Idempotency-Key': String(idempotencyKey) } }");
-    expect(service).toContain("{ params: omitBy({ page }, isNil), headers: {");
+    expect(service).toContain("{ params: { ...(page != null ? { page } : {}) }, headers: {");
     expect(service).not.toContain('Authorization');
     expect(service).toMatchSnapshot();
   });

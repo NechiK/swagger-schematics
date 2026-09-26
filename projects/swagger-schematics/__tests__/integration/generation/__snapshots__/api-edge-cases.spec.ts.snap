@@ -5,7 +5,6 @@ exports[`API generation edge cases (Angular) response edge cases render consiste
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-
 import { IModelA } from './interfaces/model-a.interface';
 import { IModelB } from './interfaces/model-b.interface';
 

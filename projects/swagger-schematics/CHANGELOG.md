@@ -36,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `apiPath` on each parsed API item (`IParsedApiItem`): the operation's path as written in the document (e.g. `/api/Users/{id}`), available to custom templates
 
 ### 🐛 Fixed
+- **Angular services with optional query params compile under `strict`** - `params: omitBy({ page }, isNil)` returns lodash's `Dictionary<T | undefined>`, which HttpClient's `params` type rejects under `strict` with `@types/lodash-es` installed. Each optional or nullable query param is now added only when it has a value, `params: { status, ...(page != null ? { page } : {}) }`:
+  - Same query string as before, checked against Angular's `HttpParams`: `null`/`undefined` are left out (so no `?page=undefined`), while `0`, `false`, `''` and arrays are kept
+  - Angular services no longer import `lodash-es`; RTK slices keep `omitBy` (RTK types `params` loosely, so they are unaffected)
+  - `queryParamsFormatted` changes accordingly for custom templates
 - **Header parameters are sent** - operations declaring `in: header` parameters (e.g. .NET `[FromHeader]` for `X-Tenant-Id`, `If-Match`, `Idempotency-Key`) generated methods without them, so the header was silently never sent. They are now part of the generated method and the request:
   - Angular: a trailing object parameter, `{ ifMatch }: { ifMatch?: string }`, sent in the HttpClient options as `headers`. When every header is optional the object defaults to `{}`, so existing calls keep compiling; a required header makes it required
   - RTK: added to the query argument and sent as `headers` in the query definition

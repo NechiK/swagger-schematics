@@ -19,6 +19,7 @@ export class EdgeCaseApiService extends ApiBaseService {
     super();
   }
 
+  /** Bodyless 200 next to a binary 2XX */
   getEdgeCaseDownload(): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl('/download'),
@@ -26,12 +27,14 @@ export class EdgeCaseApiService extends ApiBaseService {
     );
   }
 
+  /** Response declared only as application/xml */
   getEdgeCaseReport(): Observable<IModelA> {
     return this.httpClient.get<IModelA>(
       this.getUrl('/report')
     );
   }
 
+  /** Response-level $ref */
   getEdgeCaseReferenced(): Observable<IModelB> {
     return this.httpClient.get<IModelB>(
       this.getUrl('/referenced')

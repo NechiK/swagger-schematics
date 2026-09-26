@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.5.0] - 2026-09-26
 
 ### ✨ Added
+- **JSDoc from the schema's documentation** - descriptions written on the server now reach the consumer's editor as hover text instead of stopping at the OpenAPI document:
+  - Service methods (Angular) and endpoints (RTK): the operation's `summary`, its `description` as a separate paragraph (skipped when it repeats the summary), and `@deprecated`
+  - Interfaces, enums and type aliases: the schema's `description` and `deprecated`
+  - Interface properties: `description` and `deprecated`, merged into one comment with `@aggregatable`
+  - Multi-line descriptions (e.g. .NET `<remarks>`) keep their paragraphs; a literal `*/` in the text can't end the comment early
+  - Undocumented code renders exactly as before; existing output gains only comment lines
+  - `renderJsDoc(source, indent)` is available to custom API templates, and `transformProperties()` also returns `docs`
 - **API change summary** - with the new `schemaSnapshotPath` option, every `swagger-schematics all` run compares the schema with the snapshot the previous run saved and prints what changed, in the names found in the generated code (`IUserDto.email`, `UsersApiService.getById()`, `usersApi.getById`):
   - **Breaking**: a removed interface, enum, type, property, enum member or endpoint, or a changed property declaration (type, optionality, nullability), enum member value, type alias or endpoint signature. **Added**: new interfaces, properties, enum members and endpoints
   - Names, types and signatures come from the generator's own naming and type rendering, so they match the generated files

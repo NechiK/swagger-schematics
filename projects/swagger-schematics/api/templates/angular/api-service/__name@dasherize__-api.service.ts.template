@@ -19,7 +19,7 @@ export class <%= classify(name) %>ApiService extends ApiBaseService {
 <% for (let item of apiList) {
   let httpCallArgs = buildHttpCallArgs(item);
 %>
-  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+<%= renderJsDoc(item, '  ') %>  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
 <% /* Binary responses use the untyped overload: responseType 'blob' in options makes it Observable<Blob> */
    let responseGeneric = item.isBinaryResponse ? '' : `<${item.responseTypeSymbol}>`;
 if (httpCallArgs.length > 0) { %>    return this.httpClient.<%= item.requestMethod %><%= responseGeneric %>(

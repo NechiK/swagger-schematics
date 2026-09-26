@@ -20,6 +20,7 @@ export class ReportApiService extends ApiBaseService {
     super();
   }
 
+  /** List reports */
   getReport({ filter }: { filter?: string | null }): Observable<IReportDto[]> {
     return this.httpClient.get<IReportDto[]>(
       this.getUrl('/'),
@@ -27,6 +28,7 @@ export class ReportApiService extends ApiBaseService {
     );
   }
 
+  /** Download a report */
   getDownloadByReportId(reportId: number): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${reportId}/download\`),

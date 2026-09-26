@@ -208,6 +208,16 @@ For a CI pipeline, add `--change-report=<file>` to also write the summary as mar
 npx swagger-schematics all --change-report=api-changes.md
 ```
 
+### Documentation comments
+
+Descriptions from the schema become JSDoc in the generated code, so they show up as hover text in the editor:
+
+- **Service methods and RTK endpoints**: the operation's `summary`, `description` (on its own paragraph, unless it repeats the summary) and `@deprecated`
+- **Interfaces, enums and type aliases**: the schema's `description` and `deprecated`
+- **Interface properties**: the property's `description` and `deprecated`, in the same comment as `@aggregatable` (see [OpenAPI Vendor Extensions](#openapi-vendor-extensions))
+
+With ASP.NET, XML doc comments (`<summary>`, `<remarks>`) reach the schema through Swashbuckle's `IncludeXmlComments`, and `[Obsolete]` becomes `deprecated`, which editors show as strikethrough. Anything undocumented renders exactly as before.
+
 ## OpenAPI Vendor Extensions
 
 Some `x-` extensions in the source document are read and reflected in the generated code. All of them are optional: a document that omits an extension generates exactly what it generated before, so none of this is opt-in configuration - it follows the schema.
@@ -280,6 +290,7 @@ The following variables are available in API service templates:
 | `apiList`                 | IParsedApiItem[]   | Array of parsed API operations                                                                      |
 | `importRefs`              | IImportRef[]       | Array of import references for types                                                                |
 | `transformRefsToImport`   | function           | Helper to generate import statements from refs                                                      |
+| `renderJsDoc`             | function           | `renderJsDoc(item, '  ')` renders the operation's `summary`, `description` and `@deprecated` as a JSDoc comment at the given indent (empty string when there is nothing to document) |
 | `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
 | `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |

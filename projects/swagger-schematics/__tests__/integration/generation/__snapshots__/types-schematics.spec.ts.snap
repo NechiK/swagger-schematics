@@ -62,6 +62,7 @@ exports[`Types Schematics Integration Interface Generation should generate Claim
 "import { IIdNameDTO } from './id-name-dto.interface';
 import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
+/** A detailed journal entry */
 export interface IClaimDetailDTO {
   id?: number;
   problemType?: IIdNameDTO;
@@ -75,7 +76,9 @@ export interface IClaimDetailDTO {
 exports[`Types Schematics Integration Interface Generation should generate ClaimNoteViewDTO interface 1`] = `
 "
 
+/** Add a note to a claim */
 export interface IClaimNoteViewDTO {
+  /** The note content */
   note: string;
 }
 "
@@ -84,7 +87,9 @@ export interface IClaimNoteViewDTO {
 exports[`Types Schematics Integration Interface Generation should generate CreateNoteDTO interface 1`] = `
 "
 
+/** Add a note to a claim */
 export interface ICreateNoteDTO {
+  /** The note content */
   note: string;
 }
 "
@@ -93,9 +98,13 @@ export interface ICreateNoteDTO {
 exports[`Types Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
 "
 
+/** IdName lookup */
 export interface IIdNameDTO {
+  /** Id */
   id?: number;
+  /** Name */
   name?: string | null;
+  /** Display name */
   displayName?: string | null;
 }
 "

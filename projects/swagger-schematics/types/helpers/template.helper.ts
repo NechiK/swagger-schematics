@@ -2,10 +2,12 @@ import { buildRelativePath } from "@schematics/angular/utility/find-module";
 import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
 import { isAllOf, isOneOf, isAnyOf, isNot } from "../utils/transform-type";
+import { IDocSource, renderJsDoc } from "../utils/js-doc";
 
 // Property rendering lives with the rest of the type transformation; re-exported
 // here because interface generation historically imported it from this module.
 export { transformProperties } from "../utils/transform-type";
+export { renderJsDoc } from "../utils/js-doc";
 
 export function removeImportDuplicates(importRefs: IImportRef[]): IImportRef[] {
     const seen = new Set<string>();
@@ -33,17 +35,20 @@ export function transformRefsToImport(refs: IImportRef[], optionsPath: string, s
 }
 
 /**
- * Render an interface's property lines. A property the server declared aggregatable
- * (`x-aggregatable`) gets a JSDoc line naming the operations it admits, so the
- * declaration is visible at the property in the editor.
+ * Render an interface's property lines. A property's `description` and `deprecated`
+ * become JSDoc, and a property the server declared aggregatable (`x-aggregatable`)
+ * gets an `@aggregatable` tag naming the operations it admits, so both are visible
+ * at the property in the editor.
  */
-export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string, aggregatable: Array<[string, string[]]> = []) {
+export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string, aggregatable: Array<[string, string[]]> = [], docs: Array<[string, IDocSource]> = []) {
     const indentString = ' '.repeat(parseInt(indentSize, 10));
     const opsByProperty = new Map(aggregatable);
+    const docsByProperty = new Map(docs);
     return `${interfaceProperties.map(([property, type], index) => {
         const isNotLast = index !== interfaceProperties.length - 1;
-        const ops = opsByProperty.get(property.replace(/\?$/, ''));
-        const doc = ops ? `${indentString}/** @aggregatable ${ops.join(', ')} */\n` : '';
+        const name = property.replace(/\?$/, '');
+        const ops = opsByProperty.get(name);
+        const doc = renderJsDoc(docsByProperty.get(name), indentString, ops ? [`@aggregatable ${ops.join(', ')}`] : []);
         return `${doc}${indentString}${property}: ${type};${isNotLast ? '\n' : ''}`
     }).join('')}`;
 }

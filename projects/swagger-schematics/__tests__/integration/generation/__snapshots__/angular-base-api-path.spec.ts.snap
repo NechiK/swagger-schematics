@@ -20,6 +20,7 @@ export class DocumentApiService extends ApiBaseService {
     super();
   }
 
+  /** List documents */
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
@@ -27,6 +28,7 @@ export class DocumentApiService extends ApiBaseService {
     );
   }
 
+  /** Download a document */
   getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${documentId}/download\`),
@@ -34,6 +36,7 @@ export class DocumentApiService extends ApiBaseService {
     );
   }
 
+  /** Upload document files */
   postDocumentByDocumentIdUpload(documentId: number, body: FormData): Observable<boolean> {
     return this.httpClient.post<boolean>(
       this.getUrl(\`/\${documentId}/upload\`),

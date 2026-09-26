@@ -19,6 +19,7 @@ import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
 import { SwaggerApiSchema } from './schema';
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
+import { renderJsDoc } from '../types/utils/js-doc';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
@@ -106,6 +107,7 @@ export default function(options: SwaggerApiSchema) {
                 ...config,
                 ...strings,
                 transformRefsToImport,
+                renderJsDoc,
                 name: apiSchemaKey,
                 apiList: parsedApiSchemas[apiSchemaKey].apiList,
                 importRefs: parsedApiSchemas[apiSchemaKey].importRefs,

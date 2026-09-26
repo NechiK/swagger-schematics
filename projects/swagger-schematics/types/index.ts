@@ -11,6 +11,7 @@ import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import { getGeneratedSchemaKind } from "./utils/schema-kind";
+import { IDocSource, renderJsDoc } from "./utils/js-doc";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
@@ -73,6 +74,8 @@ export default function(options: SwaggerSchema): Rule {
       const generatedFiles = new Set<string>();
       parsedSchemas.forEach(schemaData => {
           let itemSource;
+          // The schema's own description / deprecated flag, as JSDoc above the declaration
+          const typeDoc = renderJsDoc(schemaData.data as IDocSource);
           if (schemaData.type === 'enum') {
               const parsed = parseName(`${openApiSchematicsConfig.path}/enums`, schemaData.name);
               const enumValuesList = schemaData.data.enum;
@@ -86,6 +89,7 @@ export default function(options: SwaggerSchema): Rule {
                       ...enums,
                       name: parsed.name,
                       path: parsed.path,
+                      typeDoc,
                       enums: enumValuesList.reduce((parsedEnumValues, currentValue, currentIndex) => {
                           // Fall back to the value per index - x-enum-varnames may be
                           // shorter than enum in malformed specs
@@ -124,7 +128,8 @@ export default function(options: SwaggerSchema): Rule {
                       optionsPath: openApiSchematicsConfig.path,
                       sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                       typeExpression,
-                      leadingComment: leadingComment ?? '',
+                      // The schema's docs first, then the note a `not` schema carries
+                      leadingComment: [typeDoc.trimEnd(), leadingComment].filter(Boolean).join('\n'),
                       importRefs,
                       indentSize
                   }),
@@ -134,7 +139,7 @@ export default function(options: SwaggerSchema): Rule {
           } else {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
-            const {propertiesContent, refs, aggregatable} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
+            const {propertiesContent, refs, aggregatable, docs: propertyDocs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
                 typeMapping: openApiSchematicsConfig.typeMapping,
                 legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
             }, (schemaData.data as { required?: string[] }).required ?? []);
@@ -151,6 +156,8 @@ export default function(options: SwaggerSchema): Rule {
                     sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                     propertiesContent,
                     aggregatable,
+                    propertyDocs,
+                    typeDoc,
                     importRefs,
                     indentSize
                 }),

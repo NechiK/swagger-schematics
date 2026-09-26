@@ -24,12 +24,14 @@ export class ClaimApiService extends ApiBaseService {
     super();
   }
 
+  /** Gets Claim */
   getById(id: number): Observable<IClaimDetailDTO> {
     return this.httpClient.get<IClaimDetailDTO>(
       this.getUrl(\`/\${id}\`)
     );
   }
 
+  /** Updates Claim */
   updateClaimById(id: number, body: IClaimDetailDTO): Observable<IClaimDetailDTO> {
     return this.httpClient.put<IClaimDetailDTO>(
       this.getUrl(\`/\${id}\`),
@@ -43,6 +45,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Create claim */
   createClaim({ width, height }: { width?: number; height?: number }, body: FormData): Observable<void> {
     return this.httpClient.post<void>(
       this.getUrl('/'),
@@ -51,6 +54,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Creates Claim */
   createClaimByIdNote(id: number, body: ICreateNoteDTO): Observable<IClaimNoteViewDTO> {
     return this.httpClient.post<IClaimNoteViewDTO>(
       this.getUrl(\`/\${id}/note\`),
@@ -58,6 +62,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Update claim status */
   updateClaimStatus(body: number): Observable<void> {
     return this.httpClient.put<void>(
       this.getUrl('/status'),
@@ -79,6 +84,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Update claim by id reactivate */
   updateClaimByIdReactivate(id: number): Observable<void> {
     return this.httpClient.put<void>(
       this.getUrl(\`/\${id}/reactivate\`),
@@ -86,6 +92,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Delete multiple entities */
   deleteClaimDeletemany(body: number[]): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/deletemany'),
@@ -93,18 +100,21 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Get service actions */
   getClaimServiceactions(serviceActionId: number): Observable<number[]> {
     return this.httpClient.get<number[]>(
       this.getUrl('/serviceactions')
     );
   }
 
+  /** Get service actions */
   getClaimServiceactionsByServiceActionId(serviceActionId: number): Observable<number[]> {
     return this.httpClient.get<number[]>(
       this.getUrl(\`/serviceactions/\${serviceActionId}\`)
     );
   }
 
+  /** Get claims by status */
   getClaimBystatus({ id, status }: { id: string; status: TClaimStatuses }): Observable<IClaimDetailDTO[]> {
     return this.httpClient.get<IClaimDetailDTO[]>(
       this.getUrl('/bystatus'),
@@ -112,6 +122,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Update note by id */
   updateClaimNoteById(body: ICreateNoteDTO): Observable<void> {
     return this.httpClient.put<void>(
       this.getUrl(\`/note/\${body.id}\`),
@@ -119,12 +130,14 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Deletes Claim */
   deleteClaimSingleById(id: number): Observable<void> {
     return this.httpClient.delete<void>(
       this.getUrl(\`/single/\${id}\`)
     );
   }
 
+  /** Delete claims by filter */
   deleteClaimByFilter({ status, force }: { status: string; force?: boolean }): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
@@ -132,6 +145,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Search claims with optional filters */
   getClaimSearch({ name, status, priority }: { name: string; status?: string | null; priority?: number | null }): Observable<IClaimDetailDTO[]> {
     return this.httpClient.get<IClaimDetailDTO[]>(
       this.getUrl('/search'),
@@ -162,6 +176,7 @@ export class DocumentApiService extends ApiBaseService {
     super();
   }
 
+  /** List documents */
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
@@ -169,6 +184,7 @@ export class DocumentApiService extends ApiBaseService {
     );
   }
 
+  /** Download a document */
   getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${documentId}/download\`),
@@ -176,6 +192,7 @@ export class DocumentApiService extends ApiBaseService {
     );
   }
 
+  /** Upload document files */
   postDocumentByDocumentIdUpload(documentId: number, body: FormData): Observable<boolean> {
     return this.httpClient.post<boolean>(
       this.getUrl(\`/\${documentId}/upload\`),
@@ -235,6 +252,7 @@ exports[`Schematics Integration Interface Generation should generate ClaimDetail
 "import { IIdNameDTO } from './id-name-dto.interface';
 import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
+/** A detailed journal entry */
 export interface IClaimDetailDTO {
   id?: number;
   problemType?: IIdNameDTO;
@@ -248,9 +266,13 @@ export interface IClaimDetailDTO {
 exports[`Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
 "
 
+/** IdName lookup */
 export interface IIdNameDTO {
+  /** Id */
   id?: number;
+  /** Name */
   name?: string | null;
+  /** Display name */
   displayName?: string | null;
 }
 "

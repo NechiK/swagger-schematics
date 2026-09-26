@@ -1,4 +1,5 @@
 import { dasherize } from "@angular-devkit/core/src/utils/strings";
+import { IDocSource } from "./js-doc";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { 
     ISwaggerSchema, 
@@ -359,10 +360,13 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
     refs: IImportRef[];
     /** Properties carrying `x-aggregatable`, with the operations each admits — the server's declaration, read here so the client can know before it calls. */
     aggregatable: Array<[string, string[]]>;
+    /** Properties with a `description` or `deprecated` flag, rendered as JSDoc on the property. */
+    docs: Array<[string, IDocSource]>;
 } {
     const transformed: Array<[string, string]> = [];
     const refs: IImportRef[] = [];
     const aggregatable: Array<[string, string[]]> = [];
+    const docs: Array<[string, IDocSource]> = [];
 
     for (const propertyKey in properties) {
         const property = properties[propertyKey];
@@ -372,6 +376,11 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
         const declaredOps = (property as { 'x-aggregatable'?: unknown })['x-aggregatable'];
         if (Array.isArray(declaredOps) && declaredOps.length > 0 && declaredOps.every(op => typeof op === 'string')) {
             aggregatable.push([propertyKey, declaredOps as string[]]);
+        }
+
+        const { description, deprecated } = property as IDocSource;
+        if (description || deprecated) {
+            docs.push([propertyKey, { description, deprecated }]);
         }
 
         const nullable = isNullable(property, swagger);
@@ -386,7 +395,8 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
     return {
         propertiesContent: transformed,
         refs,
-        aggregatable
+        aggregatable,
+        docs
     };
 }
 

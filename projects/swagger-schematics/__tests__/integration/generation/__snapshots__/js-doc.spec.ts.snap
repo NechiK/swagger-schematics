@@ -1,0 +1,115 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`JSDoc in generated code Angular: documents service methods with summary, description and @deprecated 1`] = `
+"import { Injectable } from "@angular/core";
+import { ApiBaseService } from "./_api-base.service";
+import { Observable } from "rxjs";
+
+
+import { IOrderDto } from './interfaces/order-dto.interface';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class OrdersApiService extends ApiBaseService {
+  endpoint = 'Orders';
+
+  constructor() {
+    super();
+  }
+
+  /**
+   * Get an order
+   *
+   * Returns 404 when the order does not exist.
+   *
+   * Archived orders are included.
+   */
+  getById(id: number): Observable<IOrderDto> {
+    return this.httpClient.get<IOrderDto>(
+      this.getUrl(\`/\${id}\`)
+    );
+  }
+
+  /**
+   * Delete an order
+   * @deprecated
+   */
+  deleteOrdersById(id: number): Observable<void> {
+    return this.httpClient.delete<void>(
+      this.getUrl(\`/\${id}\`)
+    );
+  }
+
+  getOrders(): Observable<IOrderDto[]> {
+    return this.httpClient.get<IOrderDto[]>(
+      this.getUrl('/')
+    );
+  }
+}
+"
+`;
+
+exports[`JSDoc in generated code RTK: documents endpoints 1`] = `
+"
+import { api as baseApi } from '@th-common/store/api-base';
+
+import { IOrderDto } from './interfaces/order-dto.interface';
+
+export const ordersApi = baseApi.injectEndpoints({
+  overrideExisting: false,
+  endpoints: (builder) => ({
+    /**
+     * Get an order
+     *
+     * Returns 404 when the order does not exist.
+     *
+     * Archived orders are included.
+     */
+    ordersGetById: builder.query<IOrderDto, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'GET',
+      }),
+    }),
+    /**
+     * Delete an order
+     * @deprecated
+     */
+    ordersDeleteOrdersById: builder.mutation<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'DELETE',
+      }),
+    }),
+    ordersGetOrders: builder.query<IOrderDto[], void>({
+      query: () => ({
+        url: '/orders',
+        method: 'GET',
+      }),
+    }),
+  }),
+});"
+`;
+
+exports[`JSDoc in generated code documents interfaces and their properties, merging @aggregatable into the same comment 1`] = `
+"
+
+/** An order placed by a customer */
+export interface IOrderDto {
+  /** Order number */
+  id: number;
+  /** @deprecated */
+  legacyCode?: string;
+  /**
+   * Total in cents
+   * @aggregatable Sum, Avg
+   */
+  total?: number;
+  notes?: string;
+}
+
+/** Columns of IOrderDto a paged search can aggregate (see each property's @aggregatable). */
+export type IOrderDtoAggregatableColumn = 'total';
+"
+`;

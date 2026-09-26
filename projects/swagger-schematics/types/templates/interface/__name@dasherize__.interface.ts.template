@@ -1,5 +1,5 @@
 <%= transformRefsToImport(importRefs, optionsPath, sourcePath) %>
 
-export interface I<%= classify(name) %> {
-<%= interfacePropertyLine(propertiesContent, indentSize, aggregatable) %>
+<%= typeDoc %>export interface I<%= classify(name) %> {
+<%= interfacePropertyLine(propertiesContent, indentSize, aggregatable, propertyDocs) %>
 }<%= aggregatableColumnsType('I' + classify(name), aggregatable) %>

@@ -19,7 +19,7 @@ export const <%= apiExportName %> = baseApi.injectEndpoints({
   let rawUrl = item.apiUrl ? (dasherize(name) + '/' + item.apiUrl) : dasherize(name);
   let hasInterpolation = rawUrl.includes('${');
   let fullUrl = hasInterpolation ? '`/' + rawUrl + '`' : "'/" + rawUrl + "'";
-%>    <%= endpointName %>: <%= builderMethod %><<%= item.responseTypeSymbol %>, <%= item.apiMethodRequestType %>>({
+%><%= renderJsDoc(item, '    ') %>    <%= endpointName %>: <%= builderMethod %><<%= item.responseTypeSymbol %>, <%= item.apiMethodRequestType %>>({
       query: (<%= args %>) => ({
         url: <%= fullUrl %>,
         method: '<%= item.httpMethod %>',

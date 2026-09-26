@@ -18,12 +18,14 @@ export class WidgetApiService extends ApiBaseService {
     super();
   }
 
+  /** List widgets */
   getWidget(): Observable<IWidgetDto[]> {
     return this.httpClient.get<IWidgetDto[]>(
       this.getUrl('/')
     );
   }
 
+  /** Get widget by id */
   getById(id: number): Observable<IWidgetDto> {
     return this.httpClient.get<IWidgetDto>(
       this.getUrl(\`/\${id}\`)

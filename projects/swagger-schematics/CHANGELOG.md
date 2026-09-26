@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.0] - 2026-09-26
+
+### 🐛 Fixed
+- **Files for removed schemas and endpoints are deleted on regeneration** - when the back-end removed a DTO, an enum or a whole controller, the previously generated file stayed on disk. The app kept compiling against code the API no longer has, so the breaking change surfaced only at runtime. Each run now deletes the files the previous run generated that the current schema no longer produces:
+  - Ownership comes from a new `.swagger-schematics-manifest.json` in `path` (one per output path, with a `types` and an `api` section). Only files listed there are deleted, so hand-written files in the same folders are never touched, and the base API files are never listed
+  - First run without a manifest deletes nothing; files in the generated folders that the current schema doesn't produce are listed as a warning for one-time manual cleanup
+  - A schema that produces no files at all (empty or wrong document) deletes nothing and logs a warning, so a broken schema source can't wipe the generated code
+  - Manifest entries that point outside `path` are ignored; an unreadable manifest deletes nothing and is rewritten
+  - Deletions go through the schematic tree, so `--dry-run` reports them as `DELETE` lines
+- **No empty service for an endpoint group without operations** - a path item with no operations (e.g. `"/api/Legacy": {}` or only path-level `parameters`) created a group that rendered as a service class with no methods. Such groups are now skipped with a warning, so a controller whose endpoints were all removed has its file deleted instead of emptied. A document without `paths` no longer throws
+
+### ✨ Added
+- `removeStaleFiles` option (`types`, `api`; default `true`) - set `false` to keep files that are no longer in the schema; they are listed as warnings and stay tracked in the manifest, so a later run with the option on still cleans them up
+
+### ♻️ Changed
+- Generation now writes `.swagger-schematics-manifest.json` to `path`. Commit it with the generated code; without it the next run can't tell which files it generated
 ## [1.3.1] - 2026-09-26
 
 ### 🐛 Fixed

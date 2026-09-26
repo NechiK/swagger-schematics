@@ -49,6 +49,7 @@ export interface SchematicOptions {
   scopeEndpointsWithTags?: boolean;
   eslintFix?: boolean;
   legacyOptionalProperties?: boolean;
+  removeStaleFiles?: boolean;
 }
 
 export const ANGULAR_SCHEMATIC_OPTIONS: SchematicOptions = loadJsonFixture('angular-options.fixture.json');

@@ -40,6 +40,7 @@ exports[`Type generation edge cases enum without varnames sanitizes string value
 exports[`Type generation edge cases generates the expected files 1`] = `
 [
   "/.editorconfig",
+  "/test-output/.swagger-schematics-manifest.json",
   "/test-output/enums/numeric-codes.enum.ts",
   "/test-output/enums/partial-names.enum.ts",
   "/test-output/enums/status-without-names.enum.ts",

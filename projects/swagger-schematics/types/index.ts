@@ -21,6 +21,7 @@ import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
+import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
 
 export default function(options: SwaggerSchema): Rule {
   const typesRule: Rule = async (host: Tree, context: SchematicContext) => {
@@ -97,6 +98,7 @@ export default function(options: SwaggerSchema): Rule {
       const typeAliasTemplates = url('./templates/type-alias');
 
       const rules: Rule[] = [];
+      const generatedFiles = new Set<string>();
       parsedSchemas.forEach(schemaData => {
           let itemSource;
           if (schemaData.type === 'enum') {
@@ -124,7 +126,8 @@ export default function(options: SwaggerSchema): Rule {
                       }, [] as Array<[string | number, string | number, string | undefined]>),
                       indentSize
                   }),
-                  move(parsed.path)
+                  move(parsed.path),
+                  recordGeneratedFiles(generatedFiles)
               ]);
           } else if (schemaData.type === 'type-alias') {
               // Handle composition schemas (allOf, oneOf, anyOf)
@@ -153,7 +156,8 @@ export default function(options: SwaggerSchema): Rule {
                       importRefs,
                       indentSize
                   }),
-                  move(parsed.path)
+                  move(parsed.path),
+                  recordGeneratedFiles(generatedFiles)
               ]);
           } else {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
@@ -178,7 +182,8 @@ export default function(options: SwaggerSchema): Rule {
                     importRefs,
                     indentSize
                 }),
-                move(parsed.path)
+                move(parsed.path),
+                recordGeneratedFiles(generatedFiles)
             ]);
           }
 
@@ -186,7 +191,17 @@ export default function(options: SwaggerSchema): Rule {
       });
 
       const eslintFixRule = createEslintFixRule(openApiSchematicsConfig);
-      return rules.length ? chain([...rules, eslintFixRule]) : eslintFixRule;
+      const staleFilesRule = createStaleFilesRule({
+          section: 'types',
+          outputPath: openApiSchematicsConfig.path as string,
+          generatedFiles,
+          remove: openApiSchematicsConfig.removeStaleFiles !== false,
+          ownedFilePatterns: [
+              { dir: `${openApiSchematicsConfig.path}/interfaces`, suffixes: ['.interface.ts', '.type.ts'] },
+              { dir: `${openApiSchematicsConfig.path}/enums`, suffixes: ['.enum.ts'] }
+          ]
+      });
+      return chain([...rules, eslintFixRule, staleFilesRule]);
   };
 
   return wrapRuleWithErrorLogging('types', typesRule);

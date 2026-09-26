@@ -10,6 +10,7 @@ const DEFAULT_CONFIG: Partial<SwaggerApiSchema> = {
     scopeEndpointsWithTags: false,
     eslintFix: false,
     legacyOptionalProperties: false,
+    removeStaleFiles: true,
 };
 
 export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerApiSchema => {

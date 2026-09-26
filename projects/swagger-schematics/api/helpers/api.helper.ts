@@ -93,7 +93,7 @@ function normalizeApiPathPrefix(prefix: string): string {
 export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: TTransformSwaggerSchemaOptions): IParsedApiSchema => {
     const apiPathPrefix = normalizeApiPathPrefix(options?.apiPathKey || '/api/');
 
-    const apiPaths = swaggerSchema.paths;
+    const apiPaths = swaggerSchema.paths ?? {};
     const apiPathKeys = Object.keys(apiPaths);
 
     const transformedSwaggerSchema = apiPathKeys.reduce((apiParsedSchema, apiPathKey: string) => {
@@ -216,9 +216,18 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         return apiParsedSchema;
     }, {} as IParsedApiSchema);
 
-    // Remove import duplicates
     Object.keys(transformedSwaggerSchema).forEach(apiKey => {
         const schema = transformedSwaggerSchema[apiKey];
+        // A group whose paths declare no operations (e.g. only path-level
+        // `parameters`, or an empty path item) would render a service with no
+        // methods - drop it, so a controller whose endpoints were all removed
+        // leaves no empty file behind.
+        if (!schema.apiList.length) {
+            console.warn(`API group '${apiKey}' has no operations. Skipping...`);
+            delete transformedSwaggerSchema[apiKey];
+            return;
+        }
+        // Remove import duplicates
         schema.importRefs = removeImportDuplicates(schema.importRefs);
     });
 

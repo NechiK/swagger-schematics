@@ -162,9 +162,21 @@ When mapping to another schema, the `nullable` property from the original type i
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
 | `legacyOptionalProperties` | boolean | types      | Legacy optionality for back-ends that don't emit a `required` array yet. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`) |
+| `removeStaleFiles`       | boolean | api, types | Delete previously generated files whose schema or endpoint group is no longer in the document (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.
+
+### Removed schemas and endpoints
+
+When the back-end removes a schema or a whole controller, the next run deletes the file generated for it, so the removal shows up as a compile error in your code instead of leaving a stale service or interface behind.
+
+To know which files it owns, the generator keeps a `.swagger-schematics-manifest.json` in `path`, listing the files each schematic generated. **Commit it** alongside the generated code. Only files listed there are ever deleted, so hand-written files in the same folders are never touched, and the base API files (`_api-base.service.ts`, `api-base.ts`) are never listed.
+
+- **First run after upgrading:** there is no manifest yet, so nothing is deleted. Files in the generated folders that don't match the current schema are listed as a warning; delete the ones that are leftovers. From then on cleanup is automatic.
+- **Schema that produces nothing** (e.g. an empty or wrong document): nothing is deleted and a warning is logged.
+- **`--dry-run`** reports the deletions as `DELETE` lines without touching the files.
+- An endpoint group whose paths declare no operations no longer generates an empty service.
 
 
 ## OpenAPI Vendor Extensions

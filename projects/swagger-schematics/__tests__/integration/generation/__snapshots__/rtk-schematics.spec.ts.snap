@@ -41,6 +41,7 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
 [
   "/.editorconfig",
   "/tsconfig.json",
+  "/test-output/.swagger-schematics-manifest.json",
   "/test-output/claim.api.ts",
   "/test-output/interfaces/company-search-dto.interface.ts",
   "/test-output/interfaces/claim-detail-dto.interface.ts",

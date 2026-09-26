@@ -27,6 +27,7 @@ import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-a
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
+import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
 import * as path from 'path';
 
 import { existsSync } from 'fs';
@@ -98,6 +99,7 @@ export default function(options: SwaggerApiSchema) {
             : {};
 
         const rules: Rule[] = [];
+        const generatedFiles = new Set<string>();
 
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
@@ -125,7 +127,8 @@ export default function(options: SwaggerApiSchema) {
 
             const itemSource = apply(apiServiceTemplates, [
                 applyTemplates(templateContext),
-                move(parsed.path)
+                move(parsed.path),
+                recordGeneratedFiles(generatedFiles)
             ]);
 
             rules.push(mergeWith(itemSource, MergeStrategy.Overwrite));
@@ -138,7 +141,14 @@ export default function(options: SwaggerApiSchema) {
         }
 
         const eslintFixRule = createEslintFixRule(config);
-        return rules.length ? chain([...rules, eslintFixRule]) : eslintFixRule;
+        const staleFilesRule = createStaleFilesRule({
+            section: 'api',
+            outputPath: config.path,
+            generatedFiles,
+            remove: config.removeStaleFiles !== false,
+            ownedFilePatterns: [{ dir: config.path, suffixes: [apiFileExt], exclude: [baseApiPath] }]
+        });
+        return chain([...rules, eslintFixRule, staleFilesRule]);
     };
 
     return wrapRuleWithErrorLogging('api', apiRule);

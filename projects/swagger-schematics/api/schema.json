@@ -33,7 +33,7 @@
     },
     "framework": {
       "type": "string",
-      "description": "Target framework for generated API code: 'angular' or 'react-rtk'.",
+      "description": "Target framework for generated API code: 'angular' or 'react-rtk'. Required, no default; may come from openapi-schematics.json.",
       "enum": [
         "angular",
         "react-rtk"

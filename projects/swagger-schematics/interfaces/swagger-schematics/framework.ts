@@ -65,3 +65,21 @@ export function getFrameworkConfig(type: TFrameworkType): IFrameworkConfig {
 export function isValidFrameworkType(type: string): type is TFrameworkType {
     return type in FRAMEWORK_CONFIGS;
 }
+
+/**
+ * Validates a configured `framework` and returns it typed. Required with no
+ * default: an Angular fallback would silently emit Angular services into a
+ * React project. Callers use this instead of schema.json 'required'/'enum',
+ * because schema validation runs before openapi-schematics.json is merged in
+ * and never sees its values.
+ */
+export function resolveFramework(framework: unknown): TFrameworkType {
+    const supported = Object.keys(FRAMEWORK_CONFIGS).map(name => `'${name}'`).join(' or ');
+    if (!framework) {
+        throw new Error(`Framework is not defined in the configuration. Please set 'framework' to ${supported}.`);
+    }
+    if (typeof framework !== 'string' || !Object.prototype.hasOwnProperty.call(FRAMEWORK_CONFIGS, framework)) {
+        throw new Error(`Framework '${String(framework)}' is not supported. Please set 'framework' to ${supported}.`);
+    }
+    return framework as TFrameworkType;
+}

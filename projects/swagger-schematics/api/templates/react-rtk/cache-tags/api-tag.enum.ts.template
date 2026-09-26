@@ -1,0 +1,4 @@
+/** RTK Query cache tags, one per API slice. Queries provide their slice's tag; mutations invalidate it. */
+export enum TApiTag {
+<%= cacheTags.map(tag => `  ${tag} = '${tag}'`).join(',\n') %>
+}

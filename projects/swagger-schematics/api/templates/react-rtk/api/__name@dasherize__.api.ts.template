@@ -6,9 +6,10 @@ import { api as baseApi } from '<%= baseApiImportPath %>';
 <% if (apiList.some(item => item.hasOmittableQueryParams)) { %>
 import { omitBy, isNil } from 'lodash-es';
 <% } %>
-<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
+<% if (cacheTag) { %>import { TApiTag } from './api-tag.enum';
+<% } %><%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}.api`) %>
 
-export const <%= apiExportName %> = baseApi.injectEndpoints({
+export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ addTagTypes: [TApiTag.${cacheTag}] })` : 'baseApi' %>.injectEndpoints({
   overrideExisting: false,
   endpoints: (builder) => ({
 <% for (let item of apiList) {
@@ -29,6 +30,7 @@ export const <%= apiExportName %> = baseApi.injectEndpoints({
 <% } if (item.headerParamsFormatted) { %>        <%= item.headerParamsFormatted %>,
 <% } if (item.isBinaryResponse) { %>        responseHandler: (response) => response.blob(),
 <% } %>      }),
-    }),
+<% if (cacheTag) { %>      <%= item.isQuery ? 'providesTags' : 'invalidatesTags' %>: [TApiTag.<%= cacheTag %>],
+<% } %>    }),
 <% } %>  }),
 });

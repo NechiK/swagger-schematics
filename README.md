@@ -164,6 +164,7 @@ When mapping to another schema, the `nullable` property from the original type i
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
 | `legacyOptionalProperties` | boolean | types      | Legacy optionality for back-ends that don't emit a `required` array yet. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`) |
+| `rtkCacheTags`           | boolean | api        | React RTK only: generate [cache tags](#rtk-cache-tags) so queries refetch after a mutation in the same slice. Defaults to `false` |
 | `schemaSnapshotPath`     | string  | `all` (CLI) | Where to keep a copy of the schema, relative to the project root, e.g. `/src/app/core/openapi.snapshot.json`. Turns on the [API change summary](#api-change-summary): each `swagger-schematics all` run compares the new schema with it, prints what changed, and updates it. Commit it with the generated code |
 | `removeStaleFiles`       | boolean | api, types | Delete previously generated files whose schema or endpoint group is no longer in the document (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
@@ -206,6 +207,60 @@ For a CI pipeline, add `--change-report=<file>` to also write the summary as mar
 
 ```bash
 npx swagger-schematics all --change-report=api-changes.md
+```
+
+### RTK cache tags
+
+With `rtkCacheTags: true` (React RTK only), a list refetches by itself after a create, update or delete in the same slice. Your components don't change:
+
+```ts
+// api-tag.enum.ts (generated): one member per slice
+export enum TApiTag {
+  Orders = 'Orders',
+  Users = 'Users'
+}
+
+// orders.api.ts (generated)
+export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [TApiTag.Orders] }).injectEndpoints({
+  endpoints: (builder) => ({
+    getOrders: builder.query<IOrderDto[], void>({
+      query: () => ({ url: '/orders', method: 'GET' }),
+      providesTags: [TApiTag.Orders],
+    }),
+    putOrdersById: builder.mutation<void, { id: number; body: IOrderDto }>({
+      query: ({ id, body }) => ({ url: `/orders/${id}`, method: 'PUT', body }),
+      invalidatesTags: [TApiTag.Orders],
+    }),
+  }),
+});
+```
+
+- GET and HEAD endpoints provide their slice's tag; POST, PUT, PATCH and DELETE invalidate it
+- Tags are per slice: updating order 5 also refetches an `Orders` query for order 7 if one is on screen, and a change in one slice doesn't refresh another
+- Tag types are registered by each slice (`enhanceEndpoints({ addTagTypes })`), so the base API file needs no changes
+- Turning the option off again removes the enum and the tags
+
+To tag across slices, override with `enhanceEndpoints` using the same enum. The object form replaces the generated tags, so repeat the slice's own tag; the function form adds to them:
+
+```ts
+// Replace
+ordersApi.enhanceEndpoints({
+  addTagTypes: [TApiTag.Users],
+  endpoints: { getOrders: { providesTags: [TApiTag.Orders, TApiTag.Users] } },
+});
+
+// Add
+ordersApi.enhanceEndpoints({
+  addTagTypes: [TApiTag.Users],
+  endpoints: {
+    getOrders: (definition) => {
+      definition.providesTags = [...(definition.providesTags as TApiTag[]), TApiTag.Users];
+    },
+  },
+});
+
+// Refresh by hand, e.g. after a websocket event
+dispatch(ordersApi.util.invalidateTags([TApiTag.Orders]));
 ```
 
 ### Documentation comments
@@ -290,6 +345,7 @@ The following variables are available in API service templates:
 | `apiList`                 | IParsedApiItem[]   | Array of parsed API operations                                                                      |
 | `importRefs`              | IImportRef[]       | Array of import references for types                                                                |
 | `transformRefsToImport`   | function           | Helper to generate import statements from refs                                                      |
+| `cacheTag`                | string \| null     | RTK: the slice's `TApiTag` member (e.g., "Orders") when `rtkCacheTags` is on, otherwise `null`       |
 | `renderJsDoc`             | function           | `renderJsDoc(item, '  ')` renders the operation's `summary`, `description` and `@deprecated` as a JSDoc comment at the given indent (empty string when there is nothing to document) |
 | `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |

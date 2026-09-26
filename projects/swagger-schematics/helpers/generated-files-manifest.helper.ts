@@ -151,7 +151,7 @@ export function createStaleFilesRule(options: IStaleFilesOptions): Rule {
             } else if (stale.length && options.remove) {
                 stale.forEach(entry => {
                     tree.delete(join(outputDir, entry));
-                    context.logger.info(`${options.section}: ${join(outputDir, entry)} is no longer in the schema, deleting it`);
+                    context.logger.info(`${options.section}: ${join(outputDir, entry)} is no longer generated, deleting it`);
                 });
             } else if (stale.length) {
                 context.logger.warn(`${options.section}: removeStaleFiles is off, keeping files that are no longer ` +

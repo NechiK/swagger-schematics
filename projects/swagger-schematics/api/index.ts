@@ -20,6 +20,7 @@ import { SwaggerApiSchema } from './schema';
 import { transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { renderJsDoc } from '../types/utils/js-doc';
+import { toEnumMemberName } from '../types/utils/enum';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
@@ -98,6 +99,21 @@ export default function(options: SwaggerApiSchema) {
         const rules: Rule[] = [];
         const generatedFiles = new Set<string>();
 
+        // RTK cache tags: one TApiTag member per slice, generated into `path`
+        if (config.rtkCacheTags && framework !== 'react-rtk') {
+            context.logger.warn(`rtkCacheTags applies to framework 'react-rtk' only; ignored for '${framework}'.`);
+        }
+        const useCacheTags = !!config.rtkCacheTags && framework === 'react-rtk';
+        const cacheTagFor = (apiSchemaKey: string) => toEnumMemberName(strings.classify(apiSchemaKey), 0);
+        if (useCacheTags) {
+            const cacheTagsSource = apply(url('./templates/react-rtk/cache-tags'), [
+                applyTemplates({ cacheTags: Object.keys(parsedApiSchemas).map(cacheTagFor) }),
+                move(config.path),
+                recordGeneratedFiles(generatedFiles)
+            ]);
+            rules.push(mergeWith(cacheTagsSource, MergeStrategy.Overwrite));
+        }
+
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
             const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}${apiFileExt}`;
@@ -112,6 +128,8 @@ export default function(options: SwaggerApiSchema) {
                 apiList: parsedApiSchemas[apiSchemaKey].apiList,
                 importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
                 scopeEndpointsWithTags: config.scopeEndpointsWithTags || false,
+                // The slice's TApiTag member (e.g. 'Orders'), or null when rtkCacheTags is off
+                cacheTag: useCacheTags ? cacheTagFor(apiSchemaKey) : null,
                 baseApiImportPath: getBaseApiImportPath(tree, apiFilePath, baseApiPath),
                 ...customHelpers,
             };

@@ -69,6 +69,10 @@
     "schemaSnapshotPath": {
       "type": "string",
       "description": "Path of a copy of the schema saved by 'swagger-schematics all', relative to the project root (a leading '/' is allowed, like 'path'), e.g. '/src/app/core/openapi.snapshot.json'. Commit it with the generated code: the next run compares the new schema with it and prints the API changes (see --change-report). CLI 'all' command only."
+    },
+    "rtkCacheTags": {
+      "type": "boolean",
+      "description": "React RTK only: generate RTK Query cache tags, one per API slice. Queries provide their slice's tag and mutations invalidate it, so a list refetches after a create/update/delete in the same slice. The tags are the members of a generated TApiTag enum ('api-tag.enum.ts' in 'path'). Defaults to false."
     }
   },
   "required": []

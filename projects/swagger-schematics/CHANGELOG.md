@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.5.0] - 2026-09-26
 
 ### ✨ Added
+- **RTK cache tags** (`rtkCacheTags`, React RTK only, off by default) - lists refetch by themselves after a create, update or delete in the same slice, instead of every team adding tags by hand:
+  - A generated `TApiTag` enum (`api-tag.enum.ts` in `path`) with one member per slice; each slice registers its tag with `enhanceEndpoints({ addTagTypes })`, so the base API file needs no changes
+  - GET and HEAD endpoints `providesTags` their slice's tag; POST, PUT, PATCH and DELETE `invalidatesTags` it
+  - Cross-slice tags are added with `enhanceEndpoints` using the same enum (README shows replacing and adding); turning the option off removes the enum and the tags
+  - Checked against `@reduxjs/toolkit` 2.x types: generated slices, overrides and `util.invalidateTags` compile under `strict` with no casts beyond the documented `providesTags` spread
 - **JSDoc from the schema's documentation** - descriptions written on the server now reach the consumer's editor as hover text instead of stopping at the OpenAPI document:
   - Service methods (Angular) and endpoints (RTK): the operation's `summary`, its `description` as a separate paragraph (skipped when it repeats the summary), and `@deprecated`
   - Interfaces, enums and type aliases: the schema's `description` and `deprecated`

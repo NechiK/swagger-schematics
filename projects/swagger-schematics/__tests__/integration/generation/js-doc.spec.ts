@@ -82,7 +82,9 @@ describe('JSDoc in generated code', () => {
     );
     expect(tree.readContent(`${OUT}/interfaces/order-ref.type.ts`)).toContain('/** An order id or code */\nexport type TOrderRef =');
     const notDraft = tree.readContent(`${OUT}/interfaces/not-draft.type.ts`);
-    expect(notDraft).toContain('/** Anything but a draft */\n/** Any value except');
+    // One comment: editors show only the last of two stacked comments
+    expect(notDraft).toContain('/**\n * Anything but a draft\n *\n * Any value except `string`.');
+    expect(notDraft.match(/\/\*\*/g)).toHaveLength(1);
   });
 
   it('Angular: documents service methods with summary, description and @deprecated', async () => {

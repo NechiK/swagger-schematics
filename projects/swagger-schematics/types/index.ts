@@ -24,6 +24,20 @@ import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
 
+/**
+ * A type alias's JSDoc: the schema's own docs plus the note a `not` schema
+ * carries, in ONE comment - editors show only the last of two stacked comments,
+ * so a separate note would hide the schema's description.
+ */
+function typeAliasComment(schemaDoc: IDocSource, note: string | undefined): string {
+    // The note is generated as a single-line `/** text */`
+    const noteText = note?.replace(/^\/\*\*\s*|\s*\*\/$/g, '');
+    return renderJsDoc({
+        ...schemaDoc,
+        description: [schemaDoc.description, noteText].filter(Boolean).join('\n\n')
+    }).trimEnd();
+}
+
 export default function(options: SwaggerSchema): Rule {
   const typesRule: Rule = async (host: Tree, context: SchematicContext) => {
     const openApiSchematicsConfig= getOpenapiSchematicsConfig(options);
@@ -128,8 +142,7 @@ export default function(options: SwaggerSchema): Rule {
                       optionsPath: openApiSchematicsConfig.path,
                       sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                       typeExpression,
-                      // The schema's docs first, then the note a `not` schema carries
-                      leadingComment: [typeDoc.trimEnd(), leadingComment].filter(Boolean).join('\n'),
+                      leadingComment: typeAliasComment(schemaData.data as IDocSource, leadingComment),
                       importRefs,
                       indentSize
                   }),

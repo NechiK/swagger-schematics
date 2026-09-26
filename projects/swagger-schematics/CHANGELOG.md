@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.1] - 2026-09-26
+
+### 🐛 Fixed
+- **`swagger-schematics all` loads the schema once** - `types` and `api` each fetched the document, so every run made two requests (or two file reads), and a backend deploy landing between them could generate types and services from different versions of the API. The CLI now loads the schema once per run and gives each schematic its own copy of it
+  - A failed load is not reused, and the legacy `npx schematics swagger-schematics:…` commands (one process per schematic) are unaffected
+  - `enableSwaggerSchemaCache()` is exported from `helpers/swagger-schema.helper` for programmatic callers; the cache is off unless turned on, so a long-lived process that regenerates after the API changed still loads the new document
+
+
 ## [1.4.0] - 2026-09-26
 
 ### 🐛 Fixed

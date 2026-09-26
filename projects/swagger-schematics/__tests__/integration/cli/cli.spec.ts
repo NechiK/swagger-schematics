@@ -1,4 +1,5 @@
 import '@helpers/matchers';
+import { countOccurrences } from '@helpers/setup';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -147,6 +148,14 @@ describe('swagger-schematics CLI', () => {
 
     const output = runCli('all --framework=angular');
 
+    expect(output).toContain('CREATE src/app/core/widget-api.service.ts');
+  }, 120000);
+
+  it('should load the schema once for the all command', () => {
+    const output = runCli('all');
+
+    expect(countOccurrences(output, 'Reading swagger schema from file')).toBe(1);
+    expect(countOccurrences(output, 'Reusing the swagger schema already loaded')).toBe(1);
     expect(output).toContain('CREATE src/app/core/widget-api.service.ts');
   }, 120000);
 

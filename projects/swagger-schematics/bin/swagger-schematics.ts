@@ -4,6 +4,7 @@ import { createConsoleLogger } from '@angular-devkit/core/node';
 import { NodeWorkflow } from '@angular-devkit/schematics/tools';
 import { parseCliArgs, helpText, TCliCommand } from './cli-args';
 import { logSchematicError } from '../helpers/error-logging.helper';
+import { enableSwaggerSchemaCache } from '../helpers/swagger-schema.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { SwaggerApiSchema } from '../api/schema';
@@ -96,6 +97,9 @@ async function main(): Promise<void> {
         } as SwaggerApiSchema);
         resolveFramework(config.framework);
     }
+
+    // `all` runs types and api in this process: load the schema once for both
+    enableSwaggerSchemaCache();
 
     for (const schematic of schematics) {
         await runSchematic(schematic, args.options, args.positionals, args.dryRun);

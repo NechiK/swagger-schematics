@@ -29,6 +29,8 @@ npm i -D swagger-schematics
 npx swagger-schematics all swaggerUrl --path=/src/app/core --framework=angular
 ```
 
+`all` generates types and then API services from a single load of the schema, so both always come from the same version of the document.
+
 Or run the schematics individually:
 
 ```bash

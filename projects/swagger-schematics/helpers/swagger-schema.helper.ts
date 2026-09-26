@@ -13,14 +13,46 @@ function isFileUrl(source: string): boolean {
 }
 
 /**
+ * Per-run schema cache, off by default. The CLI turns it on so `all` loads the
+ * document once and `types` and `api` generate from the same version of it.
+ * Deliberately not always on: a long-lived process (tests, programmatic use)
+ * that regenerates after the API changed must load the new document.
+ */
+let schemaCache: Map<string, Promise<ISwaggerSchema>> | null = null;
+
+/** Makes every later `fetchSwaggerSchema` call in this process reuse the first load of a source. */
+export function enableSwaggerSchemaCache(): void {
+    schemaCache = new Map();
+}
+
+/**
  * Loads the swagger schema from an http(s) URL, a file:// URL, or a local
  * file path (absolute, or relative to the current working directory).
  */
 export async function fetchSwaggerSchema(source: string): Promise<ISwaggerSchema> {
+    if (!schemaCache) {
+        return loadSwaggerSchema(source);
+    }
+
+    let pending = schemaCache.get(source);
+    if (pending) {
+        console.info(`[swagger-schematics] Reusing the swagger schema already loaded from '${source}'`);
+    } else {
+        pending = loadSwaggerSchema(source);
+        schemaCache.set(source, pending);
+        // Don't keep a failed load: a later call should try again, not rethrow the old error
+        pending.catch(() => schemaCache?.delete(source));
+    }
+
+    // Each caller gets its own copy, so nothing one schematic does to the document leaks into the next
+    return structuredClone(await pending);
+}
+
+function loadSwaggerSchema(source: string): Promise<ISwaggerSchema> {
     if (isHttpUrl(source)) {
         return fetchSwaggerSchemaFromUrl(source);
     }
-    return readSwaggerSchemaFromFile(source);
+    return Promise.resolve().then(() => readSwaggerSchemaFromFile(source));
 }
 
 async function fetchSwaggerSchemaFromUrl(url: string): Promise<ISwaggerSchema> {

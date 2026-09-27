@@ -57,7 +57,10 @@ describe('buildApiModel', () => {
       'GET /api/Users/{id}': {
         label: 'GET /api/Users/{id}',
         symbol: 'UsersApiService.getById()',
-        signature: '(id: number) => IUserDto'
+        signature: '(id: number) => IUserDto',
+        response: 'IUserDto',
+        params: { 'path id': 'id: number' },
+        args: [{ id: 'path id', optional: false }]
       }
     });
   });

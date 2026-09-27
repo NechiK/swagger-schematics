@@ -1,6 +1,6 @@
 import '@helpers/matchers';
-import { resetFetchMocks, runFullSchematics, runApiSchematic, setupSwaggerMock, ANGULAR_SCHEMATIC_OPTIONS } from '@helpers/setup';
-import { matchesApiName, transformSwaggerSchema } from '@lib/api/helpers/api.helper';
+import { resetFetchMocks, runFullSchematics, runApiSchematic, setupSwaggerMock, schematicRunner, ANGULAR_SCHEMATIC_OPTIONS } from '@helpers/setup';
+import { findUnmatchedIncludePatterns, matchesApiName, transformSwaggerSchema } from '@lib/api/helpers/api.helper';
 import { buildApiModel } from '@lib/helpers/api-changes/api-model';
 import { ISwaggerSchema } from '../../../interfaces/version_3_1/swagger.interface';
 
@@ -92,6 +92,29 @@ describe('API filtering', () => {
     const filtered = await runApiSchematic({ ...ANGULAR_SCHEMATIC_OPTIONS, includeApis: ['Legacy'], excludeDeprecated: true }, tree);
 
     expect(filtered.files.filter(file => file.endsWith('-api.service.ts'))).toEqual([]);
+  });
+
+  it('keeps every service when a misspelled includeApis entry leaves nothing to generate', async () => {
+    const tree = await runFullSchematics(SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+    const warnings: string[] = [];
+    const subscription = schematicRunner.logger.subscribe(entry => {
+      if (entry.level === 'warn') {
+        warnings.push(entry.message);
+      }
+    });
+
+    setupSwaggerMock(ANGULAR_SCHEMATIC_OPTIONS.swaggerSchemaUrl, SCHEMA);
+    const filtered = await runApiSchematic({ ...ANGULAR_SCHEMATIC_OPTIONS, includeApis: ['Oders'] }, tree);
+    subscription.unsubscribe();
+
+    expect(filtered.files).toContain(`${OUT}/orders-api.service.ts`);
+    expect(filtered.files).toContain(`${OUT}/admin-api.service.ts`);
+    expect(warnings).toContainEqual(expect.stringContaining("includeApis entries 'Oders' match no API: check them for typos."));
+  });
+
+  it('lists the includeApis entries that match no API', () => {
+    expect(findUnmatchedIncludePatterns(SCHEMA, ['orders', 'Oders', 'Replacement*', 'Nope*'])).toEqual(['Oders', 'Nope*']);
+    expect(findUnmatchedIncludePatterns(SCHEMA, undefined)).toEqual([]);
   });
 
   it('keeps filtered APIs out of the change summary model', () => {

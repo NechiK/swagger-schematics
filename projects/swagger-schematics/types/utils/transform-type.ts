@@ -281,12 +281,23 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
 
 /**
  * Whether a rendered type symbol contains one of `operators` at the top level - outside
- * any brackets. `Record<string, string | null>` has no top-level `|`; `IA | null` does.
+ * any brackets and string literals. `Record<string, string | null>` has no top-level `|`;
+ * `IA | null` does, and so does `'>' | '<'` (the brackets are literal text).
  */
 function hasTopLevelOperator(typeSymbol: string, operators: string): boolean {
     let depth = 0;
-    for (const char of typeSymbol) {
-        if (char === '<' || char === '(' || char === '{' || char === '[') {
+    let quote: string | undefined;
+    for (let i = 0; i < typeSymbol.length; i++) {
+        const char = typeSymbol[i];
+        if (quote) {
+            if (char === '\\') {
+                i++;
+            } else if (char === quote) {
+                quote = undefined;
+            }
+        } else if (char === "'" || char === '"') {
+            quote = char;
+        } else if (char === '<' || char === '(' || char === '{' || char === '[') {
             depth++;
         } else if (char === '>' || char === ')' || char === '}' || char === ']') {
             depth--;
@@ -520,8 +531,13 @@ export function getCompositionImports(property: TSchema, swagger: ISwaggerSchema
     if (isAnyOf(schema)) {
         return schema.anyOf.flatMap(s => getCompositionImports(s, swagger, options));
     }
-    
-    return [];
+    // `not` renders as `unknown`, so it imports nothing
+    if (isComposition(schema)) {
+        return [];
+    }
+    // A member that is an array, tuple or record inlines its element type, which can
+    // reference schemas: anyOf [{ type: array, items: { $ref: Item } }, { type: null }]
+    return transformTypeWithAllImports(schema, swagger, options)[1];
 }
 
 /**
@@ -586,7 +602,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
 
             if (mappedSchema) {
                 // Use the mapped schema's type, but preserve nullable from the original schema
-                const originalIsNullable = isSchemaValueNullable(refPropertySchema);
+                const originalIsNullable = isMappedSchemaNullable(refPropertySchema);
 
                 const symbol = transformRefProperty(mappedSchema, mappedKey);
                 const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
@@ -600,7 +616,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
         }
 
         // Mapped to a primitive or the schema wasn't found - preserve nullable from original if available
-        const originalIsNullable = isSchemaValueNullable(refPropertySchema);
+        const originalIsNullable = isMappedSchemaNullable(refPropertySchema);
         return [originalIsNullable ? `${mappedValue} | null` : mappedValue];
     }
 
@@ -780,6 +796,15 @@ export function isSchemaValueNullable(schema: TSchemaByType | undefined): boolea
     }
     const type = (schema as { type?: unknown }).type;
     return Array.isArray(type) && type.includes('null');
+}
+
+/**
+ * Whether a component replaced by `typeMapping` was nullable, so the mapped type keeps `| null`.
+ * Unlike an unmapped reference, the mapped type doesn't render the component's own alias, so a
+ * `oneOf`/`anyOf` null member has to add the `| null` too.
+ */
+function isMappedSchemaNullable(schema: TSchemaByType | undefined): boolean {
+    return !!schema && (isSchemaValueNullable(schema) || hasNullMember(schema));
 }
 
 /**

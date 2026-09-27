@@ -2,7 +2,7 @@ import { diffApiModels } from '@lib/helpers/api-changes/api-diff';
 import { IApiModel, buildApiModel } from '@lib/helpers/api-changes/api-model';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
-const endpoint = (label: string, symbol: string, signature: string) => ({ label, symbol, signature });
+const endpoint = (label: string, symbol: string, signature: string) => ({ label, symbol, signature, response: '', params: {}, args: [] });
 
 const PREVIOUS: IApiModel = {
   types: {
@@ -98,5 +98,42 @@ describe('diffApiModels', () => {
       { severity: 'added', kind: 'Enum member added', subject: 'TKind.toString', ref: '"toString"' }
     ]);
     expect(diffApiModels(after, before).map(change => change.kind)).toEqual(['Property removed', 'Enum member removed', 'Enum member removed']);
+  });
+
+  describe('new endpoint parameters', () => {
+    const ok = { '204': { description: 'ok' } };
+    const schemaWith = (parameters: unknown[], requestBody?: unknown) => ({
+      openapi: '3.0.1',
+      info: { title: 'T', version: '1' },
+      paths: { '/api/Orders/{id}': { put: { tags: ['Orders'], parameters, requestBody, responses: ok } } },
+      components: { schemas: {} }
+    }) as unknown as ISwaggerSchema;
+    const id = { name: 'id', in: 'path', required: true, schema: { type: 'integer' } };
+    const query = (name: string, required = false) => ({ name, in: 'query', required, schema: { type: 'string' } });
+    const header = (name: string, required = false) => ({ name, in: 'header', required, schema: { type: 'string' } });
+    const body = { content: { 'application/json': { schema: { type: 'string' } } } };
+    const severityOf = (framework: 'angular' | 'react-rtk', before: ISwaggerSchema, after: ISwaggerSchema) =>
+      diffApiModels(buildApiModel(before, { framework }), buildApiModel(after, { framework })).map(change => `${change.severity}: ${change.kind}`);
+
+    it('reports an optional parameter existing calls can leave out as added', () => {
+      // Next to existing query params, or a new headers object (it defaults to {})
+      expect(severityOf('angular', schemaWith([id, query('a')], body), schemaWith([id, query('a'), query('b')], body)))
+        .toEqual(['added: Optional parameter added']);
+      expect(severityOf('angular', schemaWith([id], body), schemaWith([id, header('X-Trace')], body)))
+        .toEqual(['added: Optional parameter added']);
+      expect(severityOf('react-rtk', schemaWith([id]), schemaWith([id, query('a'), header('X-Trace')])))
+        .toEqual(['added: Optional parameter added']);
+      // An RTK endpoint without an argument may be called without one when every new field is optional
+      expect(severityOf('react-rtk', schemaWith([]), schemaWith([query('a')]))).toEqual(['added: Optional parameter added']);
+    });
+
+    it('reports a required parameter, or one that shifts the positional arguments, as breaking', () => {
+      expect(severityOf('angular', schemaWith([id]), schemaWith([id, query('a', true)]))).toEqual(['breaking: Endpoint changed']);
+      expect(severityOf('react-rtk', schemaWith([id]), schemaWith([id, header('X-Trace', true)]))).toEqual(['breaking: Endpoint changed']);
+      // Angular's first query param adds a positional object before the body, which has no default
+      expect(severityOf('angular', schemaWith([id], body), schemaWith([id, query('a')], body))).toEqual(['breaking: Endpoint changed']);
+      // An existing parameter that changes stays breaking, even next to a new optional one
+      expect(severityOf('angular', schemaWith([id, query('a')]), schemaWith([id, query('a', true), query('b')]))).toEqual(['breaking: Endpoint changed']);
+    });
   });
 });

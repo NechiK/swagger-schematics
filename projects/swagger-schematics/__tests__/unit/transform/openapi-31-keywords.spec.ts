@@ -186,6 +186,55 @@ describe('OpenAPI 3.1 schema keywords', () => {
   });
 });
 
+describe('oneOf/anyOf members that are arrays or records', () => {
+  const swagger = {
+    openapi: '3.1.0',
+    info: { title: 'T', version: '1' },
+    paths: {},
+    components: {
+      schemas: {
+        Item: { type: 'object', properties: { id: { type: 'integer' } } },
+        Other: { type: 'object', properties: { name: { type: 'string' } } }
+      }
+    }
+  } as unknown as ISwaggerSchema;
+  const item = { $ref: '#/components/schemas/Item' };
+  const other = { $ref: '#/components/schemas/Other' };
+  const importsOf = (schema: unknown) => transformTypeWithAllImports(schema as TSchema, swagger);
+
+  it('imports the element type of a nullable array written as anyOf with a null member (3.1)', () => {
+    const [typeSymbol, imports] = importsOf({ anyOf: [{ type: 'array', items: item }, { type: 'null' }] });
+
+    expect(typeSymbol).toBe('IItem[] | null');
+    expect(imports.map(ref => ref.importSymbol)).toEqual(['IItem']);
+  });
+
+  it('imports every schema of a oneOf mixing a reference and an array (3.0)', () => {
+    const [typeSymbol, imports] = importsOf({ oneOf: [item, { type: 'array', items: other }] });
+
+    expect(typeSymbol).toBe('IItem | IOther[]');
+    expect(imports.map(ref => ref.importSymbol)).toEqual(['IItem', 'IOther']);
+  });
+
+  it('imports record values and tuple positions', () => {
+    const record = { type: 'object', additionalProperties: item };
+    const tuple = { type: 'array', prefixItems: [other], minItems: 1, items: false };
+
+    expect(importsOf({ anyOf: [record, tuple] })[1].map(ref => ref.importSymbol)).toEqual(['IItem', 'IOther']);
+  });
+});
+
+describe('string literals containing brackets', () => {
+  const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: {} } } as unknown as ISwaggerSchema;
+
+  it('parenthesize a union of literals before []', () => {
+    expect(transformType({ type: 'array', items: { oneOf: [{ const: '>' }, { const: '<' }] } } as unknown as TSchema, swagger)[0])
+      .toBe("('>' | '<')[]");
+    expect(transformType({ type: 'array', items: { oneOf: [{ const: "it's (" }, { const: '[' }] } } as unknown as TSchema, swagger)[0])
+      .toBe("('it\\'s (' | '[')[]");
+  });
+});
+
 describe('components replaced by typeMapping', () => {
   const dto = { type: 'object', properties: { amount: { type: 'number' } } } as never;
 
@@ -201,5 +250,31 @@ describe('components replaced by typeMapping', () => {
     expect(isReplacedByTypeMapping('Status', { NullableOfStatus: 'Status' })).toBe(false);
     expect(isReplacedByTypeMapping('Amount', { Money: 'Amount', Amount: 'string' })).toBe(false);
     expect(isReplacedByTypeMapping('Status', { Status: 'Status' })).toBe(false);
+  });
+
+  it('keep null when the component is nullable through a oneOf/anyOf null member', () => {
+    const swagger = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {},
+      components: {
+        schemas: {
+          NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] },
+          NullableAnyId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          Id: { type: 'string' },
+          Status: { type: 'string', enum: ['A', 'B'] },
+          NullableStatus: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Status' }] }
+        }
+      }
+    } as unknown as ISwaggerSchema;
+    const typeMapping = { NullableId: 'string', NullableAnyId: 'string', Id: 'string', NullableStatus: 'Status' };
+    const properties = transformProperties({
+      a: { $ref: '#/components/schemas/NullableId' },
+      b: { $ref: '#/components/schemas/NullableAnyId' },
+      c: { $ref: '#/components/schemas/Id' },
+      d: { $ref: '#/components/schemas/NullableStatus' }
+    } as never, swagger, { typeMapping }, ['a', 'b', 'c', 'd']).propertiesContent;
+
+    expect(properties).toEqual([['a', 'string | null'], ['b', 'string | null'], ['c', 'string'], ['d', 'TStatus | null']]);
   });
 });

@@ -32,6 +32,23 @@ export interface IEndpointModel {
     symbol: string;
     /** Parameters and result, e.g. `(id: number) => IUserDto` */
     signature: string;
+    /** The result type, e.g. `IUserDto` */
+    response: string;
+    /** Each parameter's declaration keyed by location and name, e.g. `query page` -> `page?: number` */
+    params: Record<string, string>;
+    /**
+     * The arguments a call passes, in order, and whether a call may leave each out. Angular:
+     * each path param, then the query object, the body and the headers object; RTK: one
+     * request object. A new optional parameter is harmless only if every existing call still
+     * lines up with these.
+     */
+    args: IEndpointArg[];
+}
+
+export interface IEndpointArg {
+    /** e.g. `path id`, `query`, `body`, `headers`, `request` */
+    id: string;
+    optional: boolean;
 }
 
 /**
@@ -124,16 +141,46 @@ function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IAp
                 ? `${strings.camelize(groupKey)}Api.${options.scopeEndpointsWithTags ? item.scopedApiMethodName : item.apiMethodName}`
                 : `${strings.classify(groupKey)}ApiService.${item.apiMethodName}()`;
             const label = `${item.httpMethod} ${item.apiPath}`;
+            const params: Record<string, string> = Object.create(null);
+            ([['path', item.pathParams], ['query', item.queryParams], ['header', item.headerParams]] as const)
+                .forEach(([location, locationParams]) => locationParams.forEach(param => {
+                    params[`${location} ${param.objectSymbol}`] = `${param.objectSymbol}${param.isOptional ? '?' : ''}: ${param.typeSymbol}`;
+                }));
+            if (item.bodyParam) {
+                params[`body ${item.bodyParam.objectSymbol}`] = `${item.bodyParam.objectSymbol}: ${item.bodyParam.typeSymbol}`;
+            }
             endpoints[label] = {
                 label,
                 symbol,
                 // What callers pass: Angular methods take positional parameters, RTK endpoints one request object
                 signature: options.framework === 'react-rtk'
                     ? `(${item.apiMethodRequestType}) => ${item.responseTypeSymbol}`
-                    : `(${item.apiMethodParams}) => ${item.responseTypeSymbol}`
+                    : `(${item.apiMethodParams}) => ${item.responseTypeSymbol}`,
+                response: item.responseTypeSymbol,
+                params,
+                args: options.framework === 'react-rtk' ? rtkArgs(item) : angularArgs(item)
             };
         });
     });
 
     return endpoints;
+}
+
+type TParsedApiItem = ReturnType<typeof transformSwaggerSchema>[string]['apiList'][number];
+
+/** Mirrors transformParamsToApiMethodParams: path params, the query object, the body, the headers object. */
+function angularArgs(item: TParsedApiItem): IEndpointArg[] {
+    return [
+        ...item.pathParams.map(param => ({ id: `path ${param.objectSymbol}`, optional: false })),
+        // The query object has no default, so a call must pass it even when every field is optional
+        ...(item.queryParams.length ? [{ id: 'query', optional: false }] : []),
+        ...(item.bodyParam ? [{ id: 'body', optional: false }] : []),
+        // Defaults to {} when every header is optional
+        ...(item.headerParams.length ? [{ id: 'headers', optional: item.headerParams.every(param => param.isOptional) }] : [])
+    ];
+}
+
+/** An RTK endpoint takes one request object, which a call may leave out when every field is optional. */
+function rtkArgs(item: TParsedApiItem): IEndpointArg[] {
+    return item.apiMethodRequestType === 'void' ? [] : [{ id: 'request', optional: item.isApiMethodRequestOptional }];
 }

@@ -238,6 +238,44 @@ describe('header parameters', () => {
       expect(item.headerParamsFormatted).toContain("...(xContext != null ? { 'X-Context': JSON.stringify(xContext) } : {})");
       expect(item.headerParamsFormatted).toContain("'X-Ids': String(xIds)");
     });
+
+    describe('schemas beyond a plain object', () => {
+      const headersOf = (schema: unknown, explode = false) => transformSwaggerSchema({
+        openapi: '3.1.0',
+        info: { title: 'T', version: '1' },
+        components: { schemas: { Filter: { type: 'object', properties: { role: { type: 'string' } } } } },
+        paths: { '/api/Items': { get: {
+          tags: ['Items'],
+          parameters: [{ name: 'X-Value', in: 'header', required: true, explode, schema }],
+          responses: { '204': { description: 'ok' } }
+        } } }
+      } as unknown as ISwaggerSchema, { silent: true }).Items.apiList[0].headerParamsFormatted;
+      const filter = { $ref: '#/components/schemas/Filter' };
+      const asObject = (separator: string) =>
+        `Object.entries(xValue).filter(entry => entry[1] != null).map(entry => entry.join('${separator}')).join(',')`;
+
+      it('sends a oneOf/anyOf of objects (with or without a null member) as an object', () => {
+        expect(headersOf({ oneOf: [filter, { type: 'object', additionalProperties: { type: 'string' } }] }))
+          .toBe(`headers: { 'X-Value': ${asObject(',')} }`);
+        expect(headersOf({ anyOf: [filter, { type: 'null' }] }, true))
+          .toBe(`headers: { ...(xValue != null ? { 'X-Value': ${asObject('=')} } : {}) }`);
+      });
+
+      it('checks at runtime for a oneOf/anyOf mixing objects and primitives', () => {
+        expect(headersOf({ oneOf: [filter, { type: 'string' }] }))
+          .toBe(`headers: { 'X-Value': (typeof xValue === 'object' && !Array.isArray(xValue) ? ${asObject(',')} : String(xValue)) }`);
+      });
+
+      it('sends an array of objects as JSON, since simple style does not define one', () => {
+        expect(headersOf({ type: 'array', items: filter })).toBe("headers: { 'X-Value': JSON.stringify(xValue) }");
+        expect(headersOf({ type: 'array', items: { anyOf: [filter, { type: 'null' }] } })).toBe("headers: { 'X-Value': JSON.stringify(xValue) }");
+      });
+
+      it('keeps String() for primitives, arrays of primitives and unions of them', () => {
+        expect(headersOf({ oneOf: [{ type: 'string' }, { type: 'integer' }] })).toBe("headers: { 'X-Value': String(xValue) }");
+        expect(headersOf({ type: 'array', items: { type: 'string' } })).toBe("headers: { 'X-Value': String(xValue) }");
+      });
+    });
   });
 
   describe('variable names and clashes', () => {

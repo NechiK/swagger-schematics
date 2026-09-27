@@ -1,4 +1,4 @@
-import { formatConsoleSummary, formatMarkdownReport, MAX_REPORT_LENGTH } from '@lib/helpers/api-changes/format';
+import { codeSpan, formatConsoleSummary, formatMarkdownReport, MAX_REPORT_LENGTH } from '@lib/helpers/api-changes/format';
 import { IApiChange } from '@lib/helpers/api-changes/api-diff';
 
 const FILES = { created: 1, updated: 3, deleted: 1 };
@@ -66,5 +66,24 @@ describe('formatMarkdownReport', () => {
     expect(report.length).toBeLessThanOrEqual(MAX_REPORT_LENGTH);
     expect(report).toContain(`_...and ${300 - shown} more changes`);
     expect(report).toContain('_Files: 1 created, 3 updated, 1 deleted_');
+  });
+});
+
+describe('codeSpan', () => {
+  it.each([
+    ['IOrderDto.total', '`IOrderDto.total`'],
+    ["kind: 'a`b'", "``kind: 'a`b'``"],
+    ["x: 'a``b'", "```x: 'a``b'```"],
+    ['`tick', '`` `tick ``']
+  ])('renders %p as %p', (text, expected) => {
+    expect(codeSpan(text)).toBe(expected);
+  });
+
+  it('keeps a backtick in a changed value from breaking the report', () => {
+    const report = formatMarkdownReport([
+      { severity: 'breaking', kind: 'Property changed', subject: 'IDto.kind', from: "kind: 'a'", to: "kind: 'a`b'" }
+    ], FILES);
+
+    expect(report).toContain("- Property changed: `IDto.kind`: `kind: 'a'` → ``kind: 'a`b'``");
   });
 });

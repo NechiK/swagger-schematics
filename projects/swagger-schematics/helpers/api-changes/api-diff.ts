@@ -1,4 +1,4 @@
-import { IApiModel, TTypeModel } from './api-model';
+import { IApiModel, IEndpointModel, TTypeModel } from './api-model';
 
 /**
  * breaking: code written against the previous generation may stop compiling or
@@ -117,9 +117,10 @@ function diffEndpoints(previous: IApiModel['endpoints'], current: IApiModel['end
             }];
         }
         if (before.signature !== after.signature) {
+            const additive = isOnlyOptionalParamsAdded(before, after);
             return [{
-                severity: 'breaking',
-                kind: 'Endpoint changed',
+                severity: additive ? 'added' : 'breaking',
+                kind: additive ? 'Optional parameter added' : 'Endpoint changed',
                 subject: label,
                 ref: after.symbol,
                 from: before.signature,
@@ -128,4 +129,24 @@ function diffEndpoints(previous: IApiModel['endpoints'], current: IApiModel['end
         }
         return [];
     });
+}
+
+/**
+ * Whether the only change is new optional parameters that every existing call can leave out:
+ * the result and the existing parameters are unchanged, and the arguments existing calls pass
+ * still line up (new ones only at the end, and optional). E.g. a new optional header (Angular's
+ * headers object defaults to {}), or a new optional query param next to existing ones.
+ */
+function isOnlyOptionalParamsAdded(before: IEndpointModel, after: IEndpointModel): boolean {
+    if (before.response !== after.response) {
+        return false;
+    }
+    const kept = Object.keys(before.params).every(key => after.params[key] === before.params[key]);
+    const added = Object.keys(after.params).filter(key => !(key in before.params));
+    if (!kept || !added.length || added.some(key => !after.params[key].split(':')[0].endsWith('?'))) {
+        return false;
+    }
+    const argsLineUp = before.args.every((arg, index) =>
+        after.args[index]?.id === arg.id && (after.args[index].optional || !arg.optional));
+    return argsLineUp && after.args.slice(before.args.length).every(arg => arg.optional);
 }

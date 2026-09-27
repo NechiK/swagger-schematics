@@ -8,6 +8,7 @@ import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, isApiMethodRequestOptional, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
 import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
+import { toEnumMemberName } from "../../types/utils/enum";
 
 export interface IParsedApiSchema {
     [key: string]: IParsedSchemaItem;
@@ -72,35 +73,77 @@ function decodePointerToken(token: string): string {
 }
 
 /**
- * Resolves `{ $ref: '#/components/parameters/Name' }` against the document; an
- * inline parameter passes through. A reference that can't be resolved (or no
- * document to resolve it in) is dropped, as unusable.
+ * Resolves a local `$ref` (`#/components/parameters/Name`, or any other JSON Pointer into the
+ * document such as `#/paths/~1api~1Orders/parameters/0`), following a reference to a reference.
+ * Returns undefined for a reference that can't be resolved: external, dangling or circular.
  */
-function resolveParams(params: Array<TParam | IRef>, swagger?: ISwaggerSchema): TParam[] {
+function resolveParamRef(ref: string, swagger: ISwaggerSchema, seen: Set<string> = new Set()): TParam | undefined {
+    if (!ref.startsWith('#/') || seen.has(ref)) {
+        return undefined;
+    }
+    seen.add(ref);
+    const target = ref.slice(2).split('/').reduce<unknown>((node, token) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[decodePointerToken(token)] : undefined, swagger);
+    if (!target || typeof target !== 'object') {
+        return undefined;
+    }
+    if ('$ref' in target && typeof (target as IRef).$ref === 'string') {
+        return resolveParamRef((target as IRef).$ref, swagger, seen);
+    }
+    return target as TParam;
+}
+
+/**
+ * Resolves `$ref` parameters against the document; an inline parameter passes through. A
+ * reference that can't be resolved (or no document to resolve it in) is dropped, as unusable,
+ * and reported through `onUnresolved`.
+ */
+function resolveParams(params: Array<TParam | IRef>, swagger?: ISwaggerSchema, onUnresolved?: (ref: string) => void): TParam[] {
     return params.flatMap(param => {
         if (!('$ref' in param)) {
             return [param];
         }
-        const match = /^#\/components\/parameters\/(.+)$/.exec(param.$ref);
-        const resolved = match ? swagger?.components?.parameters?.[decodePointerToken(match[1])] : undefined;
+        const resolved = swagger ? resolveParamRef(param.$ref, swagger) : undefined;
+        if (!resolved) {
+            onUnresolved?.(param.$ref);
+        }
         return resolved ? [resolved] : [];
     });
 }
 
-export const getPathOperations = (path: IPath, swagger?: ISwaggerSchema): [TPathOperationKey, TOperation][] => {
+/**
+ * Whether two parameters are the same one for override purposes: same location and name.
+ * HTTP header names are case-insensitive, so `X-Tenant` and `x-tenant` are the same header.
+ */
+function isSameParam(a: TParam, b: TParam): boolean {
+    if (a.in !== b.in) {
+        return false;
+    }
+    return a.in === 'header' ? (a.name ?? '').toLowerCase() === (b.name ?? '').toLowerCase() : a.name === b.name;
+}
+
+/**
+ * @param onUnresolvedParam - called with each parameter `$ref` that can't be resolved, and the
+ * operation it belongs to (undefined for a path-level parameter)
+ */
+export const getPathOperations = (
+    path: IPath,
+    swagger?: ISwaggerSchema,
+    onUnresolvedParam?: (ref: string, operationKey?: TPathOperationKey) => void
+): [TPathOperationKey, TOperation][] => {
     // Parameters on the path item apply to every operation under it; an operation's own
     // parameter with the same name and location overrides it (OpenAPI spec). Both levels
-    // may use $ref to #/components/parameters.
-    const pathLevelParams = resolveParams(path.parameters ?? [], swagger);
+    // may use $ref.
+    const pathLevelParams = resolveParams(path.parameters ?? [], swagger, ref => onUnresolvedParam?.(ref));
 
     return Object.keys(path).map((pathKey: string) => {
         if (!PATH_KEYS.includes(pathKey as keyof IPathBase)) {
             const operationKey = pathKey as TPathOperationKey;
             const operation = path[operationKey];
             if (operation) {
-                const ownParams = resolveParams((operation.parameters || []) as Array<TParam | IRef>, swagger);
-                const inheritedParams = pathLevelParams.filter(pathParam =>
-                    !ownParams.some(own => own.name === pathParam.name && own.in === pathParam.in));
+                const ownParams = resolveParams((operation.parameters || []) as Array<TParam | IRef>, swagger,
+                    ref => onUnresolvedParam?.(ref, operationKey));
+                const inheritedParams = pathLevelParams.filter(pathParam => !ownParams.some(own => isSameParam(own, pathParam)));
                 return [
                     operationKey,
                     {
@@ -152,9 +195,43 @@ export function documentDeclaresOperations(swaggerSchema: ISwaggerSchema, apiPat
         .some(([pathKey, pathItem]) => pathKey.startsWith(apiPathPrefix) && getPathOperations(pathItem as IPath, swaggerSchema).length > 0);
 }
 
+/**
+ * The `includeApis` entries that match no API in the document (before filtering), e.g. a
+ * misspelled controller name. When the include filter then leaves nothing to generate,
+ * that is more likely a typo than a choice, so the stale-files safety net keeps the services.
+ */
+export function findUnmatchedIncludePatterns(swaggerSchema: ISwaggerSchema, includeApis?: string[], apiPathKey?: string): string[] {
+    const apiPathPrefix = normalizeApiPathPrefix(apiPathKey || '/api/');
+    const apiKeys = Object.keys(swaggerSchema.paths ?? {})
+        .filter(pathKey => pathKey.startsWith(apiPathPrefix))
+        .map(pathKey => pathKey.slice(apiPathPrefix.length).split('/')[0]);
+    return (includeApis ?? []).filter(pattern => !apiKeys.some(apiKey => matchesApiName(apiKey, pattern)));
+}
+
 function isApiIncluded(apiKey: string, options?: TTransformSwaggerSchemaOptions): boolean {
     const included = !options?.includeApis?.length || options.includeApis.some(pattern => matchesApiName(apiKey, pattern));
     return included && !(options?.excludeApis ?? []).some(pattern => matchesApiName(apiKey, pattern));
+}
+
+/**
+ * The RTK cache tag (a `TApiTag` member name) of each API slice, in order. Names are the
+ * classified API name (`replacement-queue` -> `ReplacementQueue`); names that would collide
+ * (`v1.0` and `v10` are both `V10`) or have no usable characters get a numeric suffix
+ * (`V10_2`), so every slice keeps a tag of its own and the enum compiles.
+ */
+export function buildCacheTags(apiKeys: string[]): Map<string, string> {
+    const tags = new Map<string, string>();
+    const used = new Set<string>();
+    apiKeys.forEach((apiKey, index) => {
+        const base = toEnumMemberName(classify(apiKey), index);
+        let tag = base;
+        for (let suffix = 2; used.has(tag); suffix++) {
+            tag = `${base}_${suffix}`;
+        }
+        used.add(tag);
+        tags.set(apiKey, tag);
+    });
+    return tags;
 }
 
 /** Ensures the configured prefix has both a leading and a trailing slash. */
@@ -198,7 +275,13 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             };
         }
 
-        const declaredOperations = getPathOperations(swaggerPath, swaggerSchema);
+        const declaredOperations = getPathOperations(swaggerPath, swaggerSchema, (ref, operationKey) => {
+            if (!options?.silent) {
+                const owner = operationKey ? `${operationKey.toUpperCase()} ${apiPathKey}` : `path ${apiPathKey}`;
+                console.warn(`Parameter reference '${ref}' of ${owner} can't be resolved and is skipped. ` +
+                    'The generated method will not take it.');
+            }
+        });
         if (declaredOperations.length) {
             declaresOperations.add(apiPrefix);
         }
@@ -209,7 +292,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
             [operationKey, operation]
         ): IParsedApiItem => {
-            const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey, apiPathPrefix);
+            const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey, apiPathPrefix, { silent: options?.silent });
             const {
                 queryParams,
                 pathParams,

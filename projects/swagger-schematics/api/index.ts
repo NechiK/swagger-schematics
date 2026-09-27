@@ -17,10 +17,9 @@ import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
 import { SwaggerApiSchema } from './schema';
-import { documentDeclaresOperations, transformSwaggerSchema } from './helpers/api.helper';
+import { buildCacheTags, documentDeclaresOperations, findUnmatchedIncludePatterns, transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { renderJsDoc } from '../types/utils/js-doc';
-import { toEnumMemberName } from '../types/utils/enum';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
@@ -142,11 +141,11 @@ export default function(options: SwaggerApiSchema) {
             context.logger.warn(`rtkCacheTags applies to framework 'react-rtk' only; ignored for '${framework}'.`);
         }
         const useCacheTags = !!config.rtkCacheTags && framework === 'react-rtk';
-        const cacheTagFor = (apiSchemaKey: string) => toEnumMemberName(strings.classify(apiSchemaKey), 0);
+        const cacheTags = buildCacheTags(Object.keys(parsedApiSchemas));
         // No slices, no enum: an empty schema must generate nothing (see the stale-files safety net)
-        if (useCacheTags && Object.keys(parsedApiSchemas).length) {
+        if (useCacheTags && cacheTags.size) {
             const cacheTagsSource = apply(url('./templates/react-rtk/cache-tags'), [
-                applyTemplates({ cacheTags: Object.keys(parsedApiSchemas).map(cacheTagFor) }),
+                applyTemplates({ cacheTags: [...cacheTags.values()] }),
                 move(config.path),
                 recordGeneratedFiles(generatedFiles)
             ]);
@@ -168,7 +167,7 @@ export default function(options: SwaggerApiSchema) {
                 importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
                 scopeEndpointsWithTags: config.scopeEndpointsWithTags || false,
                 // The slice's TApiTag member (e.g. 'Orders'), or null when rtkCacheTags is off
-                cacheTag: useCacheTags ? cacheTagFor(apiSchemaKey) : null,
+                cacheTag: useCacheTags ? cacheTags.get(apiSchemaKey) : null,
                 baseApiImportPath: getBaseApiImportPath(tree, apiFilePath, baseApiPath),
                 ...customHelpers,
             };
@@ -201,13 +200,19 @@ export default function(options: SwaggerApiSchema) {
         }
 
         const eslintFixRule = createEslintFixRule(config);
+        // An includeApis entry matching nothing is likely a typo; if the filters then leave nothing
+        // to generate, keep the services rather than deleting all of them
+        const unmatchedIncludes = findUnmatchedIncludePatterns(swagger, config.includeApis, config.apiPathKey);
         const staleFilesRule = createStaleFilesRule({
             section: 'api',
             outputPath: config.path,
             generatedFiles,
             remove: config.removeStaleFiles !== false,
             // Filters that exclude every API are a choice, not a broken schema: their services go
-            emptyIsIntended: documentDeclaresOperations(swagger, config.apiPathKey),
+            emptyIsIntended: documentDeclaresOperations(swagger, config.apiPathKey) && !unmatchedIncludes.length,
+            emptyHint: unmatchedIncludes.length
+                ? `includeApis entries ${unmatchedIncludes.map(pattern => `'${pattern}'`).join(', ')} match no API: check them for typos.`
+                : undefined,
             ownedFilePatterns: [{ dir: config.path, suffixes: [apiFileExt], exclude: [baseApiPath] }]
         });
         return chain([...rules, eslintFixRule, staleFilesRule]);

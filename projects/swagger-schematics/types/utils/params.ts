@@ -1,7 +1,7 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition } from "./transform-type";
-import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema } from "./transform-type";
+import { ISwaggerSchema, TSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { IResponse } from "../../interfaces/version_3_1/response.interface";
@@ -50,13 +50,16 @@ export interface IParsedParam<T> {
     /**
      * Header params only: how the value is written when `String(value)` would be wrong.
      * 'object' / 'object-exploded': OpenAPI `simple` style for an object (`role,admin,id,1` /
-     * `role=admin,id=1`); 'json': a `content: application/json` param. Unset: `String(value)`,
-     * which already gives `simple` style for primitives and arrays (`1,2`).
+     * `role=admin,id=1`), including a `oneOf`/`anyOf` of objects; 'object-or-value' /
+     * 'object-or-value-exploded': a `oneOf`/`anyOf` mixing objects and primitives, checked at
+     * runtime; 'json': a `content: application/json` param, or an array of objects (which
+     * `simple` style doesn't define). Unset: `String(value)`, which already gives `simple`
+     * style for primitives and arrays of primitives (`1,2`).
      */
     headerSerialization?: THeaderSerialization;
 }
 
-export type THeaderSerialization = 'object' | 'object-exploded' | 'json';
+export type THeaderSerialization = 'object' | 'object-exploded' | 'object-or-value' | 'object-or-value-exploded' | 'json';
 
 /**
  * A parsed request body parameter - the original is the operation's
@@ -501,13 +504,18 @@ export function formatHeaderParams(headerParams: IParsedParam<IHeaderParam>[]): 
 
 /** A header value as a string, per the param's serialization (see IParsedParam.headerSerialization). */
 function formatHeaderValue(symbol: string, serialization?: THeaderSerialization): string {
+    // Unset (null/undefined) properties are left out rather than sent as empty values
+    const formatObject = (separator: string) =>
+        `Object.entries(${symbol}).filter(entry => entry[1] != null).map(entry => entry.join('${separator}')).join(',')`;
     switch (serialization) {
         case 'object':
-        case 'object-exploded': {
-            // Unset (null/undefined) properties are left out rather than sent as empty values
-            const separator = serialization === 'object' ? ',' : '=';
-            return `Object.entries(${symbol}).filter(entry => entry[1] != null).map(entry => entry.join('${separator}')).join(',')`;
-        }
+            return formatObject(',');
+        case 'object-exploded':
+            return formatObject('=');
+        case 'object-or-value':
+        case 'object-or-value-exploded':
+            return `(typeof ${symbol} === 'object' && !Array.isArray(${symbol}) ? ` +
+                `${formatObject(serialization === 'object-or-value' ? ',' : '=')} : String(${symbol}))`;
         case 'json':
             return `JSON.stringify(${symbol})`;
         default:
@@ -524,17 +532,55 @@ function getHeaderSerialization(param: IHeaderParam, swagger: ISwaggerSchema, op
         const mediaType = Object.keys(param.content)[0] ?? '';
         return /[/+]json\b/i.test(mediaType) ? 'json' : undefined;
     }
-    let schema = param.schema;
+    const shape = getHeaderValueShape(param.schema, swagger, options);
+    switch (shape) {
+        case 'object':
+            return param.explode ? 'object-exploded' : 'object';
+        case 'object-or-value':
+            return param.explode ? 'object-or-value-exploded' : 'object-or-value';
+        case 'array-of-objects':
+            return 'json';
+        default:
+            return undefined;
+    }
+}
+
+type THeaderValueShape = 'object' | 'object-or-value' | 'array-of-objects' | 'value';
+
+/**
+ * What a header schema's value is at runtime: an object, an array of objects, a primitive or an
+ * array of primitives ('value'), or a `oneOf`/`anyOf` that can be either an object or a value.
+ */
+function getHeaderValueShape(
+    schemaOrRef: TSchema | undefined,
+    swagger: ISwaggerSchema,
+    options?: ITransformTypeOptions,
+    seen: Set<string> = new Set()
+): THeaderValueShape {
+    let schema = schemaOrRef;
     if (schema && isRef(schema)) {
         const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
-        // typeMapping replaces the component's type (e.g. with `string`), so its schema says nothing about the value
-        if (options?.typeMapping?.[refPropertyKey]) {
-            return undefined;
+        // typeMapping replaces the component's type (e.g. with `string`), so its schema says nothing
+        // about the value; a recursive component can't be decided either
+        if (options?.typeMapping?.[refPropertyKey] || seen.has(schema.$ref)) {
+            return 'value';
         }
+        seen.add(schema.$ref);
         schema = refPropertySchema;
     }
     if (!schema || typeof schema !== 'object') {
-        return undefined;
+        return 'value';
+    }
+    const members = [
+        ...((schema as { oneOf?: TSchema[] }).oneOf ?? []),
+        ...((schema as { anyOf?: TSchema[] }).anyOf ?? [])
+    ].filter(member => !isNullSchema(member));
+    if (members.length > 0) {
+        const shapes = new Set(members.map(member => getHeaderValueShape(member, swagger, options, new Set(seen))));
+        if (shapes.size === 1) {
+            return [...shapes][0];
+        }
+        return shapes.has('object') || shapes.has('object-or-value') ? 'object-or-value' : 'value';
     }
     const type = (schema as { type?: unknown }).type;
     const isObject = type === 'object'
@@ -542,10 +588,15 @@ function getHeaderSerialization(param: IHeaderParam, swagger: ISwaggerSchema, op
         || 'properties' in schema
         || 'additionalProperties' in schema
         || 'allOf' in schema;
-    if (!isObject) {
-        return undefined;
+    if (isObject) {
+        return 'object';
     }
-    return param.explode ? 'object-exploded' : 'object';
+    const items = (schema as { items?: TSchema | boolean }).items;
+    if (items && typeof items === 'object') {
+        const itemShape = getHeaderValueShape(items, swagger, options, seen);
+        return itemShape === 'object' || itemShape === 'object-or-value' ? 'array-of-objects' : 'value';
+    }
+    return 'value';
 }
 
 /**

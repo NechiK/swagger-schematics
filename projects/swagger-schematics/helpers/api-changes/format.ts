@@ -48,10 +48,22 @@ export function formatConsoleSummary(changes: IApiChange[] | null): string[] {
     ];
 }
 
+/**
+ * Markdown inline code. A backtick can't be escaped inside a code span, so text containing
+ * backticks (e.g. a `const` value) is fenced with a longer run of backticks than any it
+ * contains, padded with spaces when it starts or ends with one (CommonMark).
+ */
+export function codeSpan(text: string): string {
+    const longestRun = Math.max(0, ...(text.match(/`+/g) ?? []).map(run => run.length));
+    const fence = '`'.repeat(longestRun + 1);
+    const padding = text.startsWith('`') || text.endsWith('`') ? ' ' : '';
+    return `${fence}${padding}${text}${padding}${fence}`;
+}
+
 function markdownLine(change: IApiChange): string {
-    const ref = change.ref ? ` (\`${change.ref}\`)` : '';
-    const fromTo = change.from !== undefined ? `: \`${change.from}\` → \`${change.to}\`` : '';
-    return `- ${change.kind}: \`${change.subject}\`${ref}${fromTo}`;
+    const ref = change.ref ? ` (${codeSpan(change.ref)})` : '';
+    const fromTo = change.from !== undefined ? `: ${codeSpan(change.from)} → ${codeSpan(change.to ?? '')}` : '';
+    return `- ${change.kind}: ${codeSpan(change.subject)}${ref}${fromTo}`;
 }
 
 /**

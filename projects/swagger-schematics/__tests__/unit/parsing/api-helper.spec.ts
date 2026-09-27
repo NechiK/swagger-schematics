@@ -159,6 +159,24 @@ describe('getApiMethodName - operationId priority', () => {
       .toBe('getByTicketId');
   });
 
+  it('warns about an unrecognized path pattern unless silent', () => {
+    const swagger = createSwaggerSchema({
+      paths: { '/api/Ticket/{ticketId}': { head: operationWithId(undefined) } },
+      schemas: {}
+    });
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    try {
+      transformSwaggerSchema(swagger);
+      expect(warn).toHaveBeenCalledWith('Unexpected API path pattern: ', 'Ticket/{ticketId}');
+
+      warn.mockClear();
+      transformSwaggerSchema(swagger, { silent: true });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('should be used by transformSwaggerSchema for endpoint names', () => {
     const swagger = createSwaggerSchema({
       paths: {

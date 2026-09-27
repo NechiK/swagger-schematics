@@ -131,6 +131,22 @@ describe('RTK cache tags', () => {
     expect(emptied.files).toContain(TAG_ENUM);
   });
 
+  it('gives slices whose names would collide a tag of their own', async () => {
+    const tree = await runFullSchematics({
+      ...SCHEMA,
+      paths: {
+        '/api/v1.0': { get: { tags: ['A'], responses: noContent } },
+        '/api/v10': { get: { tags: ['B'], responses: noContent } },
+        '/api/заказы': { get: { tags: ['C'], responses: noContent } },
+        '/api/товары': { get: { tags: ['D'], responses: noContent } }
+      }
+    } as unknown as ISwaggerSchema, OPTIONS);
+
+    const members = tree.readContent(TAG_ENUM).split('\n').filter(line => line.includes(' = '));
+    expect(members).toEqual(["  V10 = 'V10',", "  V10_2 = 'V10_2',", "  Value2 = 'Value2',", "  Value3 = 'Value3'"]);
+    expect(tree.readContent(`${OUT}/v10.api.ts`)).toContain('CacheTag.V10_2');
+  });
+
   it('is ignored with a warning for Angular', async () => {
     const warnings: string[] = [];
     const subscription = schematicRunner.logger.subscribe(entry => {

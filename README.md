@@ -171,7 +171,7 @@ A mapped schema generates no file of its own, since nothing references it by its
 | `excludeDeprecated`      | boolean | api        | Skip operations marked `deprecated` (e.g. .NET `[Obsolete]`). Defaults to `false` |
 | `rtkCacheTags`           | boolean | api        | React RTK only: generate [cache tags](#rtk-cache-tags) so queries refetch after a mutation in the same slice. Defaults to `false` |
 | `schemaSnapshotPath`     | string  | `all` (CLI) | Where to keep a copy of the schema, relative to the project root, e.g. `/src/app/core/openapi.snapshot.json`. Turns on the [API change summary](#api-change-summary): each `swagger-schematics all` run compares the new schema with it, prints what changed, and updates it. Commit it with the generated code |
-| `removeStaleFiles`       | boolean | api, types | Delete previously generated files whose schema or endpoint group is no longer in the document (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
+| `removeStaleFiles`       | boolean | api, types | Delete previously generated files that are no longer generated: their schema or endpoint group left the document, or a filter excludes it (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.
@@ -194,15 +194,15 @@ Set `schemaSnapshotPath` and every `swagger-schematics all` run tells you what t
 
 ```
 API changes since the last snapshot: 3 breaking, 2 added
-  ⚠ Property changed   IOrderDto.total  total?: number → total?: string
-  ⚠ Property removed   IUserDto.middleName
-  ⚠ Endpoint removed   DELETE /api/Orders/{id}  OrdersApiService.deleteOrdersById()
-  + Interface added    IRoleDto
-  + Endpoint added     GET /api/Users/{id}/roles  UsersApiService.getRolesByUsersId()
+  ⚠ Property changed  IOrderDto.total  total?: number → total?: string
+  ⚠ Property removed  IUserDto.middleName
+  ⚠ Endpoint removed  DELETE /api/Orders/{id}  OrdersApiService.deleteOrdersById()
+  + Interface added   IRoleDto
+  + Endpoint added    GET /api/Users/{id}/roles  UsersApiService.getRolesByUsersId()
 ```
 
 - The run compares the schema with the snapshot the previous run saved, then saves the new one. **Commit the snapshot** with the generated code; the first run only creates it.
-- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, a new required property (object literals of that interface must now set it), or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone: new interfaces, enum members, endpoints and optional properties.
+- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, a new required property (object literals of that interface must now set it), or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone: new interfaces, enum members, endpoints and optional properties, and new optional endpoint parameters that existing calls can leave out (e.g. an optional header, or an optional query param next to existing ones; Angular's first query param is breaking, since it adds a positional argument).
 - Names, types and signatures come from the generator itself, so they match the generated files (`IUserDto`, `UsersApiService.getById()`, or `usersApi.getById` for RTK).
 - A renamed property or endpoint shows as removed plus added.
 - `--dry-run` prints the summary without writing anything, which is a quick way to see what the back-end changed before regenerating.
@@ -229,7 +229,7 @@ Every API in the document is generated unless you narrow it down, e.g. when one 
 - Names are the controller segment of the path (`Orders` for `/api/Orders/{id}`), matched case-insensitively; `*` matches anything, and the PascalCase form works too (`ReplacementQueue` for `/api/replacement-queue`)
 - `includeApis` keeps only the listed APIs; `excludeApis` then drops from what is left
 - `excludeDeprecated` skips deprecated operations; an API left with none is skipped entirely
-- An entry that matches no API is reported as a warning, to catch typos
+- An entry that matches no API is reported as a warning, to catch typos. If such an `includeApis` entry leaves nothing to generate (`includeApis: ['Oders']`), the existing services are kept rather than deleted
 - The service of an API that becomes excluded is deleted on the next run (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)), also when the filters exclude every API, and the [API change summary](#api-change-summary) applies the same filters
 - Filtering applies to API services only: the `types` schematic still generates every schema in the document
 
@@ -280,7 +280,8 @@ export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [CacheTag.Order
 - GET and HEAD endpoints provide their slice's tag; POST, PUT, PATCH and DELETE invalidate it; OPTIONS and TRACE get no tag
 - Tags are per slice: updating order 5 also refetches an `Orders` query for order 7 if one is on screen, and a change in one slice doesn't refresh another
 - Tag types are registered by each slice (`enhanceEndpoints({ addTagTypes })`), so the base API file needs no changes
-- Turning the option off again removes the enum and the tags
+- Turning the option off again removes the tags, and the enum file with the default `removeStaleFiles: true` (with `false` it is kept and listed as a warning)
+- Slices whose names give the same member (`v1.0` and `v10` are both `V10`) get a numeric suffix (`V10_2`)
 
 To tag across slices, override with `enhanceEndpoints` using the same enum. The object form replaces the generated tags, so repeat the slice's own tag; the function form adds to them:
 
@@ -418,7 +419,7 @@ Each item in `apiList` has the following properties:
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Array of parsed query parameters                                                                     |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
-| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects are sent in OpenAPI `simple` style and `application/json` content params as JSON; empty when none |
+| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays of objects and `application/json` content params as JSON; empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
 | `pathParams`             | array    | Array of parsed path parameters                                                                      |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |

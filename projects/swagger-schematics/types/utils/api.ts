@@ -11,7 +11,16 @@ import { findMediaType } from './request-body';
  * Gets the method name for an API operation
  * Priority: operationId -> path-based generation
  */
-export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOperationKey, apiPathKey: string, apiPathPrefix: string = '/api/'): string {
+/**
+ * @param options.silent - don't warn about a path whose pattern isn't recognized (see transformSwaggerSchema's `silent`)
+ */
+export function getApiMethodName(
+    apiMethod: TOperation,
+    apiMethodKey: TPathOperationKey,
+    apiPathKey: string,
+    apiPathPrefix: string = '/api/',
+    options?: { silent?: boolean }
+): string {
     // Prefer operationId if available (per OpenAPI spec recommendation)
     if (apiMethod.operationId) {
         return camelize(apiMethod.operationId);
@@ -39,7 +48,7 @@ export function getApiMethodName(apiMethod: TOperation, apiMethodKey: TPathOpera
             parsedMethodName = parseDeleteRequestName(apiMethod, apiMethodKey, relativePath);
             break;
         default:
-            parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, relativePath);
+            parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, relativePath, options?.silent);
     }
 
     return camelize(parsedMethodName);
@@ -251,8 +260,10 @@ function parseDeleteRequestName(apiMethod: TOperation, apiMethodKey: string, api
     return parseMethodName(apiMethod, apiMethodKey, apiPathKey, ['delete', 'remove']);
 }
 
-function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string) {
-    console.warn('Unexpected API path pattern: ', apiPathKey);
+function parseUnrecognizedApiPathPatterns(apiMethodKey: string, apiPathKey: string, silent?: boolean) {
+    if (!silent) {
+        console.warn('Unexpected API path pattern: ', apiPathKey);
+    }
     return parseDefaultMethodName(apiMethodKey, apiPathKey);
 }
 

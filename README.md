@@ -202,7 +202,7 @@ API changes since the last snapshot: 3 breaking, 2 added
 ```
 
 - The run compares the schema with the snapshot the previous run saved, then saves the new one. **Commit the snapshot** with the generated code; the first run only creates it.
-- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, a new required property (object literals of that interface must now set it), or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone: new interfaces, enum members, endpoints and optional properties, and new optional endpoint parameters that existing calls can leave out (e.g. an optional header, or an optional query param next to existing ones; Angular's first query param is breaking, since it adds a positional argument).
+- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, a new required property (object literals of that interface must now set it), or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone: new interfaces, enum members, endpoints and optional properties, and new optional endpoint parameters that existing calls can leave out (e.g. an optional header, or an optional query param next to existing ones; Angular's first query param is breaking when a body or a headers object follows it, since it shifts their position).
 - Names, types and signatures come from the generator itself, so they match the generated files (`IUserDto`, `UsersApiService.getById()`, or `usersApi.getById` for RTK).
 - A renamed property or endpoint shows as removed plus added.
 - `--dry-run` prints the summary without writing anything, which is a quick way to see what the back-end changed before regenerating.
@@ -214,7 +214,7 @@ For a CI pipeline, add `--change-report=<file>` to also write the summary as mar
 npx swagger-schematics all --change-report=api-changes.md
 ```
 
-If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems (e.g. a snapshot that can't be saved) are only warnings.
+If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems are only warnings: a snapshot that can't be saved, or one that can't be compared with the schema (it is then replaced, and changes are listed from the next run).
 
 ### Filtering APIs
 
@@ -422,7 +422,7 @@ Each item in `apiList` has the following properties:
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Parsed query params; `originalParam.name` is the name sent in the query string, `objectSymbol` its variable (`page_size` → "pageSize", `default` → "defaultParam"), `objectEntry` the object entry that maps one to the other (`'page_size': pageSize`) |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
-| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays of objects and `application/json` content params as JSON; empty when none |
+| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays and tuples of objects and `application/json` content params as JSON; empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
 | `pathParams`             | array    | Parsed path params; `originalParam.name` is the name in the path template, `objectSymbol` its variable |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |

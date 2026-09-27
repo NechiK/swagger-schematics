@@ -367,3 +367,83 @@ describe('components replaced by typeMapping', () => {
     expect(properties).toEqual([['a', 'string | null'], ['b', 'string | null'], ['c', 'string'], ['d', 'TStatus | null']]);
   });
 });
+
+describe('nullability the schema checks and the rendered type agree on', () => {
+  const parse = (parameters: unknown[], schemas: Record<string, unknown> = {}) => transformSwaggerSchema({
+    openapi: '3.1.0',
+    info: { title: 'T', version: '1' },
+    paths: { '/api/Things': { get: { tags: ['Things'], parameters, responses: { '204': { description: 'ok' } } } } },
+    components: { schemas }
+  } as unknown as ISwaggerSchema, { silent: true }).Things.apiList[0];
+
+  it('leaves out a required param whose union has a nullable member when it is null', () => {
+    const item = parse([
+      { name: 'u', in: 'query', required: true, schema: { oneOf: [{ type: ['string', 'null'] }, { type: 'integer' }] } },
+      { name: 'X-H', in: 'header', required: true, schema: { anyOf: [{ type: 'string', nullable: true }, { type: 'integer' }] } }
+    ]);
+
+    expect(item.queryParamsFormatted).toBe('params: { ...(u != null ? { u } : {}) }');
+    expect(item.headerParamsFormatted).toBe("headers: { ...(xH != null ? { 'X-H': String(xH) } : {}) }");
+  });
+
+  it('types a query array of nullable items (List<int?>) without null elements, which HttpClient params reject', () => {
+    const item = parse([
+      { name: 'ids', in: 'query', required: true, schema: { type: 'array', items: { type: 'integer', nullable: true } } },
+      { name: 'names', in: 'query', schema: { type: ['array', 'null'], items: { type: ['string', 'null'] } } }
+    ]);
+
+    expect(item.apiMethodParams).toBe('{ ids, names }: { ids: number[]; names?: string[] | null }');
+  });
+
+  it('makes a reference to an untyped enum with a null value nullable', () => {
+    const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: { Color: { enum: ['red', null] } } } } as unknown as ISwaggerSchema;
+
+    expect(transformProperties({ c: { $ref: '#/components/schemas/Color' } } as never, swagger, {}, ['c']).propertiesContent)
+      .toEqual([['c', 'TColor | null']]);
+  });
+});
+
+describe('boolean component schemas', () => {
+  const swagger = {
+    openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {},
+    components: { schemas: { Anything: true, Nothing: false } }
+  } as unknown as ISwaggerSchema;
+
+  it('generate no file and are inlined as unknown / never', () => {
+    expect(getGeneratedSchemaKind(true as never)).toBeNull();
+    expect(transformType({ $ref: '#/components/schemas/Anything' } as TSchema, swagger)).toEqual(['unknown']);
+    expect(transformType({ $ref: '#/components/schemas/Nothing' } as TSchema, swagger)).toEqual(['never']);
+  });
+});
+
+describe('typeMapping lookups', () => {
+  const swagger = {
+    openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {},
+    components: {
+      schemas: {
+        Price: { type: 'object', properties: { amount: { type: 'number' } } },
+        Decimal: { type: 'string', format: 'decimal' },
+        constructor: { type: 'object', properties: { a: { type: 'string' } } }
+      }
+    }
+  } as unknown as ISwaggerSchema;
+
+  it('inline a primitive wrapper the mapping points at, which generates no file to import', () => {
+    expect(transformType({ $ref: '#/components/schemas/Price' } as TSchema, swagger, { typeMapping: { Price: 'Decimal' } })).toEqual(['string']);
+  });
+
+  it('ignore keys inherited from Object.prototype', () => {
+    const typeMapping = { Guid: 'string' };
+
+    expect(getGeneratedSchemaKind(swagger.components!.schemas!.constructor as never, { name: 'constructor', typeMapping })).toBe('interface');
+    expect(transformType({ $ref: '#/components/schemas/constructor' } as TSchema, swagger, { typeMapping })[0]).toBe('Iconstructor');
+  });
+});
+
+describe('untyped objects closed with additionalProperties: false', () => {
+  it('are not records', () => {
+    const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: {} } } as unknown as ISwaggerSchema;
+
+    expect(transformType({ properties: { a: { type: 'string' } }, additionalProperties: false } as never, swagger)[0]).toBe('any');
+  });
+});

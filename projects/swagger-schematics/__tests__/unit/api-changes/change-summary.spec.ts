@@ -54,6 +54,24 @@ describe('runChangeSummaryAfterGeneration', () => {
     expect(messages).toContainEqual(['warn', expect.stringContaining('Could not save the schema snapshot')]);
   });
 
+  it('replaces a snapshot it cannot compare with, instead of failing every run', async () => {
+    const snapshot = path.join(dir, 'snapshot.json');
+    fs.writeFileSync(snapshot, JSON.stringify({ ...SCHEMA, paths: { '/api/X': null } }));
+
+    const ok = await runChangeSummaryAfterGeneration({
+      config: config({ schemaSnapshotPath: relative('snapshot.json') }),
+      reportPath: relative('report.md'),
+      dryRun: false,
+      files: FILES,
+      logger
+    });
+
+    expect(ok).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'report.md'))).toBe(true);
+    expect(messages).toContainEqual(['warn', expect.stringContaining('Could not compare the schema with the snapshot')]);
+    expect(JSON.parse(fs.readFileSync(snapshot, 'utf-8')).components.schemas).toEqual({});
+  });
+
   it('only warns when the summary fails without a report requested', async () => {
     const ok = await runChangeSummaryAfterGeneration({
       config: config({ swaggerSchemaUrl: path.join(dir, 'missing.json'), schemaSnapshotPath: relative('snapshot.json') }),

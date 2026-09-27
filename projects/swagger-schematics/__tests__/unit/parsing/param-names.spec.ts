@@ -25,7 +25,9 @@ describe('path and query parameter names', () => {
     ['default', 'defaultParam'],
     ['class', 'classParam'],
     ['arguments', 'argumentsParam'],
-    ['[]', 'param']
+    ['[]', 'param'],
+    ['[Object]', 'object'],
+    ['ñame', 'ame']
   ])('turns %p into the variable %p', (name, symbol) => {
     expect(toParamSymbol(name)).toBe(symbol);
   });
@@ -49,6 +51,13 @@ describe('path and query parameter names', () => {
 
   it('interpolates path params with non-camelCase names', () => {
     expect(parse('/api/Items/{item_id}', [pathParam('item_id')]).apiUrl).toBe('${itemId}');
+  });
+
+  it('keeps the literal text around path params and interpolates every one in a segment', () => {
+    const file = (name: string) => ({ name, in: 'path', required: true, schema: { type: 'string' } });
+
+    expect(parse('/api/Items/{name}.{ext}', [file('name'), file('ext')]).apiUrl).toBe('${name}.${ext}');
+    expect(parse('/api/Items/{item_id}.json', [pathParam('item_id')]).apiUrl).toBe('${itemId}.json');
   });
 
   it('gives a query param whose variable another param already has its location as a suffix', () => {

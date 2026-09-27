@@ -139,10 +139,12 @@ function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IAp
                 ? `${strings.camelize(groupKey)}Api.${options.scopeEndpointsWithTags ? item.scopedApiMethodName : item.apiMethodName}`
                 : `${strings.classify(groupKey)}ApiService.${item.apiMethodName}()`;
             const label = `${item.httpMethod} ${item.apiPath}`;
+            // Keyed by the declared name: a variable can change when another param takes it (a clash
+            // suffix), and the declared param then no longer gets the value existing calls pass
             const params: Record<string, string> = Object.create(null);
             ([['path', item.pathParams], ['query', item.queryParams], ['header', item.headerParams]] as const)
                 .forEach(([location, locationParams]) => locationParams.forEach(param => {
-                    params[`${location} ${param.objectSymbol}`] = `${param.objectSymbol}${param.isOptional ? '?' : ''}: ${param.typeSymbol}`;
+                    params[`${location} ${param.originalParam.name}`] = `${param.objectSymbol}${param.isOptional ? '?' : ''}: ${param.typeSymbol}`;
                 }));
             if (item.bodyParam) {
                 params[`body ${item.bodyParam.objectSymbol}`] = `${item.bodyParam.objectSymbol}: ${item.bodyParam.typeSymbol}`;

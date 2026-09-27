@@ -135,5 +135,14 @@ describe('diffApiModels', () => {
       // An existing parameter that changes stays breaking, even next to a new optional one
       expect(severityOf('angular', schemaWith([id, query('a')]), schemaWith([id, query('a', true), query('b')]))).toEqual(['breaking: Endpoint changed']);
     });
+
+    it('reports a new optional parameter that takes an existing one\'s variable as breaking', () => {
+      // `page_size` declared first gets `pageSize`, so existing `{ pageSize }` calls now fill it instead
+      const renamed = (framework: 'angular' | 'react-rtk') =>
+        severityOf(framework, schemaWith([id, query('pageSize')]), schemaWith([id, query('page_size'), query('pageSize')]));
+
+      expect(renamed('angular')).toEqual(['breaking: Endpoint changed']);
+      expect(renamed('react-rtk')).toEqual(['breaking: Endpoint changed']);
+    });
   });
 });

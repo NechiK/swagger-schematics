@@ -271,6 +271,30 @@ describe('header parameters', () => {
         expect(headersOf({ type: 'array', items: { anyOf: [filter, { type: 'null' }] } })).toBe("headers: { 'X-Value': JSON.stringify(xValue) }");
       });
 
+      it('sends an object whose oneOf members only list required properties as an object', () => {
+        const schema = { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, oneOf: [{ required: ['a'] }, { required: ['b'] }] };
+
+        expect(headersOf(schema)).toBe(`headers: { 'X-Value': ${asObject(',')} }`);
+      });
+
+      it('sends an allOf as an object only when one of its members is an object', () => {
+        expect(headersOf({ allOf: [filter, { description: 'The filter' }] })).toBe(`headers: { 'X-Value': ${asObject(',')} }`);
+        expect(headersOf({ allOf: [{ type: 'string', enum: ['active', 'closed'] }] })).toBe("headers: { 'X-Value': String(xValue) }");
+      });
+
+      it('sends a prefixItems tuple holding an object as JSON', () => {
+        expect(headersOf({ type: 'array', prefixItems: [{ type: 'string' }, filter] })).toBe("headers: { 'X-Value': JSON.stringify(xValue) }");
+        expect(headersOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }] })).toBe("headers: { 'X-Value': String(xValue) }");
+      });
+
+      it('checks arrays first at runtime for a oneOf/anyOf with an array of objects among its members', () => {
+        const mixed = (separator: string) =>
+          `(Array.isArray(xValue) ? JSON.stringify(xValue) : typeof xValue === 'object' ? ${asObject(separator)} : String(xValue))`;
+
+        expect(headersOf({ oneOf: [filter, { type: 'array', items: filter }] })).toBe(`headers: { 'X-Value': ${mixed(',')} }`);
+        expect(headersOf({ anyOf: [{ type: 'string' }, { type: 'array', items: filter }] }, true)).toBe(`headers: { 'X-Value': ${mixed('=')} }`);
+      });
+
       it('keeps String() for primitives, arrays of primitives and unions of them', () => {
         expect(headersOf({ oneOf: [{ type: 'string' }, { type: 'integer' }] })).toBe("headers: { 'X-Value': String(xValue) }");
         expect(headersOf({ type: 'array', items: { type: 'string' } })).toBe("headers: { 'X-Value': String(xValue) }");

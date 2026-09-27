@@ -1,7 +1,7 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
 import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
-import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports, fromPropertyKey } from "../utils/transform-type";
+import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports, fromPropertyKey, toIndexSignature } from "../utils/transform-type";
 import { IDocSource, renderJsDoc } from "../utils/js-doc";
 import { toStringLiteral } from "../utils/enum";
 
@@ -117,12 +117,13 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
         };
     }
 
-    // Arrays, tuples and records render like they do inline; their nullability is added
-    // where the alias is referenced, as for an interface
+    // Arrays, tuples and records render like they do inline (a record as an index signature, so
+    // it may refer to itself); their nullability is added where the alias is referenced, as for
+    // an interface
     if (isCollectionSchema(schema)) {
         const [typeExpression, importRefs] = transformTypeWithAllImports(schema, swagger, options);
         return {
-            typeExpression,
+            typeExpression: toIndexSignature(typeExpression),
             importRefs: removeImportDuplicates(importRefs)
         };
     }

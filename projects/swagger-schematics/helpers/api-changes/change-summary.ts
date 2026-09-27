@@ -53,7 +53,13 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
                 excludeApis: config.excludeApis,
                 excludeDeprecated: config.excludeDeprecated
             };
-            changes = diffApiModels(buildApiModel(previous.schema, modelOptions), buildApiModel(current, modelOptions));
+            try {
+                changes = diffApiModels(buildApiModel(previous.schema, modelOptions), buildApiModel(current, modelOptions));
+            } catch (error) {
+                // A snapshot this generator can't read would otherwise fail every run: replace it instead
+                logger.warn(`Could not compare the schema with the snapshot ${snapshotSetting} (${(error as Error).message}); ` +
+                    `it is replaced with the current schema, and changes are listed from the next run.`);
+            }
         } else if (previous.reason === 'invalid') {
             logger.warn(`Schema snapshot ${snapshotSetting} is not valid JSON (${previous.error}); ` +
                 `it is replaced with the current schema, and changes are listed from the next run.`);

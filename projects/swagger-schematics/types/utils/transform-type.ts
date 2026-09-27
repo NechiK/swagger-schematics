@@ -174,8 +174,10 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
         }
     }
 
-    // No `type` but `additionalProperties`: JSON Schema only applies it to objects, so it's a record
-    if (hasAdditionalProperties(schema)) {
+    // No `type` but `additionalProperties` (a schema or `true`): JSON Schema only applies it to
+    // objects, so it's a record. `additionalProperties: false` only closes the object, and says
+    // nothing about the type
+    if (hasAdditionalProperties(schema) && (schema as ISchemaObject).additionalProperties !== false) {
         return transformObjectSchema(schema, swagger, options);
     }
 
@@ -355,6 +357,17 @@ export function wrapUnion(typeSymbol: string): string {
  */
 function wrapForPostfix(typeSymbol: string): string {
     return hasTopLevelOperator(typeSymbol, '|&') ? `(${typeSymbol})` : typeSymbol;
+}
+
+/**
+ * A record type alias as an index signature: `Record<string, TJson>` -> `{ [key: string]: TJson }`.
+ * TypeScript resolves a generic alias like `Record` eagerly, so a record that refers back to
+ * itself (`TJson = Record<string, TJson>`, or the JsonObject/JsonValue pair) is a circular alias
+ * error; an object type is resolved lazily and compiles. Anything else is returned as is.
+ */
+export function toIndexSignature(typeExpression: string): string {
+    const match = /^Record<string, ([\s\S]*)>$/.exec(typeExpression);
+    return match && !hasTopLevelOperator(typeExpression, '|&') ? `{ [key: string]: ${match[1]} }` : typeExpression;
 }
 
 /**
@@ -549,8 +562,8 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
             docs.push([propertyKey, { description, deprecated }]);
         }
 
-        const nullable = isNullable(property, swagger);
         const typeSymbol = withNullability(rawTypeSymbol, property, swagger);
+        const nullable = isNullable(property, swagger) || rendersNull(typeSymbol);
         const isOptional = options?.legacyOptionalProperties
             ? nullable
             : !requiredProperties.includes(propertyKey);
@@ -672,12 +685,33 @@ function isLikelySchemaReference(value: string): boolean {
     return startsWithCapital;
 }
 
+/**
+ * The `typeMapping` target for a component, or undefined when it isn't mapped. Only the mapping's
+ * own keys count, so a component named `constructor` or `toString` isn't mapped by Object.prototype.
+ */
+export function getMappedType(name: string, typeMapping?: Record<string, string>): string | undefined {
+    return typeMapping && Object.prototype.hasOwnProperty.call(typeMapping, name) && typeMapping[name]
+        ? typeMapping[name]
+        : undefined;
+}
+
+/** The primitive a primitive wrapper component is inlined as at a reference (`string`, `'dog'`, `string | null`). */
+function inlinePrimitiveWrapper(schema: TSchemaByType, swagger: ISwaggerSchema, options?: ITransformTypeOptions, forceNullable = false): string {
+    const primitiveType = constLiteral(schema)
+        ?? (hasTypeArray(schema)
+            ? transformTypeArray(schema, swagger, options)[0]
+            : transformPrimitives(schema as TSchemaWithType)[0]);
+    // `["null"]` already renders as null
+    const isNullable = (forceNullable || isSchemaValueNullable(schema)) && primitiveType !== 'null';
+    return isNullable ? `${primitiveType} | null` : primitiveType;
+}
+
 export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(property.$ref, swagger);
 
     // Check if this type is mapped
-    if (options?.typeMapping && options.typeMapping[refPropertyKey]) {
-        const mappedValue = options.typeMapping[refPropertyKey];
+    const mappedValue = getMappedType(refPropertyKey, options?.typeMapping);
+    if (mappedValue !== undefined) {
 
         // Only attempt schema resolution if the mapped value looks like a schema reference
         // This prevents primitive types from accidentally matching schema names
@@ -685,9 +719,16 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
             const { refPropertySchema: mappedSchema, refPropertyKey: mappedKey } =
                 getRefPropertyDefinition(`#/components/schemas/${mappedValue}`, swagger);
 
-            if (mappedSchema) {
+            if (mappedSchema !== undefined && mappedSchema !== null) {
                 // Use the mapped schema's type, but preserve nullable from the original schema
                 const originalIsNullable = isMappedSchemaNullable(refPropertySchema);
+
+                // A primitive wrapper target generates no file, so it is inlined like any reference to it
+                if (typeof mappedSchema === 'boolean' || isPrimitiveWrapper(mappedSchema)) {
+                    return [typeof mappedSchema === 'boolean'
+                        ? (mappedSchema ? 'unknown' : 'never')
+                        : inlinePrimitiveWrapper(mappedSchema, swagger, options, originalIsNullable)];
+                }
 
                 const symbol = transformRefProperty(mappedSchema, mappedKey);
                 const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
@@ -705,6 +746,11 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
         return [originalIsNullable ? `${mappedValue} | null` : mappedValue];
     }
 
+    // A boolean component schema generates no file (see getGeneratedSchemaKind)
+    if (typeof refPropertySchema === 'boolean') {
+        return [refPropertySchema ? 'unknown' : 'never'];
+    }
+
     // If schema not found, return a generic type based on the ref key
     if (!refPropertySchema) {
         const symbol = `I${refPropertyKey}`;
@@ -718,13 +764,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     // Check if the referenced schema is a primitive wrapper (not an object with properties)
     // These should be inlined rather than imported
     if (isPrimitiveWrapper(refPropertySchema)) {
-        const primitiveType = constLiteral(refPropertySchema)
-            ?? (hasTypeArray(refPropertySchema)
-                ? transformTypeArray(refPropertySchema, swagger, options)[0]
-                : transformPrimitives(refPropertySchema as TSchemaWithType)[0]);
-        // `["null"]` already renders as null
-        const isNullable = isSchemaValueNullable(refPropertySchema) && primitiveType !== 'null';
-        return [isNullable ? `${primitiveType} | null` : primitiveType];
+        return [inlinePrimitiveWrapper(refPropertySchema, swagger, options)];
     }
     
     const symbol = transformRefProperty(refPropertySchema, refPropertyKey);
@@ -883,7 +923,21 @@ export function isSchemaValueNullable(schema: TSchemaByType | undefined): boolea
         return true;
     }
     const type = (schema as { type?: unknown }).type;
-    return Array.isArray(type) && type.includes('null');
+    if (Array.isArray(type) && type.includes('null')) {
+        return true;
+    }
+    // A `null` enum value allows null when no `type` rules it out (OpenAPI 3.1: `enum: ['red', null]`)
+    const enumValues = (schema as { enum?: unknown }).enum;
+    return type === undefined && Array.isArray(enumValues) && enumValues.includes(null);
+}
+
+/**
+ * Whether a rendered type admits null at its top level (`IDto | null`, `null`). A union shows a
+ * nullable member's `| null` once, at the end (`string | number | null` from a
+ * `oneOf: [{ type: ['string', 'null'] }, { type: integer }]`), which the schema checks miss.
+ */
+export function rendersNull(typeSymbol: string): boolean {
+    return typeSymbol === 'null' || typeSymbol.endsWith(' | null');
 }
 
 /**

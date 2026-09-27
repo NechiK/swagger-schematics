@@ -323,18 +323,16 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             }
 
             // Build API URL, handling path params that may come from body for PUT/POST
-            const apiUrl = segments.map(urlSegment => {
-                const pathParamMatch = urlSegment.match(/\{(.*)}/);
-                if (pathParamMatch) {
-                    const pathParam = pathParams.find(p => p.originalParam.name === pathParamMatch[1]);
-                    // For PUT/POST with body and no separate path param, use body.paramName
-                    if (!pathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
-                        return `\${${bodyParam.objectSymbol}.${camelize(pathParamMatch[1])}}`;
-                    }
-                    return `\${${pathParam?.objectSymbol ?? toParamSymbol(pathParamMatch[1])}}`;
+            // Every template expression in a segment is replaced, keeping the literal text around
+            // it (`{name}.{ext}`, `{id}.json`)
+            const apiUrl = segments.map(urlSegment => urlSegment.replace(/\{([^}]+)}/g, (_match: string, paramName: string) => {
+                const pathParam = pathParams.find(p => p.originalParam.name === paramName);
+                // For PUT/POST with body and no separate path param, use body.paramName
+                if (!pathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
+                    return `\${${bodyParam.objectSymbol}.${camelize(paramName)}}`;
                 }
-                return urlSegment;
-            }).join('/');
+                return `\${${pathParam?.objectSymbol ?? toParamSymbol(paramName)}}`;
+            })).join('/');
 
             const isQuery = ['get', 'head'].includes(operationKey);
 

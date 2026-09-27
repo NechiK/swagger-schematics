@@ -1,11 +1,12 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, rendersNull } from "./transform-type";
 import { ISwaggerSchema, TSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { IResponse } from "../../interfaces/version_3_1/response.interface";
 import { camelize } from "@angular-devkit/core/src/utils/strings";
+import { toStringLiteral } from "./enum";
 
 /**
  * Represents the structure of a parsed parameter.
@@ -61,13 +62,15 @@ export interface IParsedParam<T> {
      * `role=admin,id=1`), including a `oneOf`/`anyOf` of objects; 'object-or-value' /
      * 'object-or-value-exploded': a `oneOf`/`anyOf` mixing objects and primitives, checked at
      * runtime; 'json': a `content: application/json` param, or an array of objects (which
-     * `simple` style doesn't define). Unset: `String(value)`, which already gives `simple`
-     * style for primitives and arrays of primitives (`1,2`).
+     * `simple` style doesn't define); 'mixed' / 'mixed-exploded': a `oneOf`/`anyOf` where one
+     * member is an array of objects, checked at runtime (any array as JSON, an object as in
+     * 'object', anything else with `String()`). Unset: `String(value)`, which already gives
+     * `simple` style for primitives and arrays of primitives (`1,2`).
      */
     headerSerialization?: THeaderSerialization;
 }
 
-export type THeaderSerialization = 'object' | 'object-exploded' | 'object-or-value' | 'object-or-value-exploded' | 'json';
+export type THeaderSerialization = 'object' | 'object-exploded' | 'object-or-value' | 'object-or-value-exploded' | 'mixed' | 'mixed-exploded' | 'json';
 
 /**
  * A parsed request body parameter - the original is the operation's
@@ -292,6 +295,9 @@ export function toHeaderParamSymbol(headerName: string): string | null {
  */
 export function toParamSymbol(name: string): string {
     let symbol = camelize(name).replace(/[^A-Za-z0-9_$]+(.)?/g, (_match: string, next?: string) => next ? next.toUpperCase() : '');
+    // Dropping a leading character can bring a capital to the front (`[Object]`, `ñame`), and a
+    // variable like `Object` or `String` would shadow the global the generated method calls
+    symbol = symbol.charAt(0).toLowerCase() + symbol.slice(1);
     if (!symbol) {
         symbol = 'param';
     }
@@ -303,7 +309,7 @@ export function toParamSymbol(name: string): string {
 
 /** An object literal entry for a param: shorthand when the key is the variable, else a quoted key. */
 function toObjectEntry(key: string, symbol: string): string {
-    return key === symbol ? symbol : `'${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}': ${symbol}`;
+    return key === symbol ? symbol : `${toStringLiteral(key)}: ${symbol}`;
 }
 
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
@@ -563,6 +569,10 @@ function formatHeaderValue(symbol: string, serialization?: THeaderSerialization)
         case 'object-or-value-exploded':
             return `(typeof ${symbol} === 'object' && !Array.isArray(${symbol}) ? ` +
                 `${formatObject(serialization === 'object-or-value' ? ',' : '=')} : String(${symbol}))`;
+        case 'mixed':
+        case 'mixed-exploded':
+            return `(Array.isArray(${symbol}) ? JSON.stringify(${symbol}) : typeof ${symbol} === 'object' ? ` +
+                `${formatObject(serialization === 'mixed' ? ',' : '=')} : String(${symbol}))`;
         case 'json':
             return `JSON.stringify(${symbol})`;
         default:
@@ -585,6 +595,8 @@ function getHeaderSerialization(param: IHeaderParam, swagger: ISwaggerSchema, op
             return param.explode ? 'object-exploded' : 'object';
         case 'object-or-value':
             return param.explode ? 'object-or-value-exploded' : 'object-or-value';
+        case 'mixed':
+            return param.explode ? 'mixed-exploded' : 'mixed';
         case 'array-of-objects':
             return 'json';
         default:
@@ -592,24 +604,25 @@ function getHeaderSerialization(param: IHeaderParam, swagger: ISwaggerSchema, op
     }
 }
 
-type THeaderValueShape = 'object' | 'object-or-value' | 'array-of-objects' | 'value';
+type THeaderValueShape = 'object' | 'object-or-value' | 'array-of-objects' | 'mixed' | 'value';
 
 /**
  * What a header schema's value is at runtime: an object, an array of objects, a primitive or an
- * array of primitives ('value'), or a `oneOf`/`anyOf` that can be either an object or a value.
+ * array of primitives ('value'), or a `oneOf`/`anyOf` whose members differ: objects and values
+ * ('object-or-value'), or with an array of objects among them ('mixed').
  */
 function getHeaderValueShape(
-    schemaOrRef: TSchema | undefined,
+    schemaOrRef: TSchema | boolean | undefined,
     swagger: ISwaggerSchema,
     options?: ITransformTypeOptions,
     seen: Set<string> = new Set()
 ): THeaderValueShape {
     let schema = schemaOrRef;
-    if (schema && isRef(schema)) {
+    if (schema && typeof schema === 'object' && isRef(schema)) {
         const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
         // typeMapping replaces the component's type (e.g. with `string`), so its schema says nothing
         // about the value; a recursive component can't be decided either
-        if (options?.typeMapping?.[refPropertyKey] || seen.has(schema.$ref)) {
+        if (getMappedType(refPropertyKey, options?.typeMapping) !== undefined || seen.has(schema.$ref)) {
             return 'value';
         }
         seen.add(schema.$ref);
@@ -617,6 +630,21 @@ function getHeaderValueShape(
     }
     if (!schema || typeof schema !== 'object') {
         return 'value';
+    }
+    // The schema's own keywords win: `type: object` with `oneOf` members that only list
+    // `required` is still an object
+    const type = (schema as { type?: unknown }).type;
+    if (type === 'object'
+        || (Array.isArray(type) && type.includes('object'))
+        || 'properties' in schema
+        || 'additionalProperties' in schema) {
+        return 'object';
+    }
+    // `allOf` is an intersection: an object if any member is one (an `allOf` wrapping a
+    // string enum `$ref`, as NSwag and Swashbuckle write it, is a string)
+    const allOf = (schema as { allOf?: TSchema[] }).allOf ?? [];
+    if (allOf.some(member => getHeaderValueShape(member, swagger, options, new Set(seen)) === 'object')) {
+        return 'object';
     }
     const members = [
         ...((schema as { oneOf?: TSchema[] }).oneOf ?? []),
@@ -627,23 +655,21 @@ function getHeaderValueShape(
         if (shapes.size === 1) {
             return [...shapes][0];
         }
+        if (shapes.has('array-of-objects') || shapes.has('mixed')) {
+            return 'mixed';
+        }
         return shapes.has('object') || shapes.has('object-or-value') ? 'object-or-value' : 'value';
     }
-    const type = (schema as { type?: unknown }).type;
-    const isObject = type === 'object'
-        || (Array.isArray(type) && type.includes('object'))
-        || 'properties' in schema
-        || 'additionalProperties' in schema
-        || 'allOf' in schema;
-    if (isObject) {
-        return 'object';
-    }
-    const items = (schema as { items?: TSchema | boolean }).items;
-    if (items && typeof items === 'object') {
-        const itemShape = getHeaderValueShape(items, swagger, options, seen);
-        return itemShape === 'object' || itemShape === 'object-or-value' ? 'array-of-objects' : 'value';
-    }
-    return 'value';
+    // A 2020-12 tuple (`prefixItems`) counts as an array of objects if any position holds one
+    const itemSchemas = [
+        ...((schema as { prefixItems?: TSchema[] }).prefixItems ?? []),
+        (schema as { items?: TSchema | boolean }).items
+    ];
+    const hasObjectItems = itemSchemas.some(item => {
+        const itemShape = getHeaderValueShape(item, swagger, options, new Set(seen));
+        return itemShape !== 'value';
+    });
+    return hasObjectItems ? 'array-of-objects' : 'value';
 }
 
 /**
@@ -687,10 +713,42 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
         return { typeSymbol: 'any', isParamNullable: false, importRefs: [] };
     }
 
-    const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
-    const isParamNullable = isNullable(schema, swagger);
+    const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(param.in === 'query' ? withNonNullableItems(schema) : schema, swagger, options);
     const typeSymbol = withNullability(rawTypeSymbol, schema, swagger);
+    const isParamNullable = isNullable(schema, swagger) || rendersNull(typeSymbol);
     return { typeSymbol, isParamNullable, importRefs };
+}
+
+/**
+ * A query array whose items are nullable, with the items' nullability left out: HttpClient's
+ * `params` only takes arrays of string | number | boolean, so `(number | null)[]` (Swashbuckle's
+ * `List<int?>`) wouldn't compile, and a null element has no query-string form anyway. Only
+ * inline items change; any other schema is returned as is.
+ */
+function withNonNullableItems(schema: TSchema): TSchema {
+    const items = typeof schema === 'object' && !isRef(schema) ? (schema as { items?: unknown }).items : undefined;
+    if (!items || typeof items !== 'object' || isRef(items as TSchema)) {
+        return schema;
+    }
+    const nonNullItems: Record<string, unknown> = { ...(items as Record<string, unknown>) };
+    delete nonNullItems.nullable;
+    const { type, oneOf, anyOf, enum: enumValues } = nonNullItems;
+    if (Array.isArray(type) && type.some(member => member !== 'null')) {
+        nonNullItems.type = type.filter(member => member !== 'null');
+    }
+    if (Array.isArray(oneOf)) {
+        nonNullItems.oneOf = oneOf.filter(member => !isNullSchema(member));
+    }
+    if (Array.isArray(anyOf)) {
+        nonNullItems.anyOf = anyOf.filter(member => !isNullSchema(member));
+    }
+    if (Array.isArray(enumValues)) {
+        nonNullItems.enum = enumValues.filter(value => value !== null);
+    }
+    if (nonNullItems.default === null) {
+        delete nonNullItems.default;
+    }
+    return { ...(schema as object), items: nonNullItems } as unknown as TSchema;
 }
 
 export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {

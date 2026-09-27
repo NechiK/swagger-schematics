@@ -1,5 +1,5 @@
 import { TSchema, TSchemaByType } from '../../interfaces/version_3_1/swagger.interface';
-import { isCollectionSchema, isComposition, isPrimitiveWrapper } from './transform-type';
+import { getMappedType, isCollectionSchema, isComposition, isPrimitiveWrapper } from './transform-type';
 
 /** What the types schematic generates for a `components.schemas` entry. */
 export type TGeneratedSchemaKind = 'enum' | 'interface' | 'type-alias';
@@ -14,8 +14,9 @@ export function getGeneratedSchemaKind(
     schema: TSchema,
     component?: { name: string; typeMapping?: Record<string, string> }
 ): TGeneratedSchemaKind | null {
-    // A schema that is only a $ref generates nothing of its own
-    if ('$ref' in schema) {
+    // A boolean schema (`true`/`false`) is inlined as `unknown`/`never` at every reference, and a
+    // schema that is only a $ref generates nothing of its own
+    if (typeof schema !== 'object' || schema === null || '$ref' in schema) {
         return null;
     }
 
@@ -56,7 +57,7 @@ export function getGeneratedSchemaKind(
  * generates, since references then import its file - even when it is mapped itself.
  */
 export function isReplacedByTypeMapping(name: string, typeMapping?: Record<string, string>): boolean {
-    if (!typeMapping?.[name]) {
+    if (!typeMapping || getMappedType(name, typeMapping) === undefined) {
         return false;
     }
     return !Object.values(typeMapping).includes(name);

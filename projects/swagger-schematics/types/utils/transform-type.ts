@@ -663,9 +663,22 @@ export function isSchemaValueNullable(schema: TSchemaByType | undefined): boolea
 }
 
 /**
+ * Whether a oneOf/anyOf has a { "type": "null" } member, the OpenAPI 3.1 way of writing
+ * a nullable reference: { "oneOf": [{ "type": "null" }, { "$ref": "..." }] }.
+ */
+function hasNullMember(schema: TSchemaByType): boolean {
+    const members = [
+        ...((schema as Partial<ISchemaOneOf>).oneOf ?? []),
+        ...((schema as Partial<ISchemaAnyOf>).anyOf ?? [])
+    ];
+    return members.some(isNullSchema);
+}
+
+/**
  * Check if a schema is nullable, resolving $ref if necessary.
  * A schema is considered nullable if it has `nullable: true` (3.0),
- * a type array containing "null" (3.1), or `default: null`.
+ * a type array containing "null" (3.1), a oneOf/anyOf with a "null" member (3.1),
+ * or `default: null`.
  */
 export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean {
     if (isRef(property)) {
@@ -675,5 +688,7 @@ export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean 
         }
         return isSchemaValueNullable(refPropertySchema) || (refPropertySchema as ISchemaBase).default === null;
     }
-    return isSchemaValueNullable(property as TSchemaByType) || (property as ISchemaBase).default === null;
+    return isSchemaValueNullable(property as TSchemaByType)
+        || hasNullMember(property as TSchemaByType)
+        || (property as ISchemaBase).default === null;
 }

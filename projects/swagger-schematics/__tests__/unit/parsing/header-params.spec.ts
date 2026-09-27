@@ -126,6 +126,30 @@ describe('header parameters', () => {
       expect(item.headerParamsFormatted).toBe("headers: { ...(xTenantId != null ? { 'X-Tenant-Id': String(xTenantId) } : {}) }");
     });
 
+    it('treat the OpenAPI 3.1 oneOf "null" member like any other nullable schema', () => {
+      const oneOfNull = {
+        ...schema,
+        components: { schemas: { Dto: { type: 'object', properties: { a: { type: 'string' } } } } },
+        paths: {
+          '/api/Things': {
+            get: {
+              tags: ['Things'],
+              parameters: [{ name: 'filter', in: 'query', required: true, schema: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Dto' }] } }],
+              responses: { '204': { description: 'ok' } }
+            }
+          }
+        }
+      } as unknown as ISwaggerSchema;
+      const parse = (legacyOptionalProperties: boolean) =>
+        transformSwaggerSchema(oneOfNull, { silent: true, legacyOptionalProperties }).Things.apiList[0];
+
+      // null is left out of the request, not put in the params as is
+      expect(parse(false).hasOmittableQueryParams).toBe(true);
+      expect(parse(false).queryParamsFormatted).toBe('params: { ...(filter != null ? { filter } : {}) }');
+      expect(parse(false).apiMethodParams).toBe('{ filter }: { filter: IDto | null }');
+      expect(parse(true).apiMethodParams).toBe('{ filter }: { filter?: IDto | null }');
+    });
+
     it('keep a required non-nullable parameter required either way', () => {
       const required = {
         ...schema,

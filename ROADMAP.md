@@ -20,6 +20,15 @@ Add an entry when an issue is found, remove it when its fix lands, and add a CHA
 - **Fix:** interpolate `${encodeURIComponent(id)}` (a no-op for numbers, GUIDs and plain words). It changes the request for a caller who already encodes values, which would then be encoded twice, so it needs a major version or an opt-in option (e.g. `encodePathParams`, on by default in the next major), with a CHANGELOG entry under ♻️ Changed.
 - **Introduced by 2.0.0:** no, 1.4.0 behaves the same.
 
+## Medium
+
+### Schema ids with characters a name can't hold break the generated code
+- **Where:** the component name everywhere it becomes a symbol or a file: the type templates (`I<%= classify(name) %>`, `__name@dasherize__`), `transformRefProperty` and the import `fileName` in `types/utils/transform-type.ts`, the self-reference checks in `types/index.ts`, and the change summary's names in `helpers/api-changes/api-model.ts`.
+- **Example:** Swashbuckle with `CustomSchemaIds(t => t.FullName)` gives a generic type the id ``Shop.PagedResult`1[[Shop.OrderDto, Shop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]``. The interface is declared as ``IShopPagedResult`1[[...]]`` in a file named ``shop.paged-result`1[[shop.order-dto,-shop,-version=1.0.0.0,...]].interface.ts``, and both it and the services that import it fail to compile (TS1005, TS1160). Default schema ids (`OrderDto`, `OrderDtoPagedResult`) and plain full names (`Shop.OrderDto` -> `IShopOrderDto`, since 2.0.0) are fine.
+- **Fix:** one helper that turns a schema id into a name, used for the symbol, the file name and the change summary alike: drop the assembly details (`, Shop, Version=...`), turn the generic arity and type arguments into words (``PagedResult`1[[OrderDto]]`` -> `PagedResultOfOrderDto`), and drop any other character a name can't hold. Two ids that end up with the same name need a numeric suffix, as enum members already get.
+- **Workaround for the backend:** keep the default schema ids, or strip the generic parts in `CustomSchemaIds`.
+- **Introduced by 2.0.0:** no, 1.4.0 behaves the same.
+
 ## Feature ideas
 
 Features other OpenAPI generators have and this one doesn't, from a comparison with openapi-generator, NSwag, ng-openapi-gen, orval, hey-api, kubb, openapi-typescript and the official RTK codegen. None is planned yet; each lists what it would take. Header parameters, RTK cache tags, JSDoc, API filtering and `provideApi()` came from the same comparison and shipped in 2.0.0.

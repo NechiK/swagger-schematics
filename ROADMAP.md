@@ -4,6 +4,8 @@ Known issues and follow-ups that aren't fixed yet, sorted by priority. Most were
 
 Remove an entry when its fix lands, and add a CHANGELOG entry for it as usual.
 
+[Feature ideas](#feature-ideas) at the end are candidates, not commitments: things other generators offer, kept here so they aren't lost.
+
 ## High
 
 ### Nullable array and record unions lose their imports
@@ -85,3 +87,64 @@ Remove an entry when its fix lands, and add a CHANGELOG entry for it as usual.
 - **README, `rtkCacheTags`:** "Turning the option off again removes the enum and the tags" holds only with `removeStaleFiles: true`; with `false` the enum is kept and a warning is logged. *Since 2.0.0.*
 - **README, API change summary example:** the spacing doesn't match the console output (`format.ts` pads the kind to the longest one plus two spaces). *(reasoned)*
 - **CHANGELOG 2.0.0:** the custom-templates bullet uses `⚠️ **BREAKING** (custom templates and helpers only):` instead of the `⚠️ **BREAKING**:` form the changelog skill requires, and two additive items (`transformSwaggerSchema()` `silent: true`, `enableSwaggerSchemaCache()`) sit under Changed and Fixed instead of Added.
+
+## Feature ideas
+
+Features other OpenAPI generators have and this one doesn't, from a comparison with openapi-generator, NSwag, ng-openapi-gen, orval, hey-api, kubb, openapi-typescript and the official RTK codegen. None is planned yet; each lists what it would take. Header parameters, RTK cache tags, JSDoc, API filtering and `provideApi()` came from the same comparison and shipped in 2.0.0.
+
+Sizes: **S** is a day or less, **M** a few days, **L** a week or more.
+
+### Angular `httpResource` / signals output (M)
+- **What:** generate signal-based resource functions next to the Observable services, e.g. `ordersResource(() => ({ id: id() }))` returning an `HttpResourceRef<IOrderDto>`.
+- **Why:** Angular 19.2+ moves reads to signals; today every call site wraps the service in `toSignal()` or `rxResource()` by hand.
+- **Who has it:** orval (`override.angular.retrievalClient: 'httpResource'`), hey-api (`@angular/common` plugin), ng-openapi.
+- **Notes:** GET only; mutations stay on the services. Opt-in, as `rtkCacheTags` is.
+
+### `readOnly` / `writeOnly` in request and response types (M)
+- **What:** leave `readOnly` properties (`id`, `createdAt`) out of request bodies, and `writeOnly` ones (`password`) out of responses. Either separate request/response types or a `Omit<>`-based request type per DTO.
+- **Why:** when the backend uses one DTO for GET and POST/PUT, the generated create call demands server-owned fields, so callers pass dummy values or cast.
+- **Who has it:** openapi-typescript (`--read-write-markers`).
+- **Open questions:** does the backend reuse the same DTO for reads and writes, and does its Swagger JSON contain `"readOnly": true` (Swashbuckle emits it for get-only properties)?
+
+### `oneOf` discriminators (M)
+- **What:** use `discriminator.propertyName`/`mapping` to generate narrowable unions, e.g. `TShape = (ICircle & { $type: 'circle' }) | (ISquare & { $type: 'square' })`.
+- **Why:** .NET 7+ `[JsonPolymorphic]`/`[JsonDerivedType]` emits `$type` discriminators; without them a consumer can't narrow the union safely. OpenAPI 3.1 `const` (supported since 2.0.0) covers documents that already put a `const` on the property.
+- **Who has it:** NSwag, openapi-generator.
+
+### Change summary: request vs response DTOs (M)
+- **What:** know which DTOs are used in request bodies and parameters, so the summary can judge changes by direction: a new required property on a request DTO breaks callers, a removed property on a response DTO breaks readers, and a new optional request property is harmless.
+- **Why:** makes the breaking/added split in the PR description more accurate for the regen pipeline. Today any property change is judged the same way wherever the DTO is used.
+
+### Dates as `Date` (M)
+- **What:** type `format: date-time`/`date` as `Date` and convert response strings at runtime (an HttpClient interceptor or a generated transformer for Angular, `transformResponse` for RTK). Opt-in.
+- **Why:** .NET `DateTime`/`DateTimeOffset` arrive as strings typed `string`, so parsing is scattered across components.
+- **Who has it:** NSwag (`DateTimeType`: Date, MomentJS, DayJS or string), hey-api (transformers plugin).
+- **Notes:** request bodies need the reverse conversion; keep it opt-in because it changes every date type.
+
+### More filters, and only the DTOs that are used (S–M)
+- **What:** filter by OpenAPI tag, path pattern or `operationId` in addition to the controller name (`includeApis`/`excludeApis` today), and optionally generate only the schemas the selected APIs reference (following `$ref` chains).
+- **Why:** with a filtered API list, the types schematic still generates every DTO, including ones only excluded controllers use.
+- **Who has it:** ng-openapi-gen (`includeTags`/`excludeTags`), RTK codegen (`filterEndpoints`), hey-api (`parser.filters`).
+
+### YAML input (S)
+- **What:** accept `.yaml`/`.yml` files and YAML responses (by extension or content type, falling back to YAML when JSON parsing fails).
+- **Why:** spec-first teams usually commit YAML. Low value for ASP.NET backends, which serve JSON by default.
+- **Cost:** a runtime dependency (`yaml`, about 100 KB, no dependencies of its own).
+
+### Zod schemas for runtime validation (L)
+- **What:** generate a Zod schema per DTO and optionally validate responses.
+- **Why:** catches backend contract drift at runtime, and request schemas can be reused for form validation.
+- **Who has it:** kubb (`plugin-zod`), orval (`client: 'zod'`), hey-api.
+
+### MSW handlers and Faker mocks (M–L)
+- **What:** generate Mock Service Worker handlers with Faker data per endpoint.
+- **Why:** the frontend can build, run Storybook and run tests before the .NET endpoint is deployed.
+- **Who has it:** orval, kubb (`plugin-msw`, `plugin-faker`).
+
+### Authenticated schema download (S)
+- **What:** headers (e.g. a bearer token from an environment variable) for fetching `swaggerSchemaUrl`.
+- **Status:** parked; not needed so far.
+
+### Publish workflow: one run at a time (S, CI)
+- **What:** a `concurrency` group in `.github/workflows/npm-publish.yml`, so a second run for the same merge waits and then skips the already-published version instead of failing.
+- **Why:** the merge of #34 started the workflow twice and the second run failed trying to republish 1.3.1.

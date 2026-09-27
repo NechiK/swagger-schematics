@@ -770,12 +770,6 @@ function isMappedRef(ref: string, swagger: ISwaggerSchema, options?: ITransformT
         && isMappedRef(refPropertySchema.$ref, swagger, options, seen);
 }
 
-export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
-    const { typeSymbol, isParamNullable } = resolveParamType(param, swagger, options);
-    const isOptional = isParamOptionalBySpec(param, isParamNullable, options);
-    return `${param.name}${isOptional ? '?' : ''}: ${typeSymbol}`;
-}
-
 /**
  * Per spec, a parameter can be left out when it isn't `required`; a required nullable one must
  * still be passed (null then leaves it out of the request). `legacyOptionalProperties` restores

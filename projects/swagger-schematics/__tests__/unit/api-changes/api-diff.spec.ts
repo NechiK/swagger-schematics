@@ -100,6 +100,44 @@ describe('diffApiModels', () => {
     expect(diffApiModels(after, before).map(change => change.kind)).toEqual(['Property removed', 'Enum member removed', 'Enum member removed']);
   });
 
+  it('reports a new optional property whose name is quoted as added', () => {
+    const schemaWith = (properties: Record<string, unknown>, required: string[] = []) =>
+      ({ openapi: '3.0.1', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: { Dto: { type: 'object', properties, required } } } }) as unknown as ISwaggerSchema;
+    const diff = (before: ISwaggerSchema, after: ISwaggerSchema) =>
+      diffApiModels(buildApiModel(before, { framework: 'angular' }), buildApiModel(after, { framework: 'angular' }));
+    const id = { id: { type: 'integer' } };
+    const name = { type: 'string' };
+
+    expect(diff(schemaWith(id), schemaWith({ ...id, 'first-name': name, '@odata.type': name }))).toEqual([
+      { severity: 'added', kind: 'Property added', subject: 'IDto.@odata.type', ref: "'@odata.type'?: string" },
+      { severity: 'added', kind: 'Property added', subject: 'IDto.first-name', ref: "'first-name'?: string" }
+    ]);
+    expect(diff(schemaWith(id), schemaWith({ ...id, 'first-name': name }, ['first-name']))).toEqual([
+      { severity: 'breaking', kind: 'Required property added', subject: 'IDto.first-name', ref: "'first-name': string" }
+    ]);
+  });
+
+  it('reports an index signature that appears, goes or changes type as breaking', () => {
+    const schemaWith = (additionalProperties?: unknown) =>
+      ({
+        openapi: '3.0.1', info: { title: 'T', version: '1' }, paths: {},
+        components: { schemas: { Dto: { type: 'object', required: ['id'], properties: { id: { type: 'string' } }, additionalProperties } } }
+      }) as unknown as ISwaggerSchema;
+    const diff = (before: ISwaggerSchema, after: ISwaggerSchema) =>
+      diffApiModels(buildApiModel(before, { framework: 'angular' }), buildApiModel(after, { framework: 'angular' }));
+
+    expect(diff(schemaWith({ type: 'string' }), schemaWith({ type: 'integer' }))).toEqual([
+      { severity: 'breaking', kind: 'Index signature changed', subject: 'IDto[key: string]', from: 'string', to: 'number | string' }
+    ]);
+    expect(diff(schemaWith(), schemaWith(true))).toEqual([
+      { severity: 'breaking', kind: 'Index signature added', subject: 'IDto[key: string]', ref: '[key: string]: any' }
+    ]);
+    expect(diff(schemaWith({ type: 'string' }), schemaWith(false))).toEqual([
+      { severity: 'breaking', kind: 'Index signature removed', subject: 'IDto[key: string]', ref: '[key: string]: string' }
+    ]);
+    expect(diff(schemaWith(true), schemaWith(true))).toEqual([]);
+  });
+
   describe('new endpoint parameters', () => {
     const ok = { '204': { description: 'ok' } };
     const schemaWith = (parameters: unknown[], requestBody?: unknown) => ({

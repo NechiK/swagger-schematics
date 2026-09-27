@@ -395,6 +395,16 @@ describe('nullability the schema checks and the rendered type agree on', () => {
     expect(item.apiMethodParams).toBe('{ ids, names }: { ids: number[]; names?: string[] | null }');
   });
 
+  it('leaves null out of the elements of a query array that is itself nullable through a union member', () => {
+    // pydantic's Optional[List[Optional[int]]]; the `type: ['array', 'null']` form is covered above
+    const item = parse([
+      { name: 'b', in: 'query', schema: { oneOf: [{ type: 'array', items: { type: ['integer', 'null'] } }, { type: 'null' }] } },
+      { name: 'c', in: 'query', schema: { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string', nullable: true } }] } }
+    ]);
+
+    expect(item.apiMethodParams).toBe('{ b, c }: { b?: number[] | null; c?: string | string[] } = {}');
+  });
+
   it('leaves null out of query array elements that get it from a $ref, allOf or a union member', () => {
     const item = parse([
       { name: 'a', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/NullableText' } } },
@@ -489,6 +499,20 @@ describe('typeMapping lookups', () => {
 
   it('inline a primitive wrapper the mapping points at, which generates no file to import', () => {
     expect(transformType({ $ref: '#/components/schemas/Price' } as TSchema, swagger, { typeMapping: { Price: 'Decimal' } })).toEqual(['string']);
+  });
+
+  it('follow a target that is only a $ref to the component it points to, which is the file that exists', () => {
+    const withAlias = {
+      ...swagger,
+      components: { schemas: { ...swagger.components!.schemas, PriceAlias: { $ref: '#/components/schemas/Price' }, Old: { type: 'object' } } }
+    } as unknown as ISwaggerSchema;
+    const typeMapping = { Old: 'PriceAlias' };
+
+    expect(transformType({ $ref: '#/components/schemas/Old' } as TSchema, withAlias, { typeMapping }))
+      .toEqual(['IPrice', { type: 'interface', importSymbol: 'IPrice', fileName: 'price' }]);
+    // A mapping that leads back into its own chain describes no type
+    const circular = { ...withAlias, components: { schemas: { Old: { type: 'object' }, Loop: { $ref: '#/components/schemas/Old' } } } } as unknown as ISwaggerSchema;
+    expect(transformType({ $ref: '#/components/schemas/Old' } as TSchema, circular, { typeMapping: { Old: 'Loop' } })[0]).toBe('unknown');
   });
 
   it('ignore keys inherited from Object.prototype', () => {

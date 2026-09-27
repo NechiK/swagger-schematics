@@ -1,4 +1,5 @@
 import { IApiModel, IEndpointModel, TTypeModel } from './api-model';
+import { toPropertyKey } from '../../types/utils/transform-type';
 
 /**
  * breaking: code written against the previous generation may stop compiling or
@@ -63,7 +64,10 @@ function diffTypes(previous: IApiModel['types'], current: IApiModel['types']): I
             }];
         }
         if (before.kind === 'interface' && after.kind === 'interface') {
-            return diffMembers(symbol, before.properties, after.properties, 'Property');
+            return [
+                ...diffMembers(symbol, before.properties, after.properties, 'Property'),
+                ...diffIndexSignature(symbol, before.indexSignature, after.indexSignature)
+            ];
         }
         if (before.kind === 'enum' && after.kind === 'enum') {
             return diffMembers(symbol, before.members, after.members, 'Enum member');
@@ -82,8 +86,9 @@ function diffMembers(owner: string, previous: Record<string, string>, current: R
             return [{ severity: 'breaking', kind: `${label} removed`, subject }];
         }
         if (!(name in previous)) {
-            // A new required property breaks object literals written against the previous interface
-            if (label === 'Property' && !current[name].startsWith(`${name}?`)) {
+            // A new required property breaks object literals written against the previous interface.
+            // The declaration starts with the key as written, quoted when the name needs it
+            if (label === 'Property' && !current[name].startsWith(`${toPropertyKey(name)}?:`)) {
                 return [{ severity: 'breaking', kind: 'Required property added', subject, ref: current[name] }];
             }
             return [{ severity: 'added', kind: `${label} added`, subject, ref: current[name] }];
@@ -93,6 +98,25 @@ function diffMembers(owner: string, previous: Record<string, string>, current: R
         }
         return [];
     });
+}
+
+/**
+ * An index signature (`[key: string]: ...`) is breaking when it appears, since `keyof` the
+ * interface becomes `string | number` and a class implementing it needs one too; when it goes,
+ * since extra keys no longer compile; and when its type changes.
+ */
+function diffIndexSignature(owner: string, previous: string | undefined, current: string | undefined): IApiChange[] {
+    const subject = `${owner}[key: string]`;
+    if (previous === current) {
+        return [];
+    }
+    if (previous === undefined) {
+        return [{ severity: 'breaking', kind: 'Index signature added', subject, ref: `[key: string]: ${current}` }];
+    }
+    if (current === undefined) {
+        return [{ severity: 'breaking', kind: 'Index signature removed', subject, ref: `[key: string]: ${previous}` }];
+    }
+    return [{ severity: 'breaking', kind: 'Index signature changed', subject, from: previous, to: current }];
 }
 
 function diffEndpoints(previous: IApiModel['endpoints'], current: IApiModel['endpoints']): IApiChange[] {

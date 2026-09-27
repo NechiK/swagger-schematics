@@ -2,7 +2,7 @@ import { strings } from '@angular-devkit/core';
 import { ISwaggerSchema, TSchemaByType } from '../../interfaces/version_3_1/swagger.interface';
 import { TFrameworkType } from '../../interfaces/swagger-schematics/framework';
 import { getGeneratedSchemaKind, TGeneratedSchemaKind } from '../../types/utils/schema-kind';
-import { fromPropertyKey, transformProperties } from '../../types/utils/transform-type';
+import { fromPropertyKey, transformIndexSignature, transformProperties } from '../../types/utils/transform-type';
 import { transformCompositionSchema } from '../../types/helpers/template.helper';
 import { buildEnumMembers } from '../../types/utils/enum';
 import { transformSwaggerSchema } from '../../api/helpers/api.helper';
@@ -19,8 +19,11 @@ export interface IApiModelOptions {
 }
 
 export type TTypeModel =
-    /** Property name -> its generated declaration, e.g. `total?: number | null` */
-    | { kind: 'interface'; properties: Record<string, string> }
+    /**
+     * Property name -> its generated declaration, e.g. `total?: number | null`, and the index
+     * signature's value type when the interface allows more properties, e.g. `number | string`
+     */
+    | { kind: 'interface'; properties: Record<string, string>; indexSignature?: string }
     /** Member name -> its value as it appears in the enum */
     | { kind: 'enum'; members: Record<string, string> }
     | { kind: 'type-alias'; expression: string };
@@ -113,7 +116,11 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
             propertiesContent.forEach(([name, type]) => {
                 properties[fromPropertyKey(name)] = `${name}: ${type}`;
             });
-            types[symbol] = { kind, properties };
+            // Same rule as the types schematic: an index signature only next to properties
+            const indexSignature = propertiesContent.length > 0
+                ? transformIndexSignature(schema, propertiesContent, swagger, transformOptions)?.[0]
+                : undefined;
+            types[symbol] = indexSignature === undefined ? { kind, properties } : { kind, properties, indexSignature };
         }
     });
 

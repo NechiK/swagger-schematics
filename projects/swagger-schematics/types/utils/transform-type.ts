@@ -369,12 +369,23 @@ function wrapForPostfix(typeSymbol: string): string {
  * A query array's type with its elements' nullability left out: HttpClient's `params` only takes
  * arrays of string | number | boolean, so `(number | null)[]` (Swashbuckle's `List<int?>`, or items
  * that `$ref` a nullable component) wouldn't compile, and a null element has no query-string form
- * anyway. Any other type is returned as is.
+ * anyway. Applies to each member of a top-level union, so a param that is itself nullable
+ * (`(number | null)[] | null`, pydantic's `Optional[List[Optional[int]]]`) gets `number[] | null`.
+ * Any other type is returned as is.
  */
 export function withNonNullableElements(typeSymbol: string): string {
-    const match = /^\(([\s\S]*) \| null\)\[\]$/.exec(typeSymbol);
-    // The parentheses must enclose the whole element: not `(A) | (B | null)[]`
-    return match && !hasTopLevelOperator(typeSymbol, '|&') ? `${wrapForPostfix(match[1])}[]` : typeSymbol;
+    // The parentheses must enclose the whole element: not `(A) & (B | null)[]`
+    if (hasTopLevelOperator(typeSymbol, '&')) {
+        return typeSymbol;
+    }
+    const bounds = [-1, ...topLevelOperatorIndexes(typeSymbol, '|'), typeSymbol.length];
+    return bounds.slice(1).map((end, index) => {
+        const start = bounds[index];
+        const member = typeSymbol.slice(start + 1, end);
+        const match = /^(\s*)\(([\s\S]*) \| null\)\[\](\s*)$/.exec(member);
+        const converted = match ? `${match[1]}${wrapForPostfix(match[2])}[]${match[3]}` : member;
+        return start < 0 ? converted : typeSymbol[start] + converted;
+    }).join('');
 }
 
 /**
@@ -803,6 +814,17 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
             if (mappedSchema !== undefined && mappedSchema !== null) {
                 // Use the mapped schema's type, but preserve nullable from the original schema
                 const originalIsNullable = isMappedSchemaNullable(refPropertySchema);
+
+                // A target that is only a $ref generates no file: resolve it as any reference to it
+                if (isRef(mappedSchema)) {
+                    const mappedRef = `#/components/schemas/${mappedValue}`;
+                    seen.add(property.$ref);
+                    if (seen.has(mappedRef)) {
+                        return ['unknown'];
+                    }
+                    const [symbol, importRef] = parseRefToSymbol({ $ref: mappedRef }, swagger, options, seen);
+                    return [originalIsNullable && !rendersNull(symbol) ? `${symbol} | null` : symbol, importRef];
+                }
 
                 // A primitive wrapper target generates no file, so it is inlined like any reference to it
                 if (typeof mappedSchema === 'boolean' || isPrimitiveWrapper(mappedSchema)) {

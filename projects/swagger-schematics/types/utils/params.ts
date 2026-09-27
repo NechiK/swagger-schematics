@@ -462,13 +462,14 @@ export function formatHeaderParams(headerParams: IParsedParam<IHeaderParam>[]): 
  * Formats body parameter for HTTP calls.
  * @param bodyParam - The parsed body parameter, or null if no body
  * @param methodType - HTTP method (get, post, put, delete, etc.)
- * @returns Body symbol for methods with body, "{}" for POST/PUT without body, 
+ * @returns Body symbol for methods with body, "{}" for POST/PUT/PATCH without body, 
  *          or empty string for GET/DELETE/etc. without body.
  *          Template authors: use truthy check (e.g., `if (bodyFormatted)`) to determine presence.
  */
 export function formatBody(bodyParam: TParsedBodyParam | null, methodType: string): string {
     if (bodyParam) return bodyParam.objectSymbol;
-    if (['post', 'put'].includes(methodType)) return '{}';
+    // HttpClient's post/put/patch take the body as a required argument
+    if (['post', 'put', 'patch'].includes(methodType)) return '{}';
     return '';
 }
 

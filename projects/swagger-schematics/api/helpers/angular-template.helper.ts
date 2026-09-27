@@ -2,7 +2,7 @@ import { IParsedApiItem } from '../../types/utils/params';
 
 /**
  * Build Angular HttpClient call arguments (everything after the URL)
- * Handles the different argument patterns for GET, POST, PUT, DELETE
+ * Handles the different argument patterns for GET, POST, PUT, PATCH, DELETE
  * Returns an array of argument strings for flexible template formatting
  */
 export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
@@ -11,8 +11,8 @@ export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
     // Binary responses need responseType: 'blob' in the options object
     const responseTypeFormatted = isBinaryResponse ? `responseType: 'blob'` : '';
 
-    if (apiMethodType === 'post' || apiMethodType === 'put') {
-        // POST/PUT: body is second argument, options object is third
+    if (apiMethodType === 'post' || apiMethodType === 'put' || apiMethodType === 'patch') {
+        // POST/PUT/PATCH: body is second argument, options object is third
         parts.push(bodyFormatted || 'null');
         const options = [queryParamsFormatted, headerParamsFormatted, responseTypeFormatted].filter(Boolean);
         if (options.length > 0) {

@@ -4,7 +4,8 @@ import {
   resetFetchMocks,
   runFullSchematics,
   schematicRunner,
-  ANGULAR_SCHEMATIC_OPTIONS
+  ANGULAR_SCHEMATIC_OPTIONS,
+  RTK_SCHEMATIC_OPTIONS
 } from '@helpers/setup';
 import { OPENAPI_31_SWAGGER_SCHEMA } from '@fixtures/swagger/openapi-31-schema.fixture';
 
@@ -124,5 +125,110 @@ describe('OpenAPI 3.1 support', () => {
       expect(content).toContain('has no TypeScript equivalent');
       expect(content).toMatchSnapshot();
     });
+  });
+});
+
+describe('OpenAPI 3.1 keywords and references to composition schemas', () => {
+  const SCHEMA: any = {
+    openapi: '3.1.0',
+    info: { title: 'T', version: '1' },
+    components: {
+      schemas: {
+        Dto: { type: 'object', properties: { a: { type: 'string' } } },
+        AnyId: { oneOf: [{ type: 'string' }, { type: 'integer' }] },
+        NullableDto: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Dto' }] },
+        NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] },
+        Base: { type: 'object', properties: { id: { type: 'integer' } } },
+        Derived: { allOf: [{ $ref: '#/components/schemas/Base' }], properties: { extra: { type: 'string' } } },
+        Pet: {
+          type: 'object',
+          required: ['kind', 'id', 'owner'],
+          properties: {
+            kind: { const: 'dog' },
+            id: { $ref: '#/components/schemas/AnyId' },
+            owner: { $ref: '#/components/schemas/NullableDto' },
+            parent: { $ref: '#/components/schemas/Derived' },
+            position: { type: 'array', prefixItems: [{ type: 'number' }, { type: 'number' }], items: false },
+            tags: { type: 'array', prefixItems: [{ $ref: '#/components/schemas/Dto' }], items: { type: 'string' } },
+            nothing: { type: 'null' }
+          }
+        }
+      }
+    },
+    paths: {
+      '/api/Pets/{id}': {
+        get: {
+          tags: ['Pets'],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { $ref: '#/components/schemas/AnyId' } },
+            { name: 'owner', in: 'query', required: true, schema: { $ref: '#/components/schemas/NullableId' } }
+          ],
+          responses: { '200': { description: 'ok', content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } } }
+        },
+        put: {
+          tags: ['Pets'],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { $ref: '#/components/schemas/AnyId' } }],
+          requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Derived' } } } },
+          responses: { '204': { description: 'ok' } }
+        }
+      }
+    }
+  };
+
+  /** Every relative import in the generated files names a generated file that exports the symbol. */
+  const expectImportsResolve = (tree: UnitTestTree) => {
+    const files = tree.files.filter(file => file.endsWith('.ts'));
+    const checked: string[] = [];
+    files.forEach(file => {
+      const content = tree.readContent(file);
+      for (const match of content.matchAll(/import \{ ([^}]+) \} from '(\.[^']+)';/g)) {
+        const target = `${require('path').posix.resolve(require('path').posix.dirname(file), match[2])}.ts`;
+        expect(files).toContain(target);
+        match[1].split(',').map(symbol => symbol.trim()).forEach(symbol => {
+          expect(tree.readContent(target)).toMatch(new RegExp(`export (interface|type|enum|const|class) ${symbol}\\b`));
+          checked.push(symbol);
+        });
+      }
+    });
+    return checked;
+  };
+
+  afterEach(() => {
+    resetFetchMocks();
+  });
+
+  it('renders const, tuples, type null and composition refs in interfaces', async () => {
+    const tree = await runFullSchematics(SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+    const pet = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/pet.interface.ts`);
+
+    expect(pet).toContain("kind: 'dog';");
+    expect(pet).toContain('id: TAnyId;');
+    expect(pet).toContain('owner: TNullableDto;');
+    expect(pet).toContain('parent?: TDerived;');
+    expect(pet).toContain('position?: [number, number];');
+    expect(pet).toContain('tags?: [IDto, ...string[]];');
+    expect(pet).toContain('nothing?: null;');
+    expect(pet).toContain("import { TAnyId } from './any-id.type';");
+    expect(pet).toContain("import { TNullableDto } from './nullable-dto.type';");
+    expect(pet).toContain("import { IDto } from './dto.interface';");
+  });
+
+  it.each([
+    ['Angular', ANGULAR_SCHEMATIC_OPTIONS],
+    ['RTK', RTK_SCHEMATIC_OPTIONS]
+  ])('%s: every import in the generated code resolves', async (_name, options) => {
+    const tree = await runFullSchematics(SCHEMA, options);
+    const checked = expectImportsResolve(tree);
+
+    expect(checked).toEqual(expect.arrayContaining(['TAnyId', 'TNullableDto', 'TNullableId', 'TDerived', 'IDto', 'IPet']));
+  });
+
+  it('Angular: a required nullable-composition query param is required and left out when null', async () => {
+    const tree = await runFullSchematics(SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+    const service = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/pets-api.service.ts`);
+
+    expect(service).toContain('{ owner }: { owner: TNullableId }');
+    expect(service).toContain('putPetsById(id: TAnyId, body: TDerived)');
+    expect(service).toContain('params: { ...(owner != null ? { owner } : {}) }');
   });
 });

@@ -12,13 +12,16 @@ import {
     ISchemaAnyOf,
     ISchemaNot,
     ISchemaObject,
+    ISchemaArray,
     ISchemaProperties
 } from "../../interfaces/version_3_1/swagger.interface";
 import { TParam } from "../../interfaces/version_3_1/params.interface";
 import { safePluck } from "./pluck";
+import { toStringLiteral } from "./enum";
 
 export interface IImportRef {
-    type: 'enum' | 'interface';
+    /** What the referenced schema generates: an enum, an interface, or a type alias (`.type.ts`, for compositions) */
+    type: 'enum' | 'interface' | 'type';
     fileName: string;
     importSymbol: string;
 }
@@ -103,6 +106,12 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
     }
     
     const schema = property as TSchemaByType;
+
+    // OpenAPI 3.1 (JSON Schema): `const` allows exactly one value
+    const literal = constLiteral(schema);
+    if (literal !== undefined) {
+        return [literal];
+    }
     
     // Handle schema composition first (these don't have a 'type' property)
     if (isAllOf(schema)) {
@@ -129,7 +138,9 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
         const typedSchema = schema as TSchemaWithType;
         switch (typedSchema.type) {
             case 'array':
-                return transformArraySymbol(typedSchema.items, swagger, options);
+                return hasPrefixItems(typedSchema)
+                    ? transformTuple(typedSchema, swagger, options)
+                    : transformArraySymbol(typedSchema.items, swagger, options);
             case 'object':
                 return transformObjectSchema(typedSchema as ISchemaObject, swagger, options);
             default:
@@ -139,6 +150,48 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
 
     // Fallback for schemas without type (shouldn't happen in valid OpenAPI)
     return ['any'];
+}
+
+/**
+ * The literal type for an OpenAPI 3.1 `const` (e.g. `const: "dog"` -> `'dog'`), or undefined
+ * when there is no `const` or its value is an object or array (those render from their `type`).
+ */
+function constLiteral(schema: TSchemaByType): string | undefined {
+    if (!('const' in schema)) {
+        return undefined;
+    }
+    const value = (schema as { const?: unknown }).const;
+    if (typeof value === 'string') {
+        return toStringLiteral(value);
+    }
+    if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean' || value === null) {
+        return String(value);
+    }
+    return undefined;
+}
+
+/** OpenAPI 3.1 (JSON Schema 2020-12) tuple: `prefixItems` lists the type of each position. */
+type TSchemaTuple = ISchemaArray & { prefixItems: TSchema[] };
+
+function hasPrefixItems(schema: TSchemaWithType): schema is TSchemaTuple {
+    return Array.isArray((schema as { prefixItems?: unknown }).prefixItems) && (schema as TSchemaTuple).prefixItems.length > 0;
+}
+
+/**
+ * `prefixItems: [A, B]` -> `[A, B]`. `items` then describes the elements after them:
+ * a schema gives a rest element (`[A, B, ...C[]]`); `false` or no `items` closes the tuple.
+ */
+function transformTuple(schema: TSchemaTuple, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const { types, imports } = transformCompositionSchemas(schema.prefixItems, swagger, options);
+    const rest = (schema as { items?: unknown }).items;
+    if (rest && typeof rest === 'object') {
+        const [restSymbol, restImport] = transformType(rest as TSchema, swagger, options);
+        types.push(`...${wrapUnion(restSymbol)}[]`);
+        if (restImport) {
+            imports.push(restImport);
+        }
+    }
+    return [`[${types.join(', ')}]`, imports[0]];
 }
 
 /**
@@ -337,6 +390,13 @@ export function transformTypeWithAllImports(property: TSchema, swagger: ISwagger
         if (isComposition(schema)) {
             return [typeSymbol, getCompositionImports(property, swagger, options)];
         }
+        // A tuple references a schema per position, plus its rest element
+        if (hasPrefixItems(schema as TSchemaWithType)) {
+            const tuple = schema as TSchemaTuple;
+            const rest = (tuple as { items?: unknown }).items;
+            const members = [...tuple.prefixItems, ...(rest && typeof rest === 'object' ? [rest as TSchema] : [])];
+            return [typeSymbol, members.flatMap(member => transformTypeWithAllImports(member, swagger, options)[1])];
+        }
         // Arrays and Record values inline their element type, so a union
         // element (e.g. items: oneOf [A, B]) contributes several imports.
         if ('items' in schema && schema.items) {
@@ -385,7 +445,7 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
         }
 
         const nullable = isNullable(property, swagger);
-        const typeSymbol = nullable && !rawTypeSymbol.endsWith(' | null') ? `${rawTypeSymbol} | null` : rawTypeSymbol;
+        const typeSymbol = withNullability(rawTypeSymbol, property, swagger);
         const isOptional = options?.legacyOptionalProperties
             ? nullable
             : !requiredProperties.includes(propertyKey);
@@ -500,7 +560,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
                 const typeSymbol = originalIsNullable ? `${symbol} | null` : symbol;
 
                 return [typeSymbol, {
-                    type: isRefPropertyEnum(mappedSchema) ? 'enum' : 'interface',
+                    type: getRefImportType(mappedSchema),
                     importSymbol: symbol,
                     fileName: dasherize(mappedKey)
                 }];
@@ -525,7 +585,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     // Check if the referenced schema is a primitive wrapper (not an object with properties)
     // These should be inlined rather than imported
     if (isPrimitiveWrapper(refPropertySchema)) {
-        const [primitiveType] = transformPrimitives(refPropertySchema as TSchemaWithType);
+        const primitiveType = constLiteral(refPropertySchema) ?? transformPrimitives(refPropertySchema as TSchemaWithType)[0];
         const isNullable = isSchemaValueNullable(refPropertySchema);
         return [isNullable ? `${primitiveType} | null` : primitiveType];
     }
@@ -535,7 +595,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     const typeSymbol = isNullable ? `${symbol} | null` : symbol;
 
     return [typeSymbol, {
-        type: isRefPropertyEnum(refPropertySchema) ? 'enum' : 'interface',
+        type: getRefImportType(refPropertySchema),
         importSymbol: symbol,
         fileName: dasherize(refPropertyKey)
     }];
@@ -598,6 +658,10 @@ export const transformPrimitives = (property: TSchemaWithType): [string] => {
         case 'array':
             return ['any[]'];
         default:
+            // OpenAPI 3.1: `type: "null"` on its own allows only null
+            if ((property as { type: string }).type === 'null') {
+                return ['null'];
+            }
             // Fallback for any unhandled type
             return ['any'];
     }
@@ -630,11 +694,18 @@ export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): 
 }
 
 export function transformRefProperty(refProperty: TSchemaByType, refPropertyKey: string) {
-    if (refProperty.hasOwnProperty('enum')) {
-        return `T${refPropertyKey}`;
-    } else {
-        return `I${refPropertyKey}`;
+    return getRefImportType(refProperty) === 'interface' ? `I${refPropertyKey}` : `T${refPropertyKey}`;
+}
+
+/**
+ * What a referenced component generates, in the same order the types schematic decides it
+ * (see getGeneratedSchemaKind): a composition is a type alias even when it also has `enum`.
+ */
+function getRefImportType(refProperty: TSchemaByType): IImportRef['type'] {
+    if (isComposition(refProperty)) {
+        return 'type';
     }
+    return isRefPropertyEnum(refProperty) ? 'enum' : 'interface';
 }
 
 export function isRefPropertyEnum(refProperty: TSchemaByType): boolean {
@@ -686,9 +757,32 @@ export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean 
         if (!refPropertySchema) {
             return false;
         }
-        return isSchemaValueNullable(refPropertySchema) || (refPropertySchema as ISchemaBase).default === null;
+        return isSchemaValueNullable(refPropertySchema)
+            || hasNullMember(refPropertySchema)
+            || (refPropertySchema as ISchemaBase).default === null;
     }
     return isSchemaValueNullable(property as TSchemaByType)
         || hasNullMember(property as TSchemaByType)
         || (property as ISchemaBase).default === null;
+}
+
+/**
+ * Adds `| null` to a rendered type when its schema is nullable and the type doesn't show it yet.
+ * A $ref to a component written as `oneOf: [{ type: "null" }, ...]` renders as that component's
+ * type alias, which already includes null, so it gets no suffix.
+ */
+export function withNullability(typeSymbol: string, property: TSchema, swagger: ISwaggerSchema): string {
+    if (typeSymbol.endsWith(' | null') || typeSymbol === 'null' || !isNullable(property, swagger)) {
+        return typeSymbol;
+    }
+    if (isRef(property)) {
+        const { refPropertySchema } = getRefPropertyDefinition(property.$ref, swagger);
+        const nullableOnlyByMember = !!refPropertySchema
+            && !isSchemaValueNullable(refPropertySchema)
+            && (refPropertySchema as ISchemaBase).default !== null;
+        if (nullableOnlyByMember) {
+            return typeSymbol;
+        }
+    }
+    return `${typeSymbol} | null`;
 }

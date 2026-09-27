@@ -20,6 +20,11 @@ export function toEnumMemberName(raw: string | number, index: number): string {
     return /^[0-9]/.test(classified) ? `_${classified}` : classified;
 }
 
+/** A string as a single-quoted TypeScript literal. */
+export function toStringLiteral(value: string): string {
+    return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n')}'`;
+}
+
 /**
  * Renders one enum member, preceded by a JSDoc block when the spec documented it.
  *
@@ -34,8 +39,6 @@ export function enumLine(enumValue: [string, number | string, string?], index: n
     const doc = description
         ? `${indentString}/** ${description.replace(/\*\//g, '*\\/').replace(/\s+/g, ' ').trim()} */\n`
         : '';
-    const formattedValue = typeof value === 'string'
-        ? `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n')}'`
-        : value;
+    const formattedValue = typeof value === 'string' ? toStringLiteral(value) : value;
     return `${doc}${indentString}${name} = ${formattedValue}${index !== enums.length - 1 ? ',\n' : ''}`
 }

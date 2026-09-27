@@ -31,6 +31,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "id",
             "originalParam": {
@@ -79,6 +80,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: IClaimDetailDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -108,6 +110,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "id",
             "originalParam": {
@@ -167,6 +170,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "claimId: number",
             "interpolationSymbol": "\${claimId}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "claimId",
             "originalParam": {
@@ -216,6 +220,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: FormData",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -264,6 +269,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "width?: number",
             "interpolationSymbol": "\${width}",
+            "isNullable": false,
             "isOptional": true,
             "objectSymbol": "width",
             "originalParam": {
@@ -282,6 +288,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "height?: number",
             "interpolationSymbol": "\${height}",
+            "isNullable": false,
             "isOptional": true,
             "objectSymbol": "height",
             "originalParam": {
@@ -323,6 +330,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: ICreateNoteDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -352,6 +360,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "id",
             "originalParam": {
@@ -399,6 +408,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: number",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -451,6 +461,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: ICompanySearchDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -509,6 +520,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: ICompanySearchDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -583,6 +595,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "id",
             "originalParam": {
@@ -623,6 +636,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: number[]",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -697,6 +711,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "serviceActionId: number",
             "interpolationSymbol": "\${serviceActionId}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "serviceActionId",
             "originalParam": {
@@ -760,6 +775,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "serviceActionId: number",
             "interpolationSymbol": "\${serviceActionId}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "serviceActionId",
             "originalParam": {
@@ -825,6 +841,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: string",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "id",
             "originalParam": {
@@ -841,6 +858,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "status: TClaimStatuses",
             "interpolationSymbol": "\${status}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "status",
             "originalParam": {
@@ -889,6 +907,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "bodyParam": {
           "functionSymbol": "body: ICreateNoteDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
           "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
@@ -952,6 +971,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "id",
             "originalParam": {
@@ -1006,6 +1026,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "status: string",
             "interpolationSymbol": "\${status}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "status",
             "originalParam": {
@@ -1022,6 +1043,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "force?: boolean",
             "interpolationSymbol": "\${force}",
+            "isNullable": false,
             "isOptional": true,
             "objectSymbol": "force",
             "originalParam": {
@@ -1082,6 +1104,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "name: string",
             "interpolationSymbol": "\${name}",
+            "isNullable": false,
             "isOptional": false,
             "objectSymbol": "name",
             "originalParam": {
@@ -1098,6 +1121,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "status?: string | null",
             "interpolationSymbol": "\${status}",
+            "isNullable": true,
             "isOptional": true,
             "objectSymbol": "status",
             "originalParam": {
@@ -1115,6 +1139,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "priority?: number | null",
             "interpolationSymbol": "\${priority}",
+            "isNullable": true,
             "isOptional": true,
             "objectSymbol": "priority",
             "originalParam": {

@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
@@ -43,6 +43,9 @@ export interface IParsedParam<T> {
      * with `legacyOptionalProperties`, also when it is required but nullable.
      */
     isOptional: boolean;
+
+    /** Whether the value can be null (the schema is nullable), so null must be left out of the request. */
+    isNullable: boolean;
 }
 
 /**
@@ -317,6 +320,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
                 typeSymbol,
                 objectSymbol: symbol,
                 isOptional,
+                isNullable: isParamNullable,
             };
 
             switch (apiParam.in) {
@@ -508,9 +512,7 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
 
     const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
     const isParamNullable = isNullable(schema, swagger);
-    const typeSymbol = isParamNullable && !rawTypeSymbol.endsWith(' | null')
-        ? `${rawTypeSymbol} | null`
-        : rawTypeSymbol;
+    const typeSymbol = withNullability(rawTypeSymbol, schema, swagger);
     return { typeSymbol, isParamNullable, importRefs };
 }
 
@@ -535,7 +537,7 @@ function isParamOptional(param: IParsedParam<TParam>): boolean {
 
 /** Whether the value can be null or undefined, so it must be left out of the request when it is. */
 function canBeNullish(param: IParsedParam<TParam>): boolean {
-    return param.isOptional || param.typeSymbol.endsWith(' | null');
+    return param.isOptional || param.isNullable;
 }
 
 export function transformParamsToObject(params: IParsedParam<TParam>[]): string {

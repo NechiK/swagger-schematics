@@ -51,6 +51,7 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
             objectSymbol: 'body',
             // The generated methods always take the body argument
             isOptional: false,
+            isNullable: false,
         };
     }
 

@@ -622,14 +622,14 @@ describe('Transform Type', () => {
         BaseType: { type: 'object', properties: {} }
       });
 
-      // Should NOT be inlined as primitive, should be treated as interface
+      // Should NOT be inlined as primitive: a composition generates a type alias (TX in x.type.ts)
       const result1 = parseRefToSymbol({ $ref: '#/components/schemas/ComposedString' }, swagger);
-      expect(result1[0]).toBe('IComposedString');
-      expect(result1[1]?.type).toBe('interface');
+      expect(result1[0]).toBe('TComposedString');
+      expect(result1[1]?.type).toBe('type');
 
       const result2 = parseRefToSymbol({ $ref: '#/components/schemas/ComposedWithOneOf' }, swagger);
-      expect(result2[0]).toBe('IComposedWithOneOf');
-      expect(result2[1]?.type).toBe('interface');
+      expect(result2[0]).toBe('TComposedWithOneOf');
+      expect(result2[1]?.type).toBe('type');
     });
 
     it('should add | null for nullable object schemas', () => {

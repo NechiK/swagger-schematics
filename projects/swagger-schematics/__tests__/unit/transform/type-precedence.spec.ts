@@ -122,7 +122,8 @@ describe('Generated type precedence and nullability', () => {
       functionSymbol: `p${isOptional ? '?' : ''}: ${typeSymbol}`,
       interpolationSymbol: '${p}',
       objectSymbol: 'p',
-      isOptional
+      isOptional,
+      isNullable: typeSymbol.endsWith(' | null')
     });
 
     it('keeps a required param with a nested "| null" required', () => {

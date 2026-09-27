@@ -6,7 +6,7 @@ import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinar
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
 import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
-import { IImportRef, ITransformTypeOptions, isNullable } from "../../types/utils/transform-type";
+import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 
 export interface IParsedApiSchema {
@@ -264,11 +264,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             // emitted, and `undefined` reaches the HTTP layer where it is stringified into the URL
             // as `?flag=undefined`. Servers reject that on model binding, so the caller sees a
             // server error for what is really a serialisation bug in generated code.
-            const hasOmittableQueryParams = queryParams.some(p => {
-                const param = p.originalParam;
-                if (!param.required) return true;
-                return param.schema ? isNullable(param.schema, swaggerSchema) : false;
-            });
+            const hasOmittableQueryParams = queryParams.some(p => p.isOptional || p.isNullable);
 
             return {
                 apiUrl,

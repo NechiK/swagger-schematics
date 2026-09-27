@@ -271,7 +271,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should return Observable<Blob> for binary responses', () => {
-      expect(binaryServiceContent).toMatch(/\(documentId: number, \{ thumbnail \}: \{ thumbnail\?: boolean \| null \}\): Observable<Blob>/);
+      expect(binaryServiceContent).toMatch(/\(documentId: number, \{ thumbnail \}: \{ thumbnail\?: boolean \| null \} = \{\}\): Observable<Blob>/);
     });
 
     it('should add responseType blob to the HTTP call options', () => {

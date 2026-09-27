@@ -1,31 +1,10 @@
 # Roadmap
 
-Known issues and follow-ups that aren't fixed yet, sorted by priority. Most were found in a review of PR #36 (2.0.0) that tried to predict the next Copilot findings; each was reproduced unless marked *(reasoned)*. "Since 2.0.0" means the 2.0.0 changes introduced or exposed it; "pre-existing" means it was already on `develop`.
+Known issues and follow-ups that aren't fixed yet, sorted by priority (High, Medium, Low), each with where it is, an example, the fix and whether 2.0.0 introduced it. None are open right now: everything found in the review of PR #36 (2.0.0) was fixed in 2.0.0.
 
-Remove an entry when its fix lands, and add a CHANGELOG entry for it as usual.
+Add an entry when an issue is found, remove it when its fix lands, and add a CHANGELOG entry for it as usual.
 
 [Feature ideas](#feature-ideas) at the end are candidates, not commitments: things other generators offer, kept here so they aren't lost.
-
-## Low
-
-### Angular
-- **TRACE doesn't compile:** a TRACE operation generates `this.httpClient.trace<...>()`, and `HttpClient` has no `trace` method. Use `this.httpClient.request('TRACE', url, options)` or skip the operation with a warning. *Pre-existing.* (`api/helpers/angular-template.helper.ts`)
-- **Request body dropped for OPTIONS, GET and HEAD:** an operation with a `requestBody` takes `body` but never sends it (e.g. `opt(body)` returns `this.httpClient.options(url)`). Use `this.httpClient.request(method, url, { body, params, headers })` when a body is present outside POST/PUT/PATCH/DELETE. *Pre-existing.*
-- **Optional-only query params still need an argument:** `getItems({ page }: { page?: number })` has no `= {}` default, so `getItems()` doesn't compile. The trailing headers object already defaults to `{}`. Adding the default is the Angular counterpart of the RTK `| void` fix in 2.0.0. *Pre-existing.* (`transformParamsToApiMethodParams()`)
-
-### Parameters and headers
-- **Query parameter names are renamed on the wire:** `page_size` is sent as `?pageSize=` by Angular and RTK. Keep `originalParam.name` as the key (`'page_size': pageSize`). *Pre-existing.* (`transformOperationParams()`)
-- **Reserved-word query and path names produce invalid code:** a query parameter named `default` generates `({ pageSize, default }: ...)`. Header names already go through `toHeaderParamSymbol()`, which rejects reserved words; query and path names need the same guard, or a rename. *Pre-existing.*
-
-### Types
-- **Boolean schemas crash:** `prefixItems: [true]` or `items: true` throws `Cannot use 'in' operator to search for '$ref' in true`. Map `true` to `unknown` and `false` to `never` in `transformType()` and `isRef()`. *Pre-existing; since 2.0.0 for tuples.*
-- **Property names that aren't identifiers aren't quoted:** `first-name` or `@odata.type` produce `first-name?: string`, a syntax error (also inside inline `allOf` object literals). *Pre-existing.*
-- **An enum containing `null` generates `null = null`** (TS18033), e.g. `type: ['string', 'null'], enum: ['red', null]`. Skip `null` values; nullability already comes from the reference. *Pre-existing.*
-- **A record without `type` renders as `any`:** `{ additionalProperties: { $ref: Item } }` (valid JSON Schema, no `type: object`) gives `any` instead of `Record<string, IItem>`, inline and as a component (which then stays an empty interface). Treat a schema with `additionalProperties` and no `type` as an object. *Pre-existing.* (`transformType()`, `isCollectionSchema()`)
-- **Enum member names can collide:** `'a-b'` and `'a b'` both become `AB`. *Pre-existing.*
-
-### API change summary and CLI
-- **A failed `--change-report` write still exits 0:** `runChangeSummary()` errors only log a warning. A CI step that then reads the report finds it missing or stale. Consider `process.exitCode = 1` when `--change-report` was requested and the write failed. *Since 2.0.0; currently deliberate.* (`bin/swagger-schematics.ts`)
 
 ## Feature ideas
 

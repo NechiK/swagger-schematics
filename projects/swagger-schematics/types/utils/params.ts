@@ -5,6 +5,7 @@ import { ISwaggerSchema, TSchema } from "../../interfaces/version_3_1/swagger.in
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { IResponse } from "../../interfaces/version_3_1/response.interface";
+import { camelize } from "@angular-devkit/core/src/utils/strings";
 
 /**
  * Represents the structure of a parsed parameter.
@@ -37,6 +38,13 @@ export interface IParsedParam<T> {
      * Example: 'param1'
      */
     objectSymbol: string;
+
+    /**
+     * The parameter as an object literal entry keyed by its name on the wire, for query params:
+     * `page` when the variable has the same name, `'page_size': pageSize` when it doesn't.
+     * Unset: `objectSymbol`.
+     */
+    objectEntry?: string;
 
     /**
      * Whether a caller may leave the argument out (`?`). Per spec, when it isn't `required`;
@@ -275,6 +283,29 @@ export function toHeaderParamSymbol(headerName: string): string | null {
     return RESERVED_WORDS.has(symbol) ? null : symbol;
 }
 
+/**
+ * The generated variable for a path or query parameter: its name in camelCase ('page_size' ->
+ * pageSize). Unlike a header, it can't be skipped (a path param is part of the URL), so a name
+ * that isn't a usable variable is adjusted instead: characters beyond letters, digits, `_` and `$`
+ * are dropped (`filter[name]` -> filterName), a leading digit gets `_`, and a reserved word gets
+ * `Param` (`default` -> defaultParam). The request still uses the name as declared.
+ */
+export function toParamSymbol(name: string): string {
+    let symbol = camelize(name).replace(/[^A-Za-z0-9_$]+(.)?/g, (_match: string, next?: string) => next ? next.toUpperCase() : '');
+    if (!symbol) {
+        symbol = 'param';
+    }
+    if (/^[0-9]/.test(symbol)) {
+        symbol = `_${symbol}`;
+    }
+    return RESERVED_WORDS.has(symbol) ? `${symbol}Param` : symbol;
+}
+
+/** An object literal entry for a param: shorthand when the key is the variable, else a quoted key. */
+function toObjectEntry(key: string, symbol: string): string {
+    return key === symbol ? symbol : `'${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}': ${symbol}`;
+}
+
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     queryParams: IParsedParam<IQueryParam>[];
     pathParams: IParsedParam<IPathParam>[];
@@ -290,13 +321,24 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
     const cookieParams: IParsedParam<ICookieParam>[] = [];
     const skippedHeaderParams: Array<{ name: string; reason: string }> = [];
     const importRefs: IImportRef[] = [];
-    // Names the path and query parameters (and a request body) already use: a header's variable
-    // must not repeat one, or the generated method / RTK argument gets a duplicate binding.
-    // Cookies generate no variable, so they reserve nothing.
-    const usedSymbols = new Set<string>([
-        ...('requestBody' in operation && operation.requestBody ? ['body'] : []),
-        ...(operation.parameters ?? []).filter(param => param.in === 'path' || param.in === 'query').map(param => param.name)
-    ]);
+    // Variable names already taken: a request body's, then the path and query parameters' (a
+    // header's variable must not repeat one, or the generated method / RTK argument gets a
+    // duplicate binding). Cookies generate no variable, so they reserve nothing.
+    const usedSymbols = new Set<string>('requestBody' in operation && operation.requestBody ? ['body'] : []);
+    // Path params first: their variables are interpolated into the URL. A name another param
+    // already uses gets its location as a suffix (query `id` next to path `id` -> idQuery).
+    const paramSymbols = new Map<TParam, string>();
+    (['path', 'query'] as const).forEach(location => {
+        (operation.parameters ?? []).filter(param => param.in === location).forEach(param => {
+            const base = toParamSymbol(param.name);
+            let symbol = usedSymbols.has(base) ? `${base}${location.charAt(0).toUpperCase()}${location.slice(1)}` : base;
+            for (let suffix = 2; usedSymbols.has(symbol); suffix++) {
+                symbol = `${base}${suffix}`;
+            }
+            usedSymbols.add(symbol);
+            paramSymbols.set(param, symbol);
+        });
+    });
 
     if (operation.parameters) {
         operation.parameters.forEach(apiParam => {
@@ -330,9 +372,9 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
 
             importRefs.push(...paramImportRefs);
 
-            // Headers keep their wire name in originalParam (e.g. 'If-Match'); the
-            // generated variable is its camelized form (ifMatch)
-            const symbol = headerSymbol ?? apiParam.name;
+            // Params keep their wire name in originalParam (e.g. 'If-Match', 'page_size'); the
+            // generated variable is its camelized form (ifMatch, pageSize)
+            const symbol = headerSymbol ?? paramSymbols.get(apiParam) ?? toParamSymbol(apiParam.name);
             const isOptional = isParamOptionalBySpec(apiParam, isParamNullable, options);
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
@@ -340,6 +382,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
                 interpolationSymbol: `\${${symbol}}`,
                 typeSymbol,
                 objectSymbol: symbol,
+                objectEntry: toObjectEntry(apiParam.name, symbol),
                 isOptional,
                 isNullable: isParamNullable,
                 ...(apiParam.in === 'header' ? { headerSerialization: getHeaderSerialization(apiParam, swagger, options) } : {}),
@@ -381,9 +424,13 @@ export function transformParamsToApiMethodParams(params: {
     // Headers come last, and default to {} when all are optional, so a call
     // written before the operation declared them keeps compiling
     const headersObject = transformParamsToObject(headerParams);
+    // Query params default to {} too when all are optional and nothing required follows them
+    // (a body, or a required header), so `getItems()` compiles
+    const queryObject = transformParamsToObject(params.queryParams);
+    const queryDefaults = !params.bodyParam && params.queryParams.every(isParamOptional) && headerParams.every(isParamOptional);
     const methodParams: string[] = [
         params.pathParams.map(param => param.functionSymbol).join(', '),
-        transformParamsToObject(params.queryParams),
+        queryObject && queryDefaults ? `${queryObject} = {}` : queryObject,
         params.bodyParam ? params.bodyParam.functionSymbol : '',
         headersObject && headerParams.every(isParamOptional) ? `${headersObject} = {}` : headersObject
     ].filter(item => !!item);
@@ -477,8 +524,8 @@ export function formatApiUrl(apiUrl: string): string {
 export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasOmittable?: boolean): string {
     if (queryParams.length === 0) return '';
     const entries = queryParams.map(param => hasOmittable && canBeNullish(param)
-        ? `...(${param.objectSymbol} != null ? { ${param.objectSymbol} } : {})`
-        : param.objectSymbol);
+        ? `...(${param.objectSymbol} != null ? { ${param.objectEntry ?? param.objectSymbol} } : {})`
+        : param.objectEntry ?? param.objectSymbol);
     return `params: { ${entries.join(', ')} }`;
 }
 

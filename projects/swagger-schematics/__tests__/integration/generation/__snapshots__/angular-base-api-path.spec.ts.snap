@@ -26,7 +26,7 @@ export class DocumentApiService extends ApiBaseService {
   }
 
   /** Download a document */
-  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
+  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null } = {}): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${documentId}/download\`),
       { params: { ...(thumbnail != null ? { thumbnail } : {}) }, responseType: 'blob' }

@@ -5,7 +5,7 @@ import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
-import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, isApiMethodRequestOptional, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
+import { IParsedApiItem, toParamSymbol, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, isApiMethodRequestOptional, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
 import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 import { toEnumMemberName } from "../../types/utils/enum";
@@ -150,12 +150,9 @@ export const getPathOperations = (
                     operationKey,
                     {
                         ...operation,
-                        parameters: [...inheritedParams, ...ownParams].map(param => ({
-                            ...param,
-                            // A header's name is sent on the wire, so it keeps its exact
-                            // spelling; transformOperationParams camelizes its variable name
-                            name: param.in === 'header' ? (param.name || '') : camelize(param.name || '')
-                        }))
+                        // Names stay as declared: they are sent on the wire (query string, headers);
+                        // transformOperationParams derives the variable names
+                        parameters: [...inheritedParams, ...ownParams].map(param => ({ ...param, name: param.name || '' }))
                     }
                 ] as [TPathOperationKey, TOperation];
             }
@@ -329,13 +326,12 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             const apiUrl = segments.map(urlSegment => {
                 const pathParamMatch = urlSegment.match(/\{(.*)}/);
                 if (pathParamMatch) {
-                    const paramName = camelize(pathParamMatch[1]);
-                    const hasPathParam = pathParams.some(p => p.objectSymbol === paramName);
+                    const pathParam = pathParams.find(p => p.originalParam.name === pathParamMatch[1]);
                     // For PUT/POST with body and no separate path param, use body.paramName
-                    if (!hasPathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
-                        return `\${${bodyParam.objectSymbol}.${paramName}}`;
+                    if (!pathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
+                        return `\${${bodyParam.objectSymbol}.${camelize(pathParamMatch[1])}}`;
                     }
-                    return `\${${paramName}}`;
+                    return `\${${pathParam?.objectSymbol ?? toParamSymbol(pathParamMatch[1])}}`;
                 }
                 return urlSegment;
             }).join('/');

@@ -92,10 +92,6 @@ export default function(options: SwaggerSchema): Rule {
           const typeDoc = renderJsDoc(schemaData.data as IDocSource);
           if (schemaData.type === 'enum') {
               const parsed = parseName(`${openApiSchematicsConfig.path}/enums`, schemaData.name);
-              const enumValuesList = schemaData.data.enum;
-              const enumNamesList = schemaData.data['x-enum-varnames'];
-              // Sibling of x-enum-varnames: per-member documentation, positional against `enum`.
-              const enumDescriptionsList = schemaData.data['x-enum-descriptions'];
               itemSource = apply(enumTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,
@@ -104,16 +100,7 @@ export default function(options: SwaggerSchema): Rule {
                       name: parsed.name,
                       path: parsed.path,
                       typeDoc,
-                      enums: enumValuesList.reduce((parsedEnumValues, currentValue, currentIndex) => {
-                          // Fall back to the value per index - x-enum-varnames may be
-                          // shorter than enum in malformed specs
-                          const rawName = enumNamesList?.[currentIndex] ?? currentValue;
-                          // Undocumented members legitimately carry an empty string in the
-                          // positional array, so treat empty as absent rather than emitting `/**  */`.
-                          const description = enumDescriptionsList?.[currentIndex] || undefined;
-                          parsedEnumValues.push([enums.toEnumMemberName(rawName, currentIndex), currentValue, description]);
-                          return parsedEnumValues;
-                      }, [] as Array<[string | number, string | number, string | undefined]>),
+                      enums: enums.buildEnumMembers(schemaData.data as Parameters<typeof enums.buildEnumMembers>[0]),
                       indentSize
                   }),
                   move(parsed.path),

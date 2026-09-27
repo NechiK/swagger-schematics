@@ -39,7 +39,7 @@ export class OrdersApiService extends ApiBaseService {
     );
   }
 
-  getOrders({ page }: { page?: number }, { xTrace }: { xTrace?: string } = {}): Observable<IOrderDto[]> {
+  getOrders({ page }: { page?: number } = {}, { xTrace }: { xTrace?: string } = {}): Observable<IOrderDto[]> {
     return this.httpClient.get<IOrderDto[]>(
       this.getUrl('/'),
       { params: { ...(page != null ? { page } : {}) }, headers: { ...(xTrace != null ? { 'X-Trace': String(xTrace) } : {}) } }

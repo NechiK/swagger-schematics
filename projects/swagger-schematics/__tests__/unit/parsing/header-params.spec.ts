@@ -70,7 +70,7 @@ describe('header parameters', () => {
 
   it('defaults the headers object to {} when every header is optional, so existing calls still compile', () => {
     expect(put.apiMethodParams).toBe('id: number, body: IOrderDto, { ifMatch, xVersion }: { ifMatch?: string; xVersion?: number | null } = {}');
-    expect(list.apiMethodParams).toBe('{ page }: { page?: number }, { xTrace }: { xTrace?: string } = {}');
+    expect(list.apiMethodParams).toBe('{ page }: { page?: number } = {}, { xTrace }: { xTrace?: string } = {}');
   });
 
   it('sends required headers as strings and optional ones only when they have a value', () => {
@@ -129,7 +129,7 @@ describe('header parameters', () => {
     it('are optional with legacyOptionalProperties, as before', () => {
       const item = transformSwaggerSchema(schema, { silent: true, legacyOptionalProperties: true }).Things.apiList[0];
 
-      expect(item.apiMethodParams).toBe('{ page }: { page?: number | null }, { xTenantId }: { xTenantId?: string | null } = {}');
+      expect(item.apiMethodParams).toBe('{ page }: { page?: number | null } = {}, { xTenantId }: { xTenantId?: string | null } = {}');
       expect(item.apiMethodRequestType).toBe('{ page?: number | null; xTenantId?: string | null }');
       expect(item.queryParamsFormatted).toBe('params: { ...(page != null ? { page } : {}) }');
       expect(item.headerParamsFormatted).toBe("headers: { ...(xTenantId != null ? { 'X-Tenant-Id': String(xTenantId) } : {}) }");
@@ -156,7 +156,7 @@ describe('header parameters', () => {
       expect(parse(false).hasOmittableQueryParams).toBe(true);
       expect(parse(false).queryParamsFormatted).toBe('params: { ...(filter != null ? { filter } : {}) }');
       expect(parse(false).apiMethodParams).toBe('{ filter }: { filter: IDto | null }');
-      expect(parse(true).apiMethodParams).toBe('{ filter }: { filter?: IDto | null }');
+      expect(parse(true).apiMethodParams).toBe('{ filter }: { filter?: IDto | null } = {}');
     });
 
     it('keep a required non-nullable parameter required either way', () => {

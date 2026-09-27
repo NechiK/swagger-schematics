@@ -102,6 +102,6 @@ describe('buildApiModel', () => {
       buildApiModel(schema, { framework: 'angular', legacyOptionalProperties }).endpoints['GET /api/Users'].signature;
 
     expect(signature(false)).toBe('({ page }: { page: number | null }) => void');
-    expect(signature(true)).toBe('({ page }: { page?: number | null }) => void');
+    expect(signature(true)).toBe('({ page }: { page?: number | null } = {}) => void');
   });
 });

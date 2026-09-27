@@ -1,6 +1,7 @@
 import { transformProperties, transformType, transformTypeWithAllImports } from '@lib/types/utils/transform-type';
 import { transformSwaggerSchema } from '@lib/api/helpers/api.helper';
 import { getGeneratedSchemaKind, isReplacedByTypeMapping } from '@lib/types/utils/schema-kind';
+import { aggregatableColumnsType, interfacePropertyLine } from '@lib/types/helpers/template.helper';
 import { ISwaggerSchema, TSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 /** JSON Schema 2020-12 keywords that OpenAPI 3.1 documents use and 3.0 has no equivalent for. */
@@ -261,6 +262,54 @@ describe('nullability in nested positions', () => {
   it('leaves non-nullable elements alone', () => {
     expect(typeOf({ type: 'array', items: { type: 'string' } })).toBe('string[]');
     expect(typeOf({ type: 'object', additionalProperties: { $ref: '#/components/schemas/Dto' } })).toBe('Record<string, IDto>');
+  });
+});
+
+describe('boolean schemas', () => {
+  const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: {} } } as unknown as ISwaggerSchema;
+  const typeOf = (schema: unknown) => transformTypeWithAllImports(schema as TSchema, swagger)[0];
+
+  it.each([
+    [{ type: 'array', items: true }, 'unknown[]'],
+    [{ type: 'array', items: false }, 'never[]'],
+    [{ type: 'array', prefixItems: [true, false], minItems: 1 }, '[unknown, never?, ...unknown[]]'],
+    [{ type: 'object', additionalProperties: false, properties: {} }, 'object'],
+    [{ anyOf: [false, { type: 'string' }] }, 'never | string']
+  ])('renders %p as %p instead of crashing', (schema, expected) => {
+    expect(typeOf(schema)).toBe(expected);
+  });
+
+  it('renders boolean property schemas', () => {
+    const { propertiesContent } = transformProperties({ anything: true, nothing: false } as never, swagger, {}, ['anything']);
+    expect(propertiesContent).toEqual([['anything', 'unknown'], ['nothing?', 'never']]);
+  });
+});
+
+describe('property names that are not identifiers', () => {
+  const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: {} } } as unknown as ISwaggerSchema;
+
+  it('are quoted, in interfaces and in inline object types', () => {
+    const properties = { 'first-name': { type: 'string' }, '@odata.type': { type: 'string' }, "it's": { type: 'string' }, $id: { type: 'string' }, default: { type: 'string' } };
+    expect(transformProperties(properties as never, swagger, {}, ['first-name']).propertiesContent).toEqual([
+      ["'first-name'", 'string'],
+      ["'@odata.type'?", 'string'],
+      ["'it\\'s'?", 'string'],
+      ['$id?', 'string'],
+      ['default?', 'string']
+    ]);
+    expect(transformType({ allOf: [{ type: 'object', properties: {} }], properties: { 'x-y': { type: 'integer' } } } as unknown as TSchema, swagger)[0])
+      .toContain("{ 'x-y'?: number }");
+  });
+
+  it('keep their JSDoc and @aggregatable, and the aggregatable column union stays valid', () => {
+    const { propertiesContent, aggregatable, docs } = transformProperties({
+      'unit-price': { type: 'number', description: 'Per unit', 'x-aggregatable': ['sum'] }
+    } as never, swagger, {}, []);
+
+    expect(interfacePropertyLine(propertiesContent, '2', aggregatable, docs)).toBe(
+      "  /**\n   * Per unit\n   * @aggregatable sum\n   */\n  'unit-price'?: number;"
+    );
+    expect(aggregatableColumnsType('IOrder', aggregatable)).toContain("export type IOrderAggregatableColumn = 'unit-price';");
   });
 });
 

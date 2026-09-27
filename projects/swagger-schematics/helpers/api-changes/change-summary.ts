@@ -81,12 +81,39 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
     }
 
     if (snapshotPath) {
-        const content = serializeSchemaSnapshot(current);
-        const existing = fs.existsSync(snapshotPath) ? fs.readFileSync(snapshotPath, 'utf-8') : null;
-        if (existing !== content) {
-            writeTextFile(snapshotPath, content);
-            logger.info(`Saved the schema snapshot to ${snapshotSetting}` +
-                (changes === null ? '; the next run lists API changes against it.' : ''));
+        // After the report: a snapshot that can't be saved leaves this run's report correct
+        try {
+            const content = serializeSchemaSnapshot(current);
+            const existing = fs.existsSync(snapshotPath) ? fs.readFileSync(snapshotPath, 'utf-8') : null;
+            if (existing !== content) {
+                writeTextFile(snapshotPath, content);
+                logger.info(`Saved the schema snapshot to ${snapshotSetting}` +
+                    (changes === null ? '; the next run lists API changes against it.' : ''));
+            }
+        } catch (error) {
+            logger.warn(`Could not save the schema snapshot to ${snapshotSetting} (${(error as Error).message}); ` +
+                'the next run lists changes against the previous snapshot.');
         }
+    }
+}
+
+/**
+ * Runs the change summary after generation. The code is already generated, so a failure only
+ * logs, except when `--change-report` was requested: a CI step that then reads the report would
+ * find it missing or stale, so the run must fail. Returns whether the run is still successful.
+ */
+export async function runChangeSummaryAfterGeneration(run: IChangeSummaryRun): Promise<boolean> {
+    try {
+        await runChangeSummary(run);
+        return true;
+    } catch (error) {
+        // runChangeSummary handles a failed snapshot save itself, so an error here means the
+        // report (if requested) wasn't written
+        if (run.reportPath && !run.dryRun) {
+            run.logger.error(`Could not write the API change report ${run.reportPath}: ${(error as Error).message}`);
+            return false;
+        }
+        run.logger.warn(`Could not build the API change summary: ${(error as Error).message}`);
+        return true;
     }
 }

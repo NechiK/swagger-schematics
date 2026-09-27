@@ -8,7 +8,7 @@ import { enableSwaggerSchemaCache } from '../helpers/swagger-schema.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { SwaggerApiSchema } from '../api/schema';
-import { runChangeSummary } from '../helpers/api-changes/change-summary';
+import { runChangeSummaryAfterGeneration } from '../helpers/api-changes/change-summary';
 import { IFileCounts } from '../helpers/api-changes/format';
 import { version } from '../package.json';
 
@@ -115,12 +115,11 @@ async function main(): Promise<void> {
     }
 
     if (config) {
-        const logger = createConsoleLogger();
-        try {
-            await runChangeSummary({ config, reportPath: args.changeReport, dryRun: args.dryRun, files, logger });
-        } catch (error) {
-            // The code is already generated; a summary failure must not turn the run red
-            logger.warn(`Could not build the API change summary: ${(error as Error).message}`);
+        const succeeded = await runChangeSummaryAfterGeneration({
+            config, reportPath: args.changeReport, dryRun: args.dryRun, files, logger: createConsoleLogger()
+        });
+        if (!succeeded) {
+            process.exitCode = 1;
         }
     }
 }

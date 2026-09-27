@@ -20,7 +20,7 @@ export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ a
   if (item.isApiMethodRequestOptional) { args += ' = {}'; }
   let builderMethod = item.isQuery ? 'builder.query' : 'builder.mutation';
   let endpointName = scopeEndpointsWithTags ? item.scopedApiMethodName : item.apiMethodName;
-  let queryParamsList = item.queryParams.map(p => p.objectSymbol);
+  let queryParamsList = item.queryParams.map(p => p.objectEntry ?? p.objectSymbol);
   let rawUrl = item.apiUrl ? (dasherize(name) + '/' + item.apiUrl) : dasherize(name);
   let hasInterpolation = rawUrl.includes('${');
   let fullUrl = hasInterpolation ? '`/' + rawUrl + '`' : "'/" + rawUrl + "'";

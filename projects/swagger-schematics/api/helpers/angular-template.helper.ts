@@ -46,3 +46,34 @@ export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
 
     return parts;
 }
+
+/** HttpClient methods whose shorthand takes the request body (the argument after the URL). */
+const BODY_METHODS = ['post', 'put', 'patch'];
+
+/**
+ * The whole Angular HttpClient call: the method to call and every argument, URL included.
+ *
+ * HttpClient has no `trace()`, and its `get()`, `head()` and `options()` take no body, so a
+ * TRACE operation, or a GET, HEAD or OPTIONS operation that declares a request body, goes
+ * through `request(method, url, { body, params, headers })` instead of dropping the body.
+ * Everything else uses the shorthand method with the arguments of buildAngularHttpCallArgs.
+ */
+export function buildAngularHttpCall(item: IParsedApiItem): { method: string; args: string[] } {
+    const url = `this.getUrl(${item.apiUrlFormatted})`;
+    const needsRequest = item.apiMethodType === 'trace'
+        || (!!item.bodyParam && !BODY_METHODS.includes(item.apiMethodType) && item.apiMethodType !== 'delete');
+    if (!needsRequest) {
+        return { method: item.requestMethod, args: [url, ...buildAngularHttpCallArgs(item)] };
+    }
+    const options = [
+        item.bodyParam ? `body: ${item.bodyFormatted}` : '',
+        item.queryParamsFormatted,
+        item.headerParamsFormatted,
+        item.isBinaryResponse ? `responseType: 'blob'` : ''
+    ].filter(Boolean);
+    return {
+        method: 'request',
+        args: [`'${item.httpMethod}'`, url, ...(options.length ? [`{ ${options.join(', ')} }`] : [])]
+    };
+}
+

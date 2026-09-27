@@ -34,6 +34,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${id}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -114,6 +115,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${id}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -175,6 +177,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${claimId}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "claimId",
             "objectSymbol": "claimId",
             "originalParam": {
               "description": undefined,
@@ -275,6 +278,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${width}",
             "isNullable": false,
             "isOptional": true,
+            "objectEntry": "width",
             "objectSymbol": "width",
             "originalParam": {
               "description": "Desired width of image for viewer",
@@ -294,6 +298,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${height}",
             "isNullable": false,
             "isOptional": true,
+            "objectEntry": "height",
             "objectSymbol": "height",
             "originalParam": {
               "description": "Desired height of image for viewer",
@@ -367,6 +372,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${id}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -606,6 +612,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${id}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -724,6 +731,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${serviceActionId}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "serviceActionId",
             "objectSymbol": "serviceActionId",
             "originalParam": {
               "description": undefined,
@@ -789,6 +797,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${serviceActionId}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "serviceActionId",
             "objectSymbol": "serviceActionId",
             "originalParam": {
               "description": undefined,
@@ -856,6 +865,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${id}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -873,6 +883,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${status}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "status",
             "objectSymbol": "status",
             "originalParam": {
               "description": "",
@@ -988,6 +999,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${id}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -1044,6 +1056,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${status}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "status",
             "objectSymbol": "status",
             "originalParam": {
               "description": undefined,
@@ -1061,6 +1074,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${force}",
             "isNullable": false,
             "isOptional": true,
+            "objectEntry": "force",
             "objectSymbol": "force",
             "originalParam": {
               "description": undefined,
@@ -1123,6 +1137,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${name}",
             "isNullable": false,
             "isOptional": false,
+            "objectEntry": "name",
             "objectSymbol": "name",
             "originalParam": {
               "description": undefined,
@@ -1140,6 +1155,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${status}",
             "isNullable": true,
             "isOptional": true,
+            "objectEntry": "status",
             "objectSymbol": "status",
             "originalParam": {
               "description": undefined,
@@ -1158,6 +1174,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "interpolationSymbol": "\${priority}",
             "isNullable": true,
             "isOptional": true,
+            "objectEntry": "priority",
             "objectSymbol": "priority",
             "originalParam": {
               "description": undefined,

@@ -109,7 +109,7 @@ describe('path-level parameters', () => {
 
     const item = transformSwaggerSchema(schema, { silent: true }).Things.apiList[0];
 
-    expect(item.apiMethodParams).toBe('id: number, { verbose }: { verbose?: boolean }');
+    expect(item.apiMethodParams).toBe('id: number, { verbose }: { verbose?: boolean } = {}');
   });
 
   it('warns about a $ref it cannot resolve (dangling, circular or external), naming the endpoint', () => {

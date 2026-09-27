@@ -73,8 +73,8 @@ export function isComposition(schema: TSchemaByType): boolean {
 }
 
 /**
- * Whether a component schema is an array, a tuple or a record (`type: object` with
- * `additionalProperties` and no `properties`): its type is a TypeScript expression (`string[]`, `[number, number]`,
+ * Whether a component schema is an array, a tuple or a record (`additionalProperties` and no
+ * `properties`, with or without `type: object`): its type is a TypeScript expression (`string[]`, `[number, number]`,
  * `Record<string, number>`), so it generates a type alias rather than an empty interface.
  */
 export function isCollectionSchema(schema: TSchemaByType): boolean {
@@ -88,7 +88,8 @@ export function isCollectionSchema(schema: TSchemaByType): boolean {
     }
     const properties = (schema as { properties?: object }).properties;
     const additionalProperties = (schema as { additionalProperties?: unknown }).additionalProperties;
-    return types.includes('object')
+    // A record may leave out `type: object`: `additionalProperties` only applies to objects
+    return (type === undefined || types.includes('object'))
         && (!properties || Object.keys(properties).length === 0)
         && (additionalProperties === true || (typeof additionalProperties === 'object' && additionalProperties !== null));
 }
@@ -122,6 +123,10 @@ export function hasAdditionalProperties(schema: TSchemaByType): schema is ISchem
  * @returns [typeSymbol, importRef]
  */
 export function transformType(property: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    // JSON Schema (OpenAPI 3.1) boolean schemas: `true` allows any value, `false` none
+    if (typeof property === 'boolean') {
+        return [property ? 'unknown' : 'never'];
+    }
     if (isRef(property)) {
         return parseRefToSymbol(property, swagger, options);
     }
@@ -167,6 +172,11 @@ export function transformType(property: TSchema, swagger: ISwaggerSchema, option
             default:
                 return transformPrimitives(typedSchema);
         }
+    }
+
+    // No `type` but `additionalProperties`: JSON Schema only applies it to objects, so it's a record
+    if (hasAdditionalProperties(schema)) {
+        return transformObjectSchema(schema, swagger, options);
     }
 
     // Fallback for schemas without type (shouldn't happen in valid OpenAPI)
@@ -480,7 +490,7 @@ function transformCompositionSchemas(schemas: TSchema[], swagger: ISwaggerSchema
  */
 export function transformTypeWithAllImports(property: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImports {
     const [typeSymbol, importRef] = transformType(property, swagger, options);
-    if (!isRef(property)) {
+    if (typeof property === 'object' && property !== null && !isRef(property)) {
         const schema = property as TSchemaByType;
         if (isComposition(schema)) {
             return [typeSymbol, getCompositionImports(property, swagger, options)];
@@ -545,7 +555,7 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
             ? nullable
             : !requiredProperties.includes(propertyKey);
 
-        transformed.push([`${propertyKey}${isOptional ? '?' : ''}`, typeSymbol]);
+        transformed.push([`${toPropertyKey(propertyKey)}${isOptional ? '?' : ''}`, typeSymbol]);
     }
 
     return {
@@ -556,10 +566,33 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
     };
 }
 
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+/**
+ * A property name as written in an interface or object type: as is when it is an identifier,
+ * quoted otherwise (`'first-name'`, `'@odata.type'`), since an unquoted one is a syntax error.
+ */
+export function toPropertyKey(name: string): string {
+    return IDENTIFIER.test(name) ? name : toStringLiteral(name);
+}
+
+/** The property name a key from toPropertyKey stands for (a trailing `?` is not part of it). */
+export function fromPropertyKey(key: string): string {
+    const name = key.replace(/\?$/, '');
+    if (!name.startsWith("'")) {
+        return name;
+    }
+    return name.slice(1, -1).replace(/\\(.)/g, (_match: string, char: string) => ({ n: '\n', r: '\r' } as Record<string, string>)[char] ?? char);
+}
+
 /**
  * Get all import refs from a composition schema (useful for interface generation)
  */
 export function getCompositionImports(property: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): IImportRef[] {
+    // A boolean schema (`true`/`false`) references nothing
+    if (typeof property !== 'object' || property === null) {
+        return [];
+    }
     if (isRef(property)) {
         const [, importRef] = parseRefToSymbol(property, swagger, options);
         return importRef ? [importRef] : [];
@@ -785,7 +818,8 @@ export const transformPrimitives = (property: TSchemaWithType): [string] => {
 }
 
 function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    if (!arrayProperty) {
+    // No `items`: any elements (`items: false` allows none, and renders never[] below)
+    if (arrayProperty === undefined || arrayProperty === null) {
         return ['any[]'];
     } else {
         const [typeSymbol, importRef] = transformElementType(arrayProperty, swagger, options);
@@ -833,7 +867,8 @@ export function isRefPropertyEnum(refProperty: TSchemaByType): boolean {
 }
 
 export function isRef(property: TSchema | TParam): property is IRef {
-    return '$ref' in property;
+    // Boolean schemas (`items: true`) are valid JSON Schema, and not objects
+    return typeof property === 'object' && property !== null && '$ref' in property;
 }
 
 /**

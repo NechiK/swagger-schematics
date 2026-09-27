@@ -20,6 +20,39 @@ export function toEnumMemberName(raw: string | number, index: number): string {
     return /^[0-9]/.test(classified) ? `_${classified}` : classified;
 }
 
+/**
+ * The members of an enum schema: [name, value, description] per value, in order. Names come
+ * from `x-enum-varnames` (else the value) via toEnumMemberName, descriptions from
+ * `x-enum-descriptions`, both positional against `enum`.
+ * - A `null` value is left out: it can't be an enum member (`null = null` doesn't compile), and
+ *   a nullable enum is already `TColor | null` where it is referenced
+ * - Names that collide (`'a-b'` and `'a b'` are both `AB`) get a numeric suffix (`AB_2`)
+ */
+export function buildEnumMembers(schema: {
+    enum: Array<string | number | null>;
+    'x-enum-varnames'?: string[];
+    'x-enum-descriptions'?: string[];
+}): Array<[string, string | number, string | undefined]> {
+    const used = new Set<string>();
+    const members: Array<[string, string | number, string | undefined]> = [];
+    schema.enum.forEach((value, index) => {
+        if (value === null) {
+            return;
+        }
+        // Fall back to the value per index - x-enum-varnames may be shorter than enum in malformed specs
+        const base = toEnumMemberName(schema['x-enum-varnames']?.[index] ?? value, index);
+        let name = base;
+        for (let suffix = 2; used.has(name); suffix++) {
+            name = `${base}_${suffix}`;
+        }
+        used.add(name);
+        // Undocumented members legitimately carry an empty string in the positional array,
+        // so treat empty as absent rather than emitting `/**  */`
+        members.push([name, value, schema['x-enum-descriptions']?.[index] || undefined]);
+    });
+    return members;
+}
+
 /** A string as a single-quoted TypeScript literal. */
 export function toStringLiteral(value: string): string {
     return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n')}'`;

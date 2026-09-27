@@ -79,7 +79,7 @@ describe('legacyOptionalProperties option for endpoint parameters', () => {
 
   it('legacy: Angular makes them optional', async () => {
     const service = await generate(ANGULAR_SCHEMATIC_OPTIONS, 'things-api.service.ts', true);
-    expect(service).toContain('{ page }: { page?: number | null }, { xTenantId }: { xTenantId?: string | null } = {}');
+    expect(service).toContain('{ page }: { page?: number | null } = {}, { xTenantId }: { xTenantId?: string | null } = {}');
   });
 
   it('default (spec) and legacy: RTK request type follows the option', async () => {

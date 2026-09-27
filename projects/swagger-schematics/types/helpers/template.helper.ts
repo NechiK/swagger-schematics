@@ -1,8 +1,9 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
 import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
-import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports } from "../utils/transform-type";
+import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports, fromPropertyKey } from "../utils/transform-type";
 import { IDocSource, renderJsDoc } from "../utils/js-doc";
+import { toStringLiteral } from "../utils/enum";
 
 // Property rendering lives with the rest of the type transformation; re-exported
 // here because interface generation historically imported it from this module.
@@ -46,7 +47,7 @@ export function interfacePropertyLine(interfaceProperties: Array<[string, string
     const docsByProperty = new Map(docs);
     return `${interfaceProperties.map(([property, type], index) => {
         const isNotLast = index !== interfaceProperties.length - 1;
-        const name = property.replace(/\?$/, '');
+        const name = fromPropertyKey(property);
         const ops = opsByProperty.get(name);
         const doc = renderJsDoc(docsByProperty.get(name), indentString, ops ? [`@aggregatable ${ops.join(', ')}`] : []);
         return `${doc}${indentString}${property}: ${type};${isNotLast ? '\n' : ''}`
@@ -62,7 +63,7 @@ export function aggregatableColumnsType(interfaceName: string, aggregatable: Arr
     if (aggregatable.length === 0) {
         return '';
     }
-    const union = aggregatable.map(([property]) => `'${property}'`).join(' | ');
+    const union = aggregatable.map(([property]) => toStringLiteral(property)).join(' | ');
     return `\n\n/** Columns of ${interfaceName} a paged search can aggregate (see each property's @aggregatable). */\nexport type ${interfaceName}AggregatableColumn = ${union};`;
 }
 

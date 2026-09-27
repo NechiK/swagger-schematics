@@ -18,7 +18,7 @@ export class ReportApiService extends ApiBaseService {
   }
 
   /** List reports */
-  getReport({ filter }: { filter?: string | null }): Observable<IReportDto[]> {
+  getReport({ filter }: { filter?: string | null } = {}): Observable<IReportDto[]> {
     return this.httpClient.get<IReportDto[]>(
       this.getUrl('/'),
       { params: { ...(filter != null ? { filter } : {}) } }

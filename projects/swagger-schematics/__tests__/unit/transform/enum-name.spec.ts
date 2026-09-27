@@ -1,4 +1,4 @@
-import { toEnumMemberName, enumLine } from '@lib/types/utils/enum';
+import { toEnumMemberName, enumLine, buildEnumMembers } from '@lib/types/utils/enum';
 
 describe('toEnumMemberName', () => {
   it('keeps names that are already valid identifiers untouched', () => {
@@ -74,5 +74,23 @@ describe('enumLine x-enum-descriptions', () => {
 
   it('neutralises a comment terminator inside the description', () => {
     expect(line('A', 1, 'ends */ here')).toBe('  /** ends *\\/ here */\n  A = 1');
+  });
+});
+
+describe('buildEnumMembers', () => {
+  it('leaves null out: it is no member, and a nullable enum is `TColor | null` where it is referenced', () => {
+    expect(buildEnumMembers({ enum: ['red', null, 'green'], 'x-enum-descriptions': ['Red', 'None', 'Green'] }))
+      .toEqual([['red', 'red', 'Red'], ['green', 'green', 'Green']]);
+    expect(buildEnumMembers({ enum: [null] })).toEqual([]);
+  });
+
+  it('gives members whose names collide a numeric suffix', () => {
+    expect(buildEnumMembers({ enum: ['a-b', 'a b', 'a_b', 'AB'] }).map(([name]) => name)).toEqual(['AB', 'AB_2', 'a_b', 'AB_3']);
+    expect(buildEnumMembers({ enum: [1, 2], 'x-enum-varnames': ['Same', 'Same'] }).map(([name]) => name)).toEqual(['Same', 'Same_2']);
+  });
+
+  it('keeps names, values and descriptions positional when a value is skipped', () => {
+    expect(buildEnumMembers({ enum: [null, 1, 2], 'x-enum-varnames': ['None', 'One', 'Two'], 'x-enum-descriptions': ['', '', 'The second'] }))
+      .toEqual([['One', 1, undefined], ['Two', 2, 'The second']]);
   });
 });

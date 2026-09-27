@@ -25,6 +25,7 @@ const SCHEMA = {
       Counts: { type: 'object', additionalProperties: { type: 'integer' } },
       ItemsById: { type: ['object', 'null'], additionalProperties: { $ref: '#/components/schemas/Item' } },
       Anything: { type: 'object', additionalProperties: true },
+      Untyped: { additionalProperties: { $ref: '#/components/schemas/Item' } },
       Place: {
         type: 'object',
         required: ['position'],
@@ -56,6 +57,8 @@ describe('array, tuple and record components', () => {
     expect(alias('anything')).toContain('export type TAnything = Record<string, any>;');
     expect(alias('items-by-id')).toContain('export type TItemsById = Record<string, IItem>;');
     expect(alias('items-by-id')).toContain("import { IItem } from './item.interface';");
+    // `type: object` may be left out: additionalProperties applies to objects only
+    expect(alias('untyped')).toContain('export type TUntyped = Record<string, IItem>;');
     // Nullability is added where the alias is referenced, as for an interface
     expect(alias('items')).toContain('export type TItems = IItem[];');
     expect(tree.files).not.toContain(`${OUT}/interfaces/tags.interface.ts`);

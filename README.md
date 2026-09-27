@@ -214,6 +214,8 @@ For a CI pipeline, add `--change-report=<file>` to also write the summary as mar
 npx swagger-schematics all --change-report=api-changes.md
 ```
 
+If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems (e.g. a snapshot that can't be saved) are only warnings.
+
 ### Filtering APIs
 
 Every API in the document is generated unless you narrow it down, e.g. when one back-end serves several front-ends:
@@ -393,6 +395,8 @@ The following variables are available in API service templates:
 | `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
 | `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |
+| `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and GET, HEAD or OPTIONS with a request body go through `request(method, url, { body, ... })` |
+| `buildHttpCallArgs`       | function           | Angular: the arguments after the URL for the shorthand method (`item.requestMethod`); kept for existing templates, which don't get the `request()` handling above |
 
 ### IParsedApiItem Properties
 
@@ -417,11 +421,11 @@ Each item in `apiList` has the following properties:
 | `response`               | object   | Raw OpenAPI success response object, or undefined if the operation has none                          |
 | `bodyParam`              | object   | Parsed body parameter or null                                                                        |
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
-| `queryParams`            | array    | Array of parsed query parameters                                                                     |
+| `queryParams`            | array    | Parsed query params; `originalParam.name` is the name sent in the query string, `objectSymbol` its variable (`page_size` → "pageSize", `default` → "defaultParam"), `objectEntry` the object entry that maps one to the other (`'page_size': pageSize`) |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
 | `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays of objects and `application/json` content params as JSON; empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
-| `pathParams`             | array    | Array of parsed path parameters                                                                      |
+| `pathParams`             | array    | Parsed path params; `originalParam.name` is the name in the path template, `objectSymbol` its variable |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |
 | `summary`                | string   | Operation summary from OpenAPI spec                                                                  |
 | `description`            | string   | Operation description from OpenAPI spec                                                              |

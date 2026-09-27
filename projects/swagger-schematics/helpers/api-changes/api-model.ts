@@ -2,9 +2,9 @@ import { strings } from '@angular-devkit/core';
 import { ISwaggerSchema, TSchemaByType } from '../../interfaces/version_3_1/swagger.interface';
 import { TFrameworkType } from '../../interfaces/swagger-schematics/framework';
 import { getGeneratedSchemaKind, TGeneratedSchemaKind } from '../../types/utils/schema-kind';
-import { transformProperties } from '../../types/utils/transform-type';
+import { fromPropertyKey, transformProperties } from '../../types/utils/transform-type';
 import { transformCompositionSchema } from '../../types/helpers/template.helper';
-import { toEnumMemberName } from '../../types/utils/enum';
+import { buildEnumMembers } from '../../types/utils/enum';
 import { transformSwaggerSchema } from '../../api/helpers/api.helper';
 
 export interface IApiModelOptions {
@@ -93,13 +93,11 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
         const schema = schemas[schemaKey] as TSchemaByType;
 
         if (kind === 'enum') {
-            const values = (schema as { enum: Array<string | number> }).enum;
-            const names = (schema as { 'x-enum-varnames'?: string[] })['x-enum-varnames'];
             // Null prototype: members named like Object.prototype keys (constructor, toString,
             // __proto__) are real entries, not inherited ones, when the diff compares them
             const members: Record<string, string> = Object.create(null);
-            values.forEach((value, index) => {
-                members[toEnumMemberName(names?.[index] ?? value, index)] = JSON.stringify(value);
+            buildEnumMembers(schema as Parameters<typeof buildEnumMembers>[0]).forEach(([name, value]) => {
+                members[name] = JSON.stringify(value);
             });
             types[symbol] = { kind, members };
         } else if (kind === 'type-alias') {
@@ -113,7 +111,7 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
             );
             const properties: Record<string, string> = Object.create(null);
             propertiesContent.forEach(([name, type]) => {
-                properties[name.replace(/\?$/, '')] = `${name}: ${type}`;
+                properties[fromPropertyKey(name)] = `${name}: ${type}`;
             });
             types[symbol] = { kind, properties };
         }
@@ -172,8 +170,11 @@ type TParsedApiItem = ReturnType<typeof transformSwaggerSchema>[string]['apiList
 function angularArgs(item: TParsedApiItem): IEndpointArg[] {
     return [
         ...item.pathParams.map(param => ({ id: `path ${param.objectSymbol}`, optional: false })),
-        // The query object has no default, so a call must pass it even when every field is optional
-        ...(item.queryParams.length ? [{ id: 'query', optional: false }] : []),
+        // Defaults to {} when every query param is optional and nothing required follows it
+        ...(item.queryParams.length ? [{
+            id: 'query',
+            optional: !item.bodyParam && [...item.queryParams, ...item.headerParams].every(param => param.isOptional)
+        }] : []),
         ...(item.bodyParam ? [{ id: 'body', optional: false }] : []),
         // Defaults to {} when every header is optional
         ...(item.headerParams.length ? [{ id: 'headers', optional: item.headerParams.every(param => param.isOptional) }] : [])

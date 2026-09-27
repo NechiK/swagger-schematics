@@ -14,17 +14,13 @@ export class <%= classify(name) %>ApiService extends ApiBaseService {
     super();
   }
 <% for (let item of apiList) {
-  let httpCallArgs = buildHttpCallArgs(item);
+  let httpCall = buildHttpCall(item);
 %>
 <%= renderJsDoc(item, '  ') %>  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
 <% /* Binary responses use the untyped overload: responseType 'blob' in options makes it Observable<Blob> */
    let responseGeneric = item.isBinaryResponse ? '' : `<${item.responseTypeSymbol}>`;
-if (httpCallArgs.length > 0) { %>    return this.httpClient.<%= item.requestMethod %><%= responseGeneric %>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      <%= httpCallArgs.join(',\n      ') %>
+%>    return this.httpClient.<%= httpCall.method %><%= responseGeneric %>(
+      <%= httpCall.args.join(',\n      ') %>
     );
-<% } else { %>    return this.httpClient.<%= item.requestMethod %><%= responseGeneric %>(
-      this.getUrl(<%= item.apiUrlFormatted %>)
-    );
-<% } %>  }
+  }
 <% } %>}

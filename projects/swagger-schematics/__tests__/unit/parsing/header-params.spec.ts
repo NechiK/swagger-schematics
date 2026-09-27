@@ -234,6 +234,29 @@ describe('header parameters', () => {
       expect(mapped.headerParamsFormatted).toBe("headers: { 'X-Filter': String(xFilter) }");
     });
 
+    it('sends a header whose $ref typeMapping maps to another component like that component', () => {
+      const headersOf = (typeMapping: Record<string, string>) => transformSwaggerSchema({
+        openapi: '3.0.1',
+        info: { title: 'T', version: '1' },
+        components: { schemas: {
+          Old: { type: 'string' },
+          Ctx: { type: 'object', properties: { role: { type: 'string' } } },
+          Code: { type: 'string', enum: ['a', 'b'] }
+        } },
+        paths: { '/api/Items': { get: {
+          tags: ['Items'],
+          parameters: [{ name: 'X-Ctx', in: 'header', required: true, schema: { $ref: '#/components/schemas/Old' } }],
+          responses: { '204': { description: 'ok' } }
+        } } }
+      } as unknown as ISwaggerSchema, { silent: true, typeMapping }).Items.apiList[0].headerParamsFormatted;
+
+      expect(headersOf({ Old: 'Ctx' }))
+        .toBe("headers: { 'X-Ctx': Object.entries(xCtx).filter(entry => entry[1] != null).map(entry => entry.join(',')).join(',') }");
+      expect(headersOf({ Old: 'Code' })).toBe("headers: { 'X-Ctx': String(xCtx) }");
+      // A mapping that leads back to itself says nothing about the value
+      expect(headersOf({ Old: 'Ctx', Ctx: 'Old' })).toBe("headers: { 'X-Ctx': String(xCtx) }");
+    });
+
     it('sends a JSON content header as JSON, and an array as comma-separated values', () => {
       expect(item.headerParamsFormatted).toContain("...(xContext != null ? { 'X-Context': JSON.stringify(xContext) } : {})");
       expect(item.headerParamsFormatted).toContain("'X-Ids': String(xIds)");

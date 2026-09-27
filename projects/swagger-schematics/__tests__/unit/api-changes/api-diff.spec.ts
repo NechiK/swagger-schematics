@@ -2,7 +2,14 @@ import { diffApiModels } from '@lib/helpers/api-changes/api-diff';
 import { IApiModel, buildApiModel } from '@lib/helpers/api-changes/api-model';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
-const endpoint = (label: string, symbol: string, signature: string) => ({ label, symbol, signature, response: '', params: {}, args: [] });
+// The path params and result a signature shows, as buildApiModel records them: `(id: number) => IUserDto`
+const endpoint = (label: string, symbol: string, signature: string) => {
+  const [, paramList, response] = /^\((.*)\) => (.*)$/.exec(signature)!;
+  const params: Record<string, string> = Object.fromEntries(
+    paramList ? paramList.split(', ').map(param => [`path ${param.split(':')[0]}`, param]) : []
+  );
+  return { label, symbol, signature, response, params, args: Object.keys(params).map(id => ({ id, optional: false })) };
+};
 
 const PREVIOUS: IApiModel = {
   types: {
@@ -136,6 +143,10 @@ describe('diffApiModels', () => {
       { severity: 'breaking', kind: 'Index signature removed', subject: 'IDto[key: string]', ref: '[key: string]: string' }
     ]);
     expect(diff(schemaWith(true), schemaWith(true))).toEqual([]);
+    // Reordered properties reorder the union, which is still the same type
+    const bag = (properties: Record<string, unknown>) =>
+      ({ openapi: '3.0.1', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: { Bag: { type: 'object', properties, additionalProperties: { type: 'boolean' } } } } }) as unknown as ISwaggerSchema;
+    expect(diff(bag({ a: { type: 'string' }, b: { type: 'integer' } }), bag({ b: { type: 'integer' }, a: { type: 'string' } }))).toEqual([]);
   });
 
   describe('new endpoint parameters', () => {
@@ -181,6 +192,20 @@ describe('diffApiModels', () => {
 
       expect(renamed('angular')).toEqual(['breaking: Endpoint changed']);
       expect(renamed('react-rtk')).toEqual(['breaking: Endpoint changed']);
+    });
+
+    it('finds no change when only the order of params passed by name changes', () => {
+      const before = schemaWith([id, query('page'), query('size'), header('X-A'), header('X-B')], body);
+      const after = schemaWith([id, query('size'), query('page'), header('X-B'), header('X-A')], body);
+
+      expect(severityOf('angular', before, after)).toEqual([]);
+      expect(severityOf('react-rtk', before, after)).toEqual([]);
+      // Path params are positional in Angular, so their order still matters
+      const twoIds = (first: string, second: string) => schemaWith([
+        { name: first, in: 'path', required: true, schema: { type: 'integer' } },
+        { name: second, in: 'path', required: true, schema: { type: 'integer' } }
+      ]);
+      expect(severityOf('angular', twoIds('id', 'sub'), twoIds('sub', 'id'))).toEqual(['breaking: Endpoint changed']);
     });
 
     it('compares header names case-insensitively, as HTTP does', () => {

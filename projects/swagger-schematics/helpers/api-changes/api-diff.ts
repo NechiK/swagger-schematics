@@ -1,5 +1,5 @@
 import { IApiModel, IEndpointModel, TTypeModel } from './api-model';
-import { toPropertyKey } from '../../types/utils/transform-type';
+import { splitTopLevelUnion, toPropertyKey } from '../../types/utils/transform-type';
 
 /**
  * breaking: code written against the previous generation may stop compiling or
@@ -103,11 +103,13 @@ function diffMembers(owner: string, previous: Record<string, string>, current: R
 /**
  * An index signature (`[key: string]: ...`) is breaking when it appears, since `keyof` the
  * interface becomes `string | number` and a class implementing it needs one too; when it goes,
- * since extra keys no longer compile; and when its type changes.
+ * since extra keys no longer compile; and when its type changes. Its type lists each property's
+ * type in property order, so reordered properties reorder it without changing it.
  */
 function diffIndexSignature(owner: string, previous: string | undefined, current: string | undefined): IApiChange[] {
     const subject = `${owner}[key: string]`;
-    if (previous === current) {
+    const members = (type: string | undefined) => type === undefined ? undefined : splitTopLevelUnion(type).sort().join(' | ');
+    if (members(previous) === members(current)) {
         return [];
     }
     if (previous === undefined) {
@@ -140,7 +142,7 @@ function diffEndpoints(previous: IApiModel['endpoints'], current: IApiModel['end
                 to: `${after.symbol} ${after.signature}`
             }];
         }
-        if (before.signature !== after.signature) {
+        if (before.signature !== after.signature && !isReorderedOnly(before, after)) {
             const additive = isOnlyOptionalParamsAdded(before, after);
             return [{
                 severity: additive ? 'added' : 'breaking',
@@ -153,6 +155,21 @@ function diffEndpoints(previous: IApiModel['endpoints'], current: IApiModel['end
         }
         return [];
     });
+}
+
+/**
+ * Whether two signatures differ only in the order of parameters that calls pass by name (the
+ * Angular query and headers objects, the RTK request object): the same parameters and result,
+ * and the same arguments in the same order. E.g. `page` and `size` swapped, or a query param
+ * moved to path level, which lists it first.
+ */
+function isReorderedOnly(before: IEndpointModel, after: IEndpointModel): boolean {
+    const keys = Object.keys(before.params);
+    return before.response === after.response
+        && keys.length === Object.keys(after.params).length
+        && keys.every(key => after.params[key] === before.params[key])
+        && before.args.length === after.args.length
+        && before.args.every((arg, index) => after.args[index].id === arg.id && after.args[index].optional === arg.optional);
 }
 
 /**

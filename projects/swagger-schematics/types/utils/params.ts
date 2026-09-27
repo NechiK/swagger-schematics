@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, rendersNull, withNonNullableElements, getRefTargetDefinition } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, getMappedComponent, rendersNull, withNonNullableElements, getRefTargetDefinition } from "./transform-type";
 import { ISwaggerSchema, TSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
@@ -630,12 +630,19 @@ function getHeaderValueShape(
     const schema = schemaOrRef;
     if (schema && typeof schema === 'object' && isRef(schema)) {
         const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
-        // typeMapping replaces the component's type (e.g. with `string`), so its schema says nothing
-        // about the value; a recursive component can't be decided either
-        if (getMappedType(refPropertyKey, options?.typeMapping) !== undefined || seen.has(schema.$ref)) {
+        // A recursive component can't be decided
+        if (seen.has(schema.$ref)) {
             return 'value';
         }
         seen.add(schema.$ref);
+        // typeMapping replaces the component's type: with another component (`{ "Old": "Ctx" }`),
+        // whose shape the value then has, or with a TypeScript type (`string`), which says nothing
+        // about the value
+        const mappedValue = getMappedType(refPropertyKey, options?.typeMapping);
+        if (mappedValue !== undefined) {
+            const mapped = getMappedComponent(mappedValue, swagger);
+            return mapped ? getHeaderValueShape({ $ref: mapped.ref }, swagger, options, seen) : 'value';
+        }
         // Through a component that is only a $ref to another, too
         return getHeaderValueShape(refPropertySchema, swagger, options, seen);
     }
@@ -739,23 +746,26 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
 }
 
 /**
- * A query param's type with its array elements' nullability left out (see withNonNullableElements).
+ * A query param's type with its array elements' nullability left out (see withNonNullableElements
+ * and the nonNullableElements option).
  * A $ref to an array component with nullable items (`NullableIds: { type: array, items: { type:
  * integer, nullable: true } }`) is written out (`number[]`) instead of its alias, which is
  * `(number | null)[]` and so wouldn't compile either.
  */
 function transformQueryParamType(schema: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): [string, IImportRef[]] {
+    const queryOptions: ITransformTypeOptions = { ...options, nonNullableElements: true };
     if (isRef(schema) && !isMappedRef(schema.$ref, swagger, options)) {
         const { refPropertySchema } = getRefTargetDefinition(schema.$ref, swagger);
         if (refPropertySchema && typeof refPropertySchema === 'object') {
-            const [inlineTypeSymbol, inlineImportRefs] = transformTypeWithAllImports(refPropertySchema, swagger, options);
+            const [aliasTypeSymbol] = transformTypeWithAllImports(refPropertySchema, swagger, options);
+            const [inlineTypeSymbol, inlineImportRefs] = transformTypeWithAllImports(refPropertySchema, swagger, queryOptions);
             const nonNullableTypeSymbol = withNonNullableElements(inlineTypeSymbol);
-            if (nonNullableTypeSymbol !== inlineTypeSymbol) {
+            if (nonNullableTypeSymbol !== aliasTypeSymbol) {
                 return [nonNullableTypeSymbol, inlineImportRefs];
             }
         }
     }
-    const [typeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+    const [typeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, queryOptions);
     return [withNonNullableElements(typeSymbol), importRefs];
 }
 

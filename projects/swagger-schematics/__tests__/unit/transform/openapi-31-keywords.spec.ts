@@ -395,6 +395,36 @@ describe('nullability the schema checks and the rendered type agree on', () => {
     expect(item.apiMethodParams).toBe('{ ids, names }: { ids: number[]; names?: string[] | null }');
   });
 
+  it('leaves out a required param that refers to a union with a nullable member when it is null', () => {
+    const item = parse([
+      { name: 'u', in: 'query', required: true, schema: { $ref: '#/components/schemas/U' } },
+      { name: 'X-H', in: 'header', required: true, schema: { $ref: '#/components/schemas/U' } }
+    ], {
+      U: { oneOf: [{ type: ['string', 'null'] }, { type: 'integer' }] }
+    });
+
+    expect(item.queryParamsFormatted).toBe('params: { ...(u != null ? { u } : {}) }');
+    expect(item.headerParamsFormatted).toBe("headers: { ...(xH != null ? { 'X-H': String(xH) } : {}) }");
+    // The alias already includes null, so the type gets no extra `| null`
+    expect(item.apiMethodParams).toBe('{ u }: { u: TU }, { xH }: { xH: TU }');
+  });
+
+  it('leaves null out of query array elements whose component alias hides it', () => {
+    const item = parse([
+      { name: 'ids', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/NullableId' } } },
+      { name: 'kinds', in: 'query', schema: { type: 'array', items: { anyOf: [{ $ref: '#/components/schemas/Kind' }, { type: 'integer' }] } } },
+      { name: 'all', in: 'query', schema: { $ref: '#/components/schemas/NullableIds' } }
+    ], {
+      NullableId: { oneOf: [{ type: 'null' }, { type: 'string', format: 'uuid' }] },
+      Kind: { anyOf: [{ type: 'string', enum: ['a', 'b'] }, { type: 'null' }] },
+      NullableIds: { type: 'array', items: { $ref: '#/components/schemas/NullableId' } }
+    });
+
+    expect(item.apiMethodParams).toBe(
+      '{ ids, kinds, all }: { ids?: NonNullable<TNullableId>[]; kinds?: NonNullable<TKind | number>[]; all?: NonNullable<TNullableId>[] } = {}'
+    );
+  });
+
   it('leaves null out of the elements of a query array that is itself nullable through a union member', () => {
     // pydantic's Optional[List[Optional[int]]]; the `type: ['array', 'null']` form is covered above
     const item = parse([
@@ -451,7 +481,9 @@ describe('boolean enums', () => {
     components: { schemas: {
       Flag: { type: 'boolean', enum: [true, false] },
       AlwaysTrue: { type: 'boolean', enum: [true] },
-      NullableFlag: { type: ['boolean', 'null'], enum: [true, false, null] }
+      NullableFlag: { type: ['boolean', 'null'], enum: [true, false, null] },
+      UntypedFlag: { enum: [true, false] },
+      UntypedNullableFlag: { enum: [true, null] }
     } }
   } as unknown as ISwaggerSchema;
 
@@ -464,11 +496,13 @@ describe('boolean enums', () => {
     const properties = {
       a: { $ref: '#/components/schemas/Flag' },
       b: { $ref: '#/components/schemas/AlwaysTrue' },
-      c: { $ref: '#/components/schemas/NullableFlag' }
+      c: { $ref: '#/components/schemas/NullableFlag' },
+      d: { $ref: '#/components/schemas/UntypedFlag' },
+      e: { $ref: '#/components/schemas/UntypedNullableFlag' }
     };
 
-    expect(transformProperties(properties as never, swagger, {}, ['a', 'b', 'c']).propertiesContent)
-      .toEqual([['a', 'boolean'], ['b', 'boolean'], ['c', 'boolean | null']]);
+    expect(transformProperties(properties as never, swagger, {}, ['a', 'b', 'c', 'd', 'e']).propertiesContent)
+      .toEqual([['a', 'boolean'], ['b', 'boolean'], ['c', 'boolean | null'], ['d', 'boolean'], ['e', 'boolean | null']]);
   });
 });
 

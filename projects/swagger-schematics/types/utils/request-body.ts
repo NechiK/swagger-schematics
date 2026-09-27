@@ -49,6 +49,8 @@ export function transformRequestBody(operation: TOperationWithRequestBody, swagg
             functionSymbol: `body: ${typeSymbol || 'any'}`,
             interpolationSymbol: `\${body}`,
             objectSymbol: 'body',
+            // The generated methods always take the body argument
+            isOptional: false,
         };
     }
 

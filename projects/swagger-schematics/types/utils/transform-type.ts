@@ -40,9 +40,10 @@ export interface ITransformTypeOptions {
     typeMapping?: Record<string, string>;
     /**
      * Legacy optionality: when true, an interface property is optional (`?`) iff
-     * it is nullable, ignoring the object schema's `required` array. Escape hatch
-     * for back-ends that do not emit `required` yet. Nullability (`| null`) is
-     * unaffected either way.
+     * it is nullable, ignoring the object schema's `required` array, and an
+     * endpoint parameter is optional when it is nullable even if `required`.
+     * Escape hatch for back-ends that do not emit `required` yet. Nullability
+     * (`| null`) is unaffected either way.
      */
     legacyOptionalProperties?: boolean;
 }

@@ -37,6 +37,12 @@ export interface IParsedParam<T> {
      * Example: 'param1'
      */
     objectSymbol: string;
+
+    /**
+     * Whether a caller may leave the argument out (`?`). Per spec, when it isn't `required`;
+     * with `legacyOptionalProperties`, also when it is required but nullable.
+     */
+    isOptional: boolean;
 }
 
 /**
@@ -303,13 +309,14 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
             // Headers keep their wire name in originalParam (e.g. 'If-Match'); the
             // generated variable is its camelized form (ifMatch)
             const symbol = headerSymbol ?? apiParam.name;
-            const isOptional = !apiParam.required || isParamNullable;
+            const isOptional = isParamOptionalBySpec(apiParam, isParamNullable, options);
             const parsedParam: IParsedParam<TParam> = {
                 originalParam: apiParam,
                 functionSymbol: `${symbol}${isOptional ? '?' : ''}: ${typeSymbol}`,
                 interpolationSymbol: `\${${symbol}}`,
                 typeSymbol,
                 objectSymbol: symbol,
+                isOptional,
             };
 
             switch (apiParam.in) {
@@ -432,7 +439,7 @@ export function formatApiUrl(apiUrl: string): string {
  */
 export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasOmittable?: boolean): string {
     if (queryParams.length === 0) return '';
-    const entries = queryParams.map(param => hasOmittable && isParamOptional(param)
+    const entries = queryParams.map(param => hasOmittable && canBeNullish(param)
         ? `...(${param.objectSymbol} != null ? { ${param.objectSymbol} } : {})`
         : param.objectSymbol);
     return `params: { ${entries.join(', ')} }`;
@@ -441,8 +448,8 @@ export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasO
 /**
  * Formats header params for HTTP options, under their exact wire names.
  * Values are sent as strings (both HttpClient and fetch take string headers).
- * An optional header is added only when it has a value: HttpClient throws on
- * an undefined header value, and a null one would be sent as "null".
+ * An optional or nullable header is added only when it has a value: HttpClient
+ * throws on an undefined header value, and a null one would be sent as "null".
  * Example: "headers: { 'If-Match': String(ifMatch), ...(tenant != null ? { 'X-Tenant': String(tenant) } : {}) }"
  */
 export function formatHeaderParams(headerParams: IParsedParam<IHeaderParam>[]): string {
@@ -451,7 +458,7 @@ export function formatHeaderParams(headerParams: IParsedParam<IHeaderParam>[]): 
         // Names are letters, digits, '-' and '_' only (see toHeaderParamSymbol), so plain quotes are safe
         const name = `'${param.originalParam.name}'`;
         const value = `String(${param.objectSymbol})`;
-        return isParamOptional(param)
+        return canBeNullish(param)
             ? `...(${param.objectSymbol} != null ? { ${name}: ${value} } : {})`
             : `${name}: ${value}`;
     });
@@ -509,15 +516,26 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
 
 export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {
     const { typeSymbol, isParamNullable } = resolveParamType(param, swagger, options);
-    const isOptional = !param.required || isParamNullable;
+    const isOptional = isParamOptionalBySpec(param, isParamNullable, options);
     return `${param.name}${isOptional ? '?' : ''}: ${typeSymbol}`;
 }
 
 /**
- * A parameter is optional when the spec doesn't mark it required, or when its type is nullable.
+ * Per spec, a parameter can be left out when it isn't `required`; a required nullable one must
+ * still be passed (null then leaves it out of the request). `legacyOptionalProperties` restores
+ * the earlier rule, which also made required nullable parameters optional.
  */
+function isParamOptionalBySpec(param: TParam, isParamNullable: boolean, options?: ITransformTypeOptions): boolean {
+    return !param.required || (!!options?.legacyOptionalProperties && isParamNullable);
+}
+
 function isParamOptional(param: IParsedParam<TParam>): boolean {
-    return !param.originalParam.required || param.typeSymbol.endsWith(' | null');
+    return param.isOptional;
+}
+
+/** Whether the value can be null or undefined, so it must be left out of the request when it is. */
+function canBeNullish(param: IParsedParam<TParam>): boolean {
+    return param.isOptional || param.typeSymbol.endsWith(' | null');
 }
 
 export function transformParamsToObject(params: IParsedParam<TParam>[]): string {

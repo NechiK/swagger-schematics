@@ -78,4 +78,24 @@ describe('buildApiModel', () => {
     const mapped = buildApiModel(SCHEMA, { framework: 'angular', typeMapping: { UserDto: 'unknown' } });
     expect(mapped.endpoints['GET /api/Users/{id}'].signature).toBe('(id: number) => unknown');
   });
+
+  it('applies legacyOptionalProperties to parameters like the generator', () => {
+    const schema = {
+      ...SCHEMA,
+      paths: {
+        '/api/Users': {
+          get: {
+            tags: ['Users'],
+            parameters: [{ name: 'page', in: 'query', required: true, schema: { type: 'integer', nullable: true } }],
+            responses: { '204': { description: 'ok' } }
+          }
+        }
+      }
+    } as unknown as ISwaggerSchema;
+    const signature = (legacyOptionalProperties: boolean) =>
+      buildApiModel(schema, { framework: 'angular', legacyOptionalProperties }).endpoints['GET /api/Users'].signature;
+
+    expect(signature(false)).toBe('({ page }: { page: number | null }) => void');
+    expect(signature(true)).toBe('({ page }: { page?: number | null }) => void');
+  });
 });

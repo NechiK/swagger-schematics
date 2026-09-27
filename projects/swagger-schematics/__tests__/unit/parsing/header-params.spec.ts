@@ -87,6 +87,59 @@ describe('header parameters', () => {
     expect(put.apiMethodRequestType).toBe('{ id: number; ifMatch?: string; xVersion?: number | null; body: IOrderDto }');
   });
 
+  describe('required nullable parameters', () => {
+    // OpenAPI 3.1: parameters keep the boolean `required`, nullability is a `null` type member
+    const schema = {
+      ...HEADER_PARAMS_SWAGGER_SCHEMA,
+      openapi: '3.1.0',
+      paths: {
+        '/api/Things': {
+          get: {
+            tags: ['Things'],
+            parameters: [
+              { name: 'page', in: 'query', required: true, schema: { type: ['integer', 'null'] } },
+              { name: 'X-Tenant-Id', in: 'header', required: true, schema: { type: ['string', 'null'] } }
+            ],
+            responses: { '204': { description: 'ok' } }
+          }
+        }
+      }
+    } as unknown as ISwaggerSchema;
+
+    it('are required, and null leaves them out of the request', () => {
+      const item = transformSwaggerSchema(schema, { silent: true }).Things.apiList[0];
+
+      // No `?` and no `= {}`: the caller has to pass them, but null means "don't send it"
+      expect(item.apiMethodParams).toBe('{ page }: { page: number | null }, { xTenantId }: { xTenantId: string | null }');
+      expect(item.apiMethodRequestType).toBe('{ page: number | null; xTenantId: string | null }');
+      expect(item.queryParamsFormatted).toBe('params: { ...(page != null ? { page } : {}) }');
+      expect(item.hasOmittableQueryParams).toBe(true);
+      expect(item.headerParamsFormatted).toBe("headers: { ...(xTenantId != null ? { 'X-Tenant-Id': String(xTenantId) } : {}) }");
+    });
+
+    it('are optional with legacyOptionalProperties, as before', () => {
+      const item = transformSwaggerSchema(schema, { silent: true, legacyOptionalProperties: true }).Things.apiList[0];
+
+      expect(item.apiMethodParams).toBe('{ page }: { page?: number | null }, { xTenantId }: { xTenantId?: string | null } = {}');
+      expect(item.apiMethodRequestType).toBe('{ page?: number | null; xTenantId?: string | null }');
+      expect(item.queryParamsFormatted).toBe('params: { ...(page != null ? { page } : {}) }');
+      expect(item.headerParamsFormatted).toBe("headers: { ...(xTenantId != null ? { 'X-Tenant-Id': String(xTenantId) } : {}) }");
+    });
+
+    it('keep a required non-nullable parameter required either way', () => {
+      const required = {
+        ...schema,
+        paths: { '/api/Things': { get: { tags: ['Things'], parameters: [{ name: 'page', in: 'query', required: true, schema: { type: 'integer' } }], responses: { '204': { description: 'ok' } } } } }
+      } as unknown as ISwaggerSchema;
+
+      [false, true].forEach(legacyOptionalProperties => {
+        const item = transformSwaggerSchema(required, { silent: true, legacyOptionalProperties }).Things.apiList[0];
+        expect(item.apiMethodParams).toBe('{ page }: { page: number }');
+        expect(item.queryParamsFormatted).toBe('params: { page }');
+      });
+    });
+  });
+
   it('leaves cookie parameters out of the method: a browser sends cookies itself', () => {
     expect(getById.cookieParams.map(p => p.originalParam.name)).toEqual(['session']);
     expect(getById.apiMethodParams).not.toContain('session');

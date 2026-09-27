@@ -110,6 +110,7 @@ export default function(options: SwaggerApiSchema) {
 
         const parsedApiSchemas = transformSwaggerSchema(swagger, {
             typeMapping: config.typeMapping,
+            legacyOptionalProperties: config.legacyOptionalProperties,
             apiPathKey: config.apiPathKey,
             includeApis: config.includeApis,
             excludeApis: config.excludeApis,

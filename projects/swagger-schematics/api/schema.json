@@ -60,7 +60,7 @@
     },
     "legacyOptionalProperties": {
       "type": "boolean",
-      "description": "Legacy optionality: mark an interface property optional ('?') when it is nullable instead of when it is absent from the object schema's 'required' array. Escape hatch for back-ends that do not emit 'required' yet. Nullability ('| null' in the type) is unaffected."
+      "description": "Legacy optionality: mark an interface property optional ('?') when it is nullable instead of when it is absent from the object schema's 'required' array, and an endpoint parameter (query, header) optional when it is nullable even if 'required'. Escape hatch for back-ends that do not emit 'required' yet and for code written before parameters followed 'required'. Nullability ('| null' in the type) is unaffected."
     },
     "removeStaleFiles": {
       "type": "boolean",

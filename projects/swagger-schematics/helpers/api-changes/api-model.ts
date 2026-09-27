@@ -108,6 +108,7 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
 function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IApiModel['endpoints'] {
     const groups = transformSwaggerSchema(swagger, {
         typeMapping: options.typeMapping,
+        legacyOptionalProperties: options.legacyOptionalProperties,
         apiPathKey: options.apiPathKey,
         includeApis: options.includeApis,
         excludeApis: options.excludeApis,

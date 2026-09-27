@@ -260,11 +260,12 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
     const cookieParams: IParsedParam<ICookieParam>[] = [];
     const skippedHeaderParams: Array<{ name: string; reason: string }> = [];
     const importRefs: IImportRef[] = [];
-    // Names every non-header parameter (and the request body) already uses: a header's variable
-    // must not repeat one, or the generated method / RTK argument gets a duplicate binding
+    // Names the path and query parameters (and a request body) already use: a header's variable
+    // must not repeat one, or the generated method / RTK argument gets a duplicate binding.
+    // Cookies generate no variable, so they reserve nothing.
     const usedSymbols = new Set<string>([
         ...('requestBody' in operation && operation.requestBody ? ['body'] : []),
-        ...(operation.parameters ?? []).filter(param => param.in !== 'header').map(param => param.name)
+        ...(operation.parameters ?? []).filter(param => param.in === 'path' || param.in === 'query').map(param => param.name)
     ]);
 
     if (operation.parameters) {

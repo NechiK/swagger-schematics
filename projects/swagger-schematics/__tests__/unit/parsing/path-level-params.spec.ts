@@ -66,4 +66,26 @@ describe('path-level parameters', () => {
     expect(item.apiMethodParams).toBe('id: number, { xTenantId }: { xTenantId: string }');
     expect(item.headerParamsFormatted).toBe("headers: { 'X-Tenant-Id': String(xTenantId) }");
   });
+
+  it('decodes $ref names as JSON Pointers: ~1 is /, ~0 is ~, and %-escapes', () => {
+    const schema = {
+      ...schemaWithPaths({
+        '/api/Things/{id}': {
+          parameters: [{ $ref: '#/components/parameters/ids~1thing' }],
+          get: { tags: ['Things'], parameters: [{ $ref: '#/components/parameters/tenant~0x%20header' }], responses: ok }
+        }
+      }),
+      components: {
+        schemas: {},
+        parameters: {
+          'ids/thing': { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+          'tenant~x header': { name: 'X-Tenant-Id', in: 'header', required: true, schema: { type: 'string' } }
+        }
+      }
+    } as unknown as ISwaggerSchema;
+
+    const item = transformSwaggerSchema(schema, { silent: true }).Things.apiList[0];
+
+    expect(item.apiMethodParams).toBe('id: number, { xTenantId }: { xTenantId: string }');
+  });
 });

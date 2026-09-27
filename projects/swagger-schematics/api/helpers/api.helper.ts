@@ -58,6 +58,20 @@ export const buildScopedApiMethodName = (apiMethodName: string, tagName: string)
 };
 
 /**
+ * A `$ref` fragment is a URI-encoded JSON Pointer: `%xx` escapes, then `~1` for
+ * `/` and `~0` for `~` (in that order), so `Foo~1Bar` names the key `Foo/Bar`.
+ */
+function decodePointerToken(token: string): string {
+    let decoded = token;
+    try {
+        decoded = decodeURIComponent(token);
+    } catch {
+        // Not valid percent-encoding: use the token as written
+    }
+    return decoded.replace(/~1/g, '/').replace(/~0/g, '~');
+}
+
+/**
  * Resolves `{ $ref: '#/components/parameters/Name' }` against the document; an
  * inline parameter passes through. A reference that can't be resolved (or no
  * document to resolve it in) is dropped, as unusable.
@@ -68,7 +82,7 @@ function resolveParams(params: Array<TParam | IRef>, swagger?: ISwaggerSchema): 
             return [param];
         }
         const match = /^#\/components\/parameters\/(.+)$/.exec(param.$ref);
-        const resolved = match ? swagger?.components?.parameters?.[match[1]] : undefined;
+        const resolved = match ? swagger?.components?.parameters?.[decodePointerToken(match[1])] : undefined;
         return resolved ? [resolved] : [];
     });
 }

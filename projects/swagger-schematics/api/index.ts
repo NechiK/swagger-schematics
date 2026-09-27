@@ -70,8 +70,17 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
 function createProvideApiRule(baseApiDir: string): Rule {
     return (tree: Tree, context: SchematicContext) => {
         const tokenPath = `${baseApiDir}/_api-base-url.token.ts`;
+        const providerPath = `${baseApiDir}/_provide-api.ts`;
         if (!tree.exists(tokenPath)) {
-            context.logger.info(`provideApi: ${tokenPath} not found, so _provide-api.ts is not generated.`);
+            // A provider from an earlier run would now import a missing token and break the build.
+            // Only ours is removed: it is the file that imports that token.
+            const previousProvider = tree.read(providerPath)?.toString();
+            if (previousProvider?.includes(`from './_api-base-url.token'`)) {
+                tree.delete(providerPath);
+                context.logger.info(`provideApi: ${tokenPath} not found, so the previously generated ${providerPath} is removed.`);
+            } else {
+                context.logger.info(`provideApi: ${tokenPath} not found, so _provide-api.ts is not generated.`);
+            }
             return;
         }
         return mergeWith(apply(url('./templates/angular/provider'), [

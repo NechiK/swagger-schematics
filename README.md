@@ -244,7 +244,7 @@ bootstrapApplication(AppComponent, {
 provideApi({ baseUrl: () => inject(AppConfig).apiUrl });
 ```
 
-It provides the `API_BASE_URL` token the generated services read, and is regenerated on every run. It is generated only when `_api-base-url.token.ts` exists, so a custom base template without that token gets no provider.
+It provides the `API_BASE_URL` token the generated services read, and is regenerated on every run. It is generated only when `_api-base-url.token.ts` exists, so a custom base template without that token gets no provider (and one generated earlier is removed).
 
 ### RTK cache tags
 

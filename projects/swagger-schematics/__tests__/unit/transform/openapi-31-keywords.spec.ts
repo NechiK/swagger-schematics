@@ -1,5 +1,6 @@
 import { transformProperties, transformType, transformTypeWithAllImports } from '@lib/types/utils/transform-type';
 import { transformSwaggerSchema } from '@lib/api/helpers/api.helper';
+import { getGeneratedSchemaKind } from '@lib/types/utils/schema-kind';
 import { ISwaggerSchema, TSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 /** JSON Schema 2020-12 keywords that OpenAPI 3.1 documents use and 3.0 has no equivalent for. */
@@ -13,6 +14,8 @@ describe('OpenAPI 3.1 schema keywords', () => {
         Dto: { type: 'object', properties: { a: { type: 'string' } } },
         Point: { type: 'object', properties: { x: { type: 'number' } } },
         Kind: { type: 'string', const: 'dog' },
+        UntypedKind: { const: 'cat' },
+        Nothing: { type: 'null' },
         NullableDto: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Dto' }] },
         NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] }
       }
@@ -44,8 +47,16 @@ describe('OpenAPI 3.1 schema keywords', () => {
       expect(typeOf({ oneOf: [{ const: 'cat' }, { const: 'dog' }] })).toBe("'cat' | 'dog'");
     });
 
-    it('inlines a const primitive component as its literal where it is referenced', () => {
+    it('inlines a const component as its literal where it is referenced, with or without a type', () => {
       expect(typeOf({ $ref: '#/components/schemas/Kind' })).toBe("'dog'");
+      expect(typeOf({ $ref: '#/components/schemas/UntypedKind' })).toBe("'cat'");
+    });
+
+    it('generates no file of its own for a const component', () => {
+      expect(getGeneratedSchemaKind({ const: 'cat' } as never)).toBeNull();
+      expect(getGeneratedSchemaKind({ type: 'string', const: 'dog' } as never)).toBeNull();
+      // An object const is not a literal type: still an interface
+      expect(getGeneratedSchemaKind({ type: 'object', const: { a: 1 } } as never)).toBe('interface');
     });
 
     it('keeps nullability', () => {
@@ -58,16 +69,34 @@ describe('OpenAPI 3.1 schema keywords', () => {
       expect(typeOf({ type: 'null' })).toBe('null');
       expect(propertiesOf({ nothing: { type: 'null' } }).nothing).toBe('nothing?: null');
     });
+
+    it('inlines a type null component as null, with no file of its own', () => {
+      expect(typeOf({ $ref: '#/components/schemas/Nothing' })).toBe('null');
+      expect(getGeneratedSchemaKind({ type: 'null' } as never)).toBeNull();
+    });
   });
 
   describe('prefixItems (tuples)', () => {
-    it('renders a closed tuple when there is no items, or items is false', () => {
-      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }] })).toBe('[string, number]');
-      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }], items: false })).toBe('[string]');
+    // JSON Schema 2020-12: positions from minItems on may be absent, and more elements are
+    // allowed unless items: false (or maxItems) closes the tuple
+    it('makes positions from minItems on optional', () => {
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }], minItems: 2, items: false })).toBe('[string, number]');
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }], minItems: 1, items: false })).toBe('[string, number?]');
+      expect(typeOf({ type: 'array', prefixItems: [{ oneOf: [{ type: 'string' }, { type: 'integer' }] }], items: false })).toBe('[(string | number)?]');
+    });
+
+    it('allows any further elements unless the tuple is closed', () => {
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }] })).toBe('[string?, number?, ...unknown[]]');
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }], minItems: 1, items: true })).toBe('[string, ...unknown[]]');
+    });
+
+    it('closes the tuple with maxItems, cutting positions beyond it', () => {
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }], minItems: 2, maxItems: 2 })).toBe('[string, number]');
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }, { type: 'boolean' }], maxItems: 2 })).toBe('[string?, number?]');
     });
 
     it('renders items as the rest element', () => {
-      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }], items: { oneOf: [{ type: 'string' }, { type: 'integer' }] } }))
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }], minItems: 1, items: { oneOf: [{ type: 'string' }, { type: 'integer' }] } }))
         .toBe('[string, ...(string | number)[]]');
     });
 
@@ -75,6 +104,7 @@ describe('OpenAPI 3.1 schema keywords', () => {
       const [typeSymbol, imports] = transformTypeWithAllImports({
         type: 'array',
         prefixItems: [{ $ref: '#/components/schemas/Point' }, { type: 'string' }],
+        minItems: 2,
         items: { $ref: '#/components/schemas/Dto' }
       } as unknown as TSchema, swagger);
 
@@ -82,8 +112,19 @@ describe('OpenAPI 3.1 schema keywords', () => {
       expect(imports.map(ref => ref.importSymbol)).toEqual(['IPoint', 'IDto']);
     });
 
+    it('does not import a position that maxItems cuts off', () => {
+      const [typeSymbol, imports] = transformTypeWithAllImports({
+        type: 'array',
+        prefixItems: [{ type: 'string' }, { $ref: '#/components/schemas/Point' }],
+        maxItems: 1
+      } as unknown as TSchema, swagger);
+
+      expect(typeSymbol).toBe('[string?]');
+      expect(imports).toEqual([]);
+    });
+
     it('keeps nullability', () => {
-      expect(propertiesOf({ pair: { type: ['array', 'null'], prefixItems: [{ type: 'string' }, { type: 'string' }] } }).pair)
+      expect(propertiesOf({ pair: { type: ['array', 'null'], prefixItems: [{ type: 'string' }, { type: 'string' }], minItems: 2, items: false } }).pair)
         .toBe('pair?: [string, string] | null');
     });
   });

@@ -178,20 +178,43 @@ function hasPrefixItems(schema: TSchemaWithType): schema is TSchemaTuple {
 }
 
 /**
- * `prefixItems: [A, B]` -> `[A, B]`. `items` then describes the elements after them:
- * a schema gives a rest element (`[A, B, ...C[]]`); `false` or no `items` closes the tuple.
+ * `prefixItems` -> a TypeScript tuple, following JSON Schema 2020-12:
+ * - positions from `minItems` on may be absent, so they are optional: `[A, B?]`
+ * - elements after the prefix are allowed unless `items: false` (or a `maxItems` within the
+ *   prefix) closes the tuple; `items` gives their type, otherwise they are `unknown`
+ * e.g. `{ prefixItems: [number, number], minItems: 2, items: false }` -> `[number, number]`,
+ * `{ prefixItems: [IDto], minItems: 1, items: string }` -> `[IDto, ...string[]]`.
  */
 function transformTuple(schema: TSchemaTuple, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
-    const { types, imports } = transformCompositionSchemas(schema.prefixItems, swagger, options);
-    const rest = (schema as { items?: unknown }).items;
-    if (rest && typeof rest === 'object') {
-        const [restSymbol, restImport] = transformType(rest as TSchema, swagger, options);
-        types.push(`...${wrapUnion(restSymbol)}[]`);
+    const minItems = schema.minItems ?? 0;
+    const { types, imports } = transformCompositionSchemas(getTuplePositions(schema), swagger, options);
+    const elements = types.map((typeSymbol, index) => index < minItems ? typeSymbol : `${wrapUnion(typeSymbol)}?`);
+
+    const rest = getTupleRest(schema);
+    if (rest === null) {
+        elements.push('...unknown[]');
+    } else if (rest !== 'closed') {
+        const [restSymbol, restImport] = transformType(rest, swagger, options);
+        elements.push(`...${wrapUnion(restSymbol)}[]`);
         if (restImport) {
             imports.push(restImport);
         }
     }
-    return [`[${types.join(', ')}]`, imports[0]];
+    return [`[${elements.join(', ')}]`, imports[0]];
+}
+
+/** The prefix positions a tuple can have: `maxItems` below the prefix length cuts it short. */
+function getTuplePositions(schema: TSchemaTuple): TSchema[] {
+    return schema.maxItems !== undefined ? schema.prefixItems.slice(0, Math.max(schema.maxItems, 0)) : schema.prefixItems;
+}
+
+/** What may follow a tuple's prefix: nothing ('closed'), elements of a schema, or anything (null). */
+function getTupleRest(schema: TSchemaTuple): TSchema | 'closed' | null {
+    const items = (schema as { items?: unknown }).items;
+    if (items === false || (schema.maxItems !== undefined && schema.maxItems <= schema.prefixItems.length)) {
+        return 'closed';
+    }
+    return items && typeof items === 'object' ? items as TSchema : null;
 }
 
 /**
@@ -393,8 +416,8 @@ export function transformTypeWithAllImports(property: TSchema, swagger: ISwagger
         // A tuple references a schema per position, plus its rest element
         if (hasPrefixItems(schema as TSchemaWithType)) {
             const tuple = schema as TSchemaTuple;
-            const rest = (tuple as { items?: unknown }).items;
-            const members = [...tuple.prefixItems, ...(rest && typeof rest === 'object' ? [rest as TSchema] : [])];
+            const rest = getTupleRest(tuple);
+            const members = [...getTuplePositions(tuple), ...(rest && rest !== 'closed' ? [rest] : [])];
             return [typeSymbol, members.flatMap(member => transformTypeWithAllImports(member, swagger, options)[1])];
         }
         // Arrays and Record values inline their element type, so a union
@@ -607,14 +630,20 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
  * but don't define an object structure with properties
  */
 export function isPrimitiveWrapper(schema: TSchemaByType): boolean {
-    // Must have a primitive type
-    if (!('type' in schema)) {
-        return false;
-    }
-    
     // Not a primitive wrapper if it uses composition (allOf, oneOf, anyOf, not)
     // A schema can have both 'type' and composition, and composition takes precedence
     if (isComposition(schema)) {
+        return false;
+    }
+
+    // OpenAPI 3.1: a scalar `const` (with or without a type) or `type: "null"` is a single
+    // literal type, inlined like a primitive (`'dog'`, `null`) rather than an empty interface
+    if (constLiteral(schema) !== undefined || (schema as { type?: unknown }).type === 'null') {
+        return true;
+    }
+
+    // Must have a primitive type
+    if (!('type' in schema)) {
         return false;
     }
     

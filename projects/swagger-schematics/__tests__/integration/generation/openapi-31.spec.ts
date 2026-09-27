@@ -138,18 +138,20 @@ describe('OpenAPI 3.1 keywords and references to composition schemas', () => {
         AnyId: { oneOf: [{ type: 'string' }, { type: 'integer' }] },
         NullableDto: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Dto' }] },
         NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] },
+        Kind: { const: 'dog' },
         Base: { type: 'object', properties: { id: { type: 'integer' } } },
         Derived: { allOf: [{ $ref: '#/components/schemas/Base' }], properties: { extra: { type: 'string' } } },
         Pet: {
           type: 'object',
           required: ['kind', 'id', 'owner'],
           properties: {
-            kind: { const: 'dog' },
+            kind: { $ref: '#/components/schemas/Kind' },
             id: { $ref: '#/components/schemas/AnyId' },
             owner: { $ref: '#/components/schemas/NullableDto' },
             parent: { $ref: '#/components/schemas/Derived' },
-            position: { type: 'array', prefixItems: [{ type: 'number' }, { type: 'number' }], items: false },
-            tags: { type: 'array', prefixItems: [{ $ref: '#/components/schemas/Dto' }], items: { type: 'string' } },
+            position: { type: 'array', prefixItems: [{ type: 'number' }, { type: 'number' }], minItems: 2, items: false },
+            tags: { type: 'array', prefixItems: [{ $ref: '#/components/schemas/Dto' }], minItems: 1, items: { type: 'string' } },
+            extra: { type: 'array', prefixItems: [{ type: 'string' }] },
             nothing: { type: 'null' }
           }
         }
@@ -207,6 +209,9 @@ describe('OpenAPI 3.1 keywords and references to composition schemas', () => {
     expect(pet).toContain('parent?: TDerived;');
     expect(pet).toContain('position?: [number, number];');
     expect(pet).toContain('tags?: [IDto, ...string[]];');
+    expect(pet).toContain('extra?: [string?, ...unknown[]];');
+    // A const component is inlined as its literal, with no empty IKind interface
+    expect(tree.files).not.toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/kind.interface.ts`);
     expect(pet).toContain('nothing?: null;');
     expect(pet).toContain("import { TAnyId } from './any-id.type';");
     expect(pet).toContain("import { TNullableDto } from './nullable-dto.type';");

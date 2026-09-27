@@ -7,11 +7,19 @@ export type TGeneratedSchemaKind = 'enum' | 'interface' | 'type-alias';
 /**
  * Decides what (if anything) a component schema generates. Shared by the types
  * schematic and the API change summary, so both always agree on which symbols exist.
- * Returns null for schemas that generate no file.
+ * Returns null for schemas that generate no file. Pass the component's name and the
+ * `typeMapping` option so a mapped component generates nothing (see isReplacedByTypeMapping).
  */
-export function getGeneratedSchemaKind(schema: TSchema): TGeneratedSchemaKind | null {
+export function getGeneratedSchemaKind(
+    schema: TSchema,
+    component?: { name: string; typeMapping?: Record<string, string> }
+): TGeneratedSchemaKind | null {
     // A schema that is only a $ref generates nothing of its own
     if ('$ref' in schema) {
+        return null;
+    }
+
+    if (component && isReplacedByTypeMapping(component.name, component.typeMapping)) {
         return null;
     }
 
@@ -33,4 +41,17 @@ export function getGeneratedSchemaKind(schema: TSchema): TGeneratedSchemaKind | 
     }
 
     return 'enum' in typedSchema && Array.isArray(typedSchema.enum) ? 'enum' : 'interface';
+}
+
+/**
+ * Whether `typeMapping` replaces a component everywhere it is referenced, so a file of its own
+ * would be dead code: `{ "Money": "string" }` renders every `$ref` to Money as `string`.
+ * A component that a mapping points at (`{ "NullableOfStatus": "Status" }` keeps Status) still
+ * generates, since references then import its file - even when it is mapped itself.
+ */
+export function isReplacedByTypeMapping(name: string, typeMapping?: Record<string, string>): boolean {
+    if (!typeMapping?.[name]) {
+        return false;
+    }
+    return !Object.values(typeMapping).includes(name);
 }

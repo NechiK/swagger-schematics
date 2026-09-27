@@ -148,6 +148,8 @@ You can also map nullable wrapper types to their base types. This is useful when
 
 When mapping to another schema, the `nullable` property from the original type is preserved, so `NullableOfDistributionType` becomes `TDistributionType | null` with the proper import.
 
+A mapped schema generates no file of its own, since nothing references it by its own name (`nullable-of-distribution-type.enum.ts` above is not generated; a file from an earlier run is deleted as stale). A schema that a mapping points to, like `DistributionType`, is still generated.
+
 ### Available options
 
 | Name                     | Type    | Schematics | Description                                                                                                                                                      |
@@ -161,7 +163,7 @@ When mapping to another schema, the `nullable` property from the original type i
 | `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
 | `framework`              | string  | api        | Target framework: `"angular"` or `"react-rtk"`. **Required** for `api` (no default) - set it in `openapi-schematics.json` or pass `--framework`                |
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
-| `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
+| `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`). A mapped schema generates no file of its own   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
 | `legacyOptionalProperties` | boolean | api, types | Legacy optionality for back-ends that don't emit a `required` array yet, and for code written before parameters followed `required`. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required — and a query or header parameter that is `required` but nullable is optional. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`; a required nullable parameter must be passed, and `null` leaves it out of the request) |
 | `includeApis`            | string[] | api       | Generate only these APIs: controller names as in the path (`Orders` for `/api/Orders/...`), case-insensitive, `*` as a wildcard. On the CLI, comma-separated. Unset: every API (see [Filtering APIs](#filtering-apis)) |

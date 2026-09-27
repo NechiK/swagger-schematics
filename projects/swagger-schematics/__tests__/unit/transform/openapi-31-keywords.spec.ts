@@ -1,6 +1,6 @@
 import { transformProperties, transformType, transformTypeWithAllImports } from '@lib/types/utils/transform-type';
 import { transformSwaggerSchema } from '@lib/api/helpers/api.helper';
-import { getGeneratedSchemaKind } from '@lib/types/utils/schema-kind';
+import { getGeneratedSchemaKind, isReplacedByTypeMapping } from '@lib/types/utils/schema-kind';
 import { ISwaggerSchema, TSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 /** JSON Schema 2020-12 keywords that OpenAPI 3.1 documents use and 3.0 has no equivalent for. */
@@ -183,5 +183,23 @@ describe('OpenAPI 3.1 schema keywords', () => {
       expect(item.apiMethodParams).toBe('{ owner }: { owner: TNullableId }');
       expect(item.queryParamsFormatted).toBe('params: { ...(owner != null ? { owner } : {}) }');
     });
+  });
+});
+
+describe('components replaced by typeMapping', () => {
+  const dto = { type: 'object', properties: { amount: { type: 'number' } } } as never;
+
+  it('generate no file of their own', () => {
+    expect(getGeneratedSchemaKind(dto, { name: 'Money', typeMapping: { Money: 'string' } })).toBeNull();
+    expect(getGeneratedSchemaKind(dto, { name: 'Money', typeMapping: { Other: 'string' } })).toBe('interface');
+    expect(getGeneratedSchemaKind(dto, { name: 'Money' })).toBe('interface');
+  });
+
+  it('keep a component another mapping points at, since references then import its file', () => {
+    // NullableOfStatus -> Status: Status stays; Money -> Amount -> string: Amount stays too
+    expect(isReplacedByTypeMapping('NullableOfStatus', { NullableOfStatus: 'Status' })).toBe(true);
+    expect(isReplacedByTypeMapping('Status', { NullableOfStatus: 'Status' })).toBe(false);
+    expect(isReplacedByTypeMapping('Amount', { Money: 'Amount', Amount: 'string' })).toBe(false);
+    expect(isReplacedByTypeMapping('Status', { Status: 'Status' })).toBe(false);
   });
 });

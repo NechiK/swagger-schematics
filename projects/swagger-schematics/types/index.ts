@@ -68,7 +68,7 @@ export default function(options: SwaggerSchema): Rule {
       const schemas = swagger.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
-        const schemaType = getGeneratedSchemaKind(schemas[schemaKey]);
+        const schemaType = getGeneratedSchemaKind(schemas[schemaKey], { name: schemaKey, typeMapping: openApiSchematicsConfig.typeMapping });
         if (!schemaType) {
             return;
         }

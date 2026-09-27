@@ -242,6 +242,15 @@ describe('Types Schematics Integration', () => {
       expect(content).toContain('TDistributionType | null');
     });
 
+    it('should not generate a file for a mapped component, but keep the component it maps to', () => {
+      const files = typeMappingTree.files;
+
+      expect(files).not.toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/nullable-of-distribution-type.enum.ts`);
+      expect(files).toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/distribution-type.enum.ts`);
+      // Without the mapping, the component generates as usual
+      expect(tree.files).toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/enums/nullable-of-distribution-type.enum.ts`);
+    });
+
     it('should use original NullableOfDistributionType import when typeMapping is not set', () => {
       const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/type-mapping-test-dto.interface.ts`);
 

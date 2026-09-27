@@ -66,7 +66,7 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
     const types: IApiModel['types'] = {};
 
     Object.keys(schemas).forEach(schemaKey => {
-        const kind = getGeneratedSchemaKind(schemas[schemaKey]);
+        const kind = getGeneratedSchemaKind(schemas[schemaKey], { name: schemaKey, typeMapping: options.typeMapping });
         if (!kind) {
             return;
         }

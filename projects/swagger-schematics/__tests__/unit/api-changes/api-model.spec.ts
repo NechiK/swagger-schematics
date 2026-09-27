@@ -77,6 +77,9 @@ describe('buildApiModel', () => {
   it('applies typeMapping like the generator', () => {
     const mapped = buildApiModel(SCHEMA, { framework: 'angular', typeMapping: { UserDto: 'unknown' } });
     expect(mapped.endpoints['GET /api/Users/{id}'].signature).toBe('(id: number) => unknown');
+    // A mapped component generates no file, so it isn't listed as a type either
+    expect(mapped.types.IUserDto).toBeUndefined();
+    expect(buildApiModel(SCHEMA, { framework: 'angular' }).types.IUserDto).toBeDefined();
   });
 
   it('applies legacyOptionalProperties to parameters like the generator', () => {

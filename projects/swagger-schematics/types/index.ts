@@ -18,6 +18,7 @@ import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
+import { transformIndexSignature } from './utils/transform-type';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
@@ -118,7 +119,7 @@ export default function(options: SwaggerSchema): Rule {
                   }
               );
               // Filter out self-references: a recursive composition refers to its own alias, T<Name>
-              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `T${parsed.name}`);
+              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `T${strings.classify(parsed.name)}`);
               itemSource = apply(typeAliasTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,
@@ -144,7 +145,16 @@ export default function(options: SwaggerSchema): Rule {
                 legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
             }, (schemaData.data as { required?: string[] }).required ?? []);
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
-            const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));
+            // More properties allowed (`additionalProperties`, e.g. .NET [JsonExtensionData]): an index signature
+            const indexSignature = transformIndexSignature(schemaData.data as TSchemaByType, propertiesContent, swagger, {
+                typeMapping: openApiSchematicsConfig.typeMapping,
+                legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
+            });
+            if (indexSignature && propertiesContent.length > 0) {
+                propertiesContent.push(['[key: string]', indexSignature[0]]);
+                refs.push(...indexSignature[1]);
+            }
+            const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${strings.classify(parsed.name)}`));
             itemSource = apply(interfaceTemplates, [
                 applyTemplates({
                     ...openApiSchematicsConfig,

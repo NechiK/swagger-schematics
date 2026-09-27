@@ -1,4 +1,4 @@
-import { dasherize } from "@angular-devkit/core/src/utils/strings";
+import { classify, dasherize } from "@angular-devkit/core/src/utils/strings";
 import { IDocSource } from "./js-doc";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { 
@@ -546,6 +546,12 @@ export function transformTypeWithAllImports(property: TSchema, swagger: ISwagger
         if ('items' in schema && schema.items) {
             return [typeSymbol, transformTypeWithAllImports(schema.items, swagger, options)[1]];
         }
+        // An object with properties and more (see transformObjectSchema) imports both
+        if (hasPropertiesAndIndexSignature(schema)) {
+            const { properties, required } = schema as ISchemaObject & { properties: ISchemaProperties; required?: string[] };
+            const { propertiesContent, refs } = transformProperties(properties, swagger, options, required ?? []);
+            return [typeSymbol, [...refs, ...transformIndexSignature(schema, propertiesContent, swagger, options)![1]]];
+        }
         if ('additionalProperties' in schema && typeof schema.additionalProperties === 'object') {
             return [typeSymbol, transformTypeWithAllImports(schema.additionalProperties, swagger, options)[1]];
         }
@@ -668,6 +674,16 @@ export function getCompositionImports(property: TSchema, swagger: ISwaggerSchema
  * Transforms object schema, handling additionalProperties
  */
 function transformObjectSchema(schema: ISchemaObject, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    // Properties next to additionalProperties: an object type with both, since a record of the
+    // additional values alone would reject the properties (see transformIndexSignature)
+    if (hasPropertiesAndIndexSignature(schema)) {
+        const { properties, required } = schema as ISchemaObject & { properties: ISchemaProperties; required?: string[] };
+        const { propertiesContent, refs } = transformProperties(properties, swagger, options, required ?? []);
+        const [valueType, valueRefs] = transformIndexSignature(schema, propertiesContent, swagger, options)!;
+        const members = [...propertiesContent, ['[key: string]', valueType]].map(([key, type]) => `${key}: ${type}`);
+        return [`{ ${members.join('; ')} }`, [...refs, ...valueRefs][0]];
+    }
+
     // Check for additionalProperties
     if (schema.additionalProperties !== undefined && schema.additionalProperties !== false) {
         if (schema.additionalProperties === true) {
@@ -682,6 +698,45 @@ function transformObjectSchema(schema: ISchemaObject, swagger: ISwaggerSchema, o
     
     // Regular object without additionalProperties
     return ['object'];
+}
+
+/** Whether an object has `properties` and allows more (`additionalProperties` a schema or `true`). */
+function hasPropertiesAndIndexSignature(schema: TSchemaByType): boolean {
+    const { properties, additionalProperties } = schema as ISchemaObject;
+    return !!properties && Object.keys(properties).length > 0
+        && additionalProperties !== undefined && additionalProperties !== false;
+}
+
+/**
+ * The value type of the index signature an object with `properties` gets from
+ * `additionalProperties` (a schema, or `true` for `any`), with its import refs; undefined when it
+ * allows no more properties. TypeScript checks every property against the index signature
+ * (TS2411), so the type also admits each property's type, and `undefined` when one is optional:
+ * `{ id?: string; [key: string]: number | string | undefined }` (.NET `[JsonExtensionData]`).
+ */
+export function transformIndexSignature(
+    schema: TSchemaByType,
+    propertiesContent: Array<[string, string]>,
+    swagger: ISwaggerSchema,
+    options?: ITransformTypeOptions
+): [string, IImportRef[]] | undefined {
+    const additionalProperties = (schema as ISchemaObject).additionalProperties;
+    if (additionalProperties === undefined || additionalProperties === false) {
+        return undefined;
+    }
+    if (additionalProperties === true) {
+        return ['any', []];
+    }
+    const [rawValueType, importRefs] = transformTypeWithAllImports(additionalProperties, swagger, options);
+    const valueType = withNullability(rawValueType, additionalProperties, swagger);
+    if (valueType === 'any' || valueType === 'unknown') {
+        return [valueType, importRefs];
+    }
+    const members = new Set([valueType, ...propertiesContent.map(([, type]) => type)]);
+    if (propertiesContent.some(([key]) => key.endsWith('?'))) {
+        members.add('undefined');
+    }
+    return [[...members].join(' | '), importRefs];
 }
 
 /**
@@ -732,7 +787,7 @@ function inlinePrimitiveWrapper(schema: TSchemaByType, swagger: ISwaggerSchema, 
     return isNullable ? `${primitiveType} | null` : primitiveType;
 }
 
-export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, options?: ITransformTypeOptions, seen: Set<string> = new Set()): TTypeWithImport {
     const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(property.$ref, swagger);
 
     // Check if this type is mapped
@@ -772,6 +827,15 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
         return [originalIsNullable ? `${mappedValue} | null` : mappedValue];
     }
 
+    // A component that is only a $ref generates no file (see getGeneratedSchemaKind): it is the
+    // component it points to. A circular chain of them describes no type
+    if (refPropertySchema && isRef(refPropertySchema)) {
+        seen.add(property.$ref);
+        return seen.has(refPropertySchema.$ref)
+            ? ['unknown']
+            : parseRefToSymbol(refPropertySchema, swagger, options, seen);
+    }
+
     // A boolean component schema generates no file (see getGeneratedSchemaKind)
     if (typeof refPropertySchema === 'boolean') {
         return [refPropertySchema ? 'unknown' : 'never'];
@@ -779,7 +843,7 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
 
     // If schema not found, return a generic type based on the ref key
     if (!refPropertySchema) {
-        const symbol = `I${refPropertyKey}`;
+        const symbol = `I${classify(refPropertyKey)}`;
         return [symbol, {
             type: 'interface',
             importSymbol: symbol,
@@ -902,6 +966,25 @@ function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema, o
     }
 }
 
+/**
+ * Like getRefPropertyDefinition, but through components that are only a $ref to another
+ * (`ObjAlias: { $ref: Obj }`), to the schema that describes the value. A circular chain of
+ * them resolves to no schema.
+ */
+export function getRefTargetDefinition(ref: string, swagger: ISwaggerSchema): ReturnType<typeof getRefPropertyDefinition> {
+    const seen = new Set([ref]);
+    let definition = getRefPropertyDefinition(ref, swagger);
+    while (definition.refPropertySchema && isRef(definition.refPropertySchema)) {
+        const next = definition.refPropertySchema.$ref;
+        if (seen.has(next)) {
+            return { refPropertySchema: undefined, refPropertyKey: definition.refPropertyKey };
+        }
+        seen.add(next);
+        definition = getRefPropertyDefinition(next, swagger);
+    }
+    return definition;
+}
+
 export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): {
     refPropertySchema: TSchemaByType | undefined;
     refPropertyKey: string;
@@ -919,8 +1002,13 @@ export function getRefPropertyDefinition(ref: string, swagger: ISwaggerSchema): 
     return { refPropertySchema, refPropertyKey };
 }
 
+/**
+ * The symbol a component is declared as: its name classified like the templates do (`classify(name)`),
+ * so `thing_kind`, `my-thing` or a .NET full name `Shop.OrderDto` are referenced as `TThingKind`,
+ * `IMyThing` and `IShopOrderDto`, not by the raw key, which isn't the declared name or an identifier.
+ */
 export function transformRefProperty(refProperty: TSchemaByType, refPropertyKey: string) {
-    return getRefImportType(refProperty) === 'interface' ? `I${refPropertyKey}` : `T${refPropertyKey}`;
+    return `${getRefImportType(refProperty) === 'interface' ? 'I' : 'T'}${classify(refPropertyKey)}`;
 }
 
 /**
@@ -1004,7 +1092,7 @@ function hasNullMember(schema: TSchemaByType): boolean {
  */
 export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean {
     if (isRef(property)) {
-        const { refPropertySchema } = getRefPropertyDefinition(property.$ref, swagger);
+        const { refPropertySchema } = getRefTargetDefinition(property.$ref, swagger);
         if (!refPropertySchema) {
             return false;
         }
@@ -1027,7 +1115,7 @@ export function withNullability(typeSymbol: string, property: TSchema, swagger: 
         return typeSymbol;
     }
     if (isRef(property)) {
-        const { refPropertySchema } = getRefPropertyDefinition(property.$ref, swagger);
+        const { refPropertySchema } = getRefTargetDefinition(property.$ref, swagger);
         const nullableOnlyByMember = !!refPropertySchema
             && !isSchemaValueNullable(refPropertySchema)
             && (refPropertySchema as ISchemaBase).default !== null;

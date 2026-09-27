@@ -52,9 +52,6 @@ export class OrdersApiService extends ApiBaseService {
 exports[`header parameters in generated code RTK: passes headers in the query definition 1`] = `
 "
 import { api as baseApi } from '@th-common/store/api-base';
-
-import { omitBy, isNil } from 'lodash-es';
-
 import { IOrderDto } from './interfaces/order-dto.interface';
 
 export const ordersApi = baseApi.injectEndpoints({
@@ -86,7 +83,7 @@ export const ordersApi = baseApi.injectEndpoints({
       query: ({ page, xTrace } = {}) => ({
         url: '/orders',
         method: 'GET',
-        params: omitBy({ page }, isNil),
+        params: { ...(page != null ? { page } : {}) },
         headers: { ...(xTrace != null ? { 'X-Trace': String(xTrace) } : {}) },
       }),
     }),

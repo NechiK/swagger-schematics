@@ -409,6 +409,24 @@ describe('nullability the schema checks and the rendered type agree on', () => {
     expect(item.apiMethodParams).toBe('{ a, b, c, d }: { a?: string[]; b?: TColor[]; c?: TColor[]; d?: (number | string)[] } = {}');
   });
 
+  it('writes out a query param that refers to an array component with nullable items, whose alias HttpClient params reject', () => {
+    const item = parse([
+      { name: 'a', in: 'query', schema: { $ref: '#/components/schemas/NullableIds' } },
+      { name: 'b', in: 'query', required: true, schema: { $ref: '#/components/schemas/MaybeColors' } },
+      { name: 'c', in: 'query', schema: { $ref: '#/components/schemas/IdsAlias' } },
+      { name: 'd', in: 'query', schema: { $ref: '#/components/schemas/Tags' } }
+    ], {
+      NullableIds: { type: 'array', items: { type: ['integer', 'null'] } },
+      MaybeColors: { type: ['array', 'null'], items: { $ref: '#/components/schemas/Color' } },
+      Color: { type: ['string', 'null'], enum: ['red', null] },
+      IdsAlias: { $ref: '#/components/schemas/NullableIds' },
+      Tags: { type: 'array', items: { type: 'string' } }
+    });
+
+    // An alias without nullable items stays the alias
+    expect(item.apiMethodParams).toBe('{ a, b, c, d }: { a?: number[]; b: TColor[] | null; c?: number[]; d?: TTags }');
+  });
+
   it('makes a reference to an untyped enum with a null value nullable', () => {
     const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: { Color: { enum: ['red', null] } } } } as unknown as ISwaggerSchema;
 
@@ -477,7 +495,7 @@ describe('typeMapping lookups', () => {
     const typeMapping = { Guid: 'string' };
 
     expect(getGeneratedSchemaKind(swagger.components!.schemas!.constructor as never, { name: 'constructor', typeMapping })).toBe('interface');
-    expect(transformType({ $ref: '#/components/schemas/constructor' } as TSchema, swagger, { typeMapping })[0]).toBe('Iconstructor');
+    expect(transformType({ $ref: '#/components/schemas/constructor' } as TSchema, swagger, { typeMapping })[0]).toBe('IConstructor');
   });
 });
 
@@ -486,5 +504,26 @@ describe('untyped objects closed with additionalProperties: false', () => {
     const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: {} } } as unknown as ISwaggerSchema;
 
     expect(transformType({ properties: { a: { type: 'string' } }, additionalProperties: false } as never, swagger)[0]).toBe('any');
+  });
+});
+
+describe('objects with properties and additionalProperties', () => {
+  const swagger = {
+    openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {},
+    components: { schemas: { Tag: { type: 'object', properties: { name: { type: 'string' } } } } }
+  } as unknown as ISwaggerSchema;
+
+  it('render both, instead of a record that rejects the properties', () => {
+    const extra = { type: 'object', properties: { x: { type: 'string' } }, additionalProperties: { type: 'integer' } };
+
+    // Every property must fit the index signature (TS2411), so its type admits them too
+    expect(transformType(extra as never, swagger)[0]).toBe('{ x?: string; [key: string]: number | string | undefined }');
+    expect(transformType({ ...extra, required: ['x'], additionalProperties: true } as never, swagger)[0]).toBe('{ x: string; [key: string]: any }');
+  });
+
+  it('import the properties\' and the additional values\' types', () => {
+    const schema = { type: 'object', properties: { tag: { $ref: '#/components/schemas/Tag' } }, additionalProperties: { $ref: '#/components/schemas/Tag' } };
+
+    expect(transformTypeWithAllImports(schema as never, swagger)[1].map(ref => ref.importSymbol)).toEqual(['ITag', 'ITag']);
   });
 });

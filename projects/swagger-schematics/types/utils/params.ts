@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, rendersNull, withNonNullableElements } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, rendersNull, withNonNullableElements, getRefTargetDefinition } from "./transform-type";
 import { ISwaggerSchema, TSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
@@ -525,7 +525,7 @@ export function formatApiUrl(apiUrl: string): string {
 }
 
 /**
- * Formats query params for the Angular HttpClient options object.
+ * Formats query params for the Angular HttpClient options object and the RTK query definition.
  * Example: "params: { status, force }" or ""
  *
  * HttpParams stringifies every value, so an optional or nullable param left
@@ -534,7 +534,8 @@ export function formatApiUrl(apiUrl: string): string {
  * "params: { status, ...(page != null ? { page } : {}) }". This drops exactly
  * what lodash `omitBy(isNil)` did (0, false, '' and arrays are kept) but keeps
  * the object's type, so it compiles under `strict` against HttpClient's
- * `params` type, which omitBy's `Dictionary<T | undefined>` result does not.
+ * `params` type, which omitBy's `Dictionary<T | undefined>` result does not. RTK slices use
+ * it too, so they need no lodash import, and a param named `omitBy` or `isNil` can't shadow one.
  */
 export function formatQueryParams(queryParams: IParsedParam<IQueryParam>[], hasOmittable?: boolean): string {
     if (queryParams.length === 0) return '';
@@ -626,7 +627,7 @@ function getHeaderValueShape(
     options?: ITransformTypeOptions,
     seen: Set<string> = new Set()
 ): THeaderValueShape {
-    let schema = schemaOrRef;
+    const schema = schemaOrRef;
     if (schema && typeof schema === 'object' && isRef(schema)) {
         const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
         // typeMapping replaces the component's type (e.g. with `string`), so its schema says nothing
@@ -635,7 +636,8 @@ function getHeaderValueShape(
             return 'value';
         }
         seen.add(schema.$ref);
-        schema = refPropertySchema;
+        // Through a component that is only a $ref to another, too
+        return getHeaderValueShape(refPropertySchema, swagger, options, seen);
     }
     if (!schema || typeof schema !== 'object') {
         return 'value';
@@ -728,10 +730,44 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
         return { typeSymbol: 'any', isParamNullable: false, importRefs: [] };
     }
 
-    const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
-    const typeSymbol = withNullability(param.in === 'query' ? withNonNullableElements(rawTypeSymbol) : rawTypeSymbol, schema, swagger);
+    const [rawTypeSymbol, importRefs] = param.in === 'query'
+        ? transformQueryParamType(schema, swagger, options)
+        : transformTypeWithAllImports(schema, swagger, options);
+    const typeSymbol = withNullability(rawTypeSymbol, schema, swagger);
     const isParamNullable = isNullable(schema, swagger) || rendersNull(typeSymbol);
     return { typeSymbol, isParamNullable, importRefs };
+}
+
+/**
+ * A query param's type with its array elements' nullability left out (see withNonNullableElements).
+ * A $ref to an array component with nullable items (`NullableIds: { type: array, items: { type:
+ * integer, nullable: true } }`) is written out (`number[]`) instead of its alias, which is
+ * `(number | null)[]` and so wouldn't compile either.
+ */
+function transformQueryParamType(schema: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): [string, IImportRef[]] {
+    if (isRef(schema) && !isMappedRef(schema.$ref, swagger, options)) {
+        const { refPropertySchema } = getRefTargetDefinition(schema.$ref, swagger);
+        if (refPropertySchema && typeof refPropertySchema === 'object') {
+            const [inlineTypeSymbol, inlineImportRefs] = transformTypeWithAllImports(refPropertySchema, swagger, options);
+            const nonNullableTypeSymbol = withNonNullableElements(inlineTypeSymbol);
+            if (nonNullableTypeSymbol !== inlineTypeSymbol) {
+                return [nonNullableTypeSymbol, inlineImportRefs];
+            }
+        }
+    }
+    const [typeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+    return [withNonNullableElements(typeSymbol), importRefs];
+}
+
+/** Whether a $ref, or a component it passes through, is replaced by `typeMapping`. */
+function isMappedRef(ref: string, swagger: ISwaggerSchema, options?: ITransformTypeOptions, seen: Set<string> = new Set()): boolean {
+    const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(ref, swagger);
+    if (getMappedType(refPropertyKey, options?.typeMapping) !== undefined) {
+        return true;
+    }
+    seen.add(ref);
+    return !!refPropertySchema && isRef(refPropertySchema) && !seen.has(refPropertySchema.$ref)
+        && isMappedRef(refPropertySchema.$ref, swagger, options, seen);
 }
 
 export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {

@@ -52,7 +52,6 @@ export class OrdersApiService extends ApiBaseService {
 exports[`JSDoc in generated code RTK: documents endpoints 1`] = `
 "
 import { api as baseApi } from '@th-common/store/api-base';
-
 import { IOrderDto } from './interfaces/order-dto.interface';
 
 export const ordersApi = baseApi.injectEndpoints({

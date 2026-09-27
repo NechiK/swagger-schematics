@@ -10,7 +10,8 @@ describe('Success response resolution', () => {
     paths: {},
     components: {
       schemas: {
-        ReportDto: { type: 'object', properties: { id: { type: 'integer' } } }
+        ReportDto: { type: 'object', properties: { id: { type: 'integer' } } },
+        Nothing: false
       },
       responses: {
         Ok: {
@@ -39,6 +40,14 @@ describe('Success response resolution', () => {
     // typed Observable<Blob> without responseType: 'blob'.
     expect(getApiResponseSymbol(op, swagger)).toEqual(['Blob', []]);
     expect(isBinaryResponse(op, swagger)).toBe(true);
+  });
+
+  it('types a response whose schema no value matches (a false component) as void, like one without content', () => {
+    const op = operation({
+      '200': { description: 'ok', content: { 'application/json': { schema: { $ref: '#/components/schemas/Nothing' } } } }
+    } as TResponse);
+
+    expect(getApiResponseSymbol(op, swagger)).toEqual(['void', []]);
   });
 
   it('keeps 204 No Content as void even when later keys have content', () => {

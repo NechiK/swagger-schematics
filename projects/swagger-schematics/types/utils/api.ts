@@ -23,7 +23,7 @@ export function getApiMethodName(
 ): string {
     // Prefer operationId if available (per OpenAPI spec recommendation)
     if (apiMethod.operationId) {
-        return camelize(apiMethod.operationId);
+        return toMethodName(apiMethod.operationId);
     }
 
     // Strip the configured prefix once so the pattern matching below works
@@ -51,7 +51,18 @@ export function getApiMethodName(
             parsedMethodName = parseUnrecognizedApiPathPatterns(apiMethodKey, relativePath, options?.silent);
     }
 
-    return camelize(parsedMethodName);
+    return toMethodName(parsedMethodName);
+}
+
+/**
+ * A method name from an operationId or path words, camelized. Characters a name can't hold are
+ * dropped, capitalizing the next one (`items:list` -> itemsList, a path segment `it's` -> itS),
+ * and a name that can't start an identifier (a digit) gets `_`, so the generated method compiles.
+ * Letters beyond ASCII are kept (`получитьЗаказ`).
+ */
+function toMethodName(name: string): string {
+    const methodName = camelize(name).replace(/[^\p{ID_Continue}$]+(.)?/gu, (_match: string, next?: string) => next ? next.toUpperCase() : '');
+    return /^[\p{ID_Start}$_]/u.test(methodName) ? methodName : `_${methodName}`;
 }
 
 /**
@@ -94,7 +105,10 @@ function extractResponseType(response: IResponse, swaggerData: ISwaggerSchema, o
 
     const mediaType = findMediaType(content);
     if (mediaType?.schema) {
-        return transformTypeWithAllImports(mediaType.schema, swaggerData, options);
+        const [typeSymbol, importRefs] = transformTypeWithAllImports(mediaType.schema, swaggerData, options);
+        // A schema no value matches (a `false` component) means there is no body, like `false` inline;
+        // `never` would also be rejected as an RTK query's result type
+        return typeSymbol === 'never' ? ['void', []] : [typeSymbol, importRefs];
     }
 
     // OpenAPI 3.1 binary responses: application/octet-stream without a schema

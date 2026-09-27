@@ -242,6 +242,15 @@ function normalizeApiPathPrefix(prefix: string): string {
     return normalized;
 }
 
+/**
+ * Literal path text as the content of a generated string: the URL is emitted in single quotes, or
+ * in backticks when it interpolates params, so a backslash, `'` and `` ` `` are escaped (valid in both),
+ * and so is `${`, which a template literal would otherwise interpolate (`/api/Items/it's`).
+ */
+function escapeUrlText(text: string): string {
+    return text.replace(/[\\'`]/g, '\\$&').replace(/\$\{/g, '\\${');
+}
+
 export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: TTransformSwaggerSchemaOptions): IParsedApiSchema => {
     const apiPathPrefix = normalizeApiPathPrefix(options?.apiPathKey || '/api/');
 
@@ -325,14 +334,18 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             // Build API URL, handling path params that may come from body for PUT/POST
             // Every template expression in a segment is replaced, keeping the literal text around
             // it (`{name}.{ext}`, `{id}.json`)
-            const apiUrl = segments.map(urlSegment => urlSegment.replace(/\{([^}]+)}/g, (_match: string, paramName: string) => {
+            const apiUrl = segments.map(urlSegment => urlSegment.split(/(\{[^}]+})/).map(part => {
+                const paramName = /^\{([^}]+)}$/.exec(part)?.[1];
+                if (paramName === undefined) {
+                    return escapeUrlText(part);
+                }
                 const pathParam = pathParams.find(p => p.originalParam.name === paramName);
                 // For PUT/POST with body and no separate path param, use body.paramName
                 if (!pathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
                     return `\${${bodyParam.objectSymbol}.${camelize(paramName)}}`;
                 }
                 return `\${${pathParam?.objectSymbol ?? toParamSymbol(paramName)}}`;
-            })).join('/');
+            }).join('')).join('/');
 
             const isQuery = ['get', 'head'].includes(operationKey);
 

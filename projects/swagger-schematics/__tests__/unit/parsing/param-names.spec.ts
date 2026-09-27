@@ -68,6 +68,23 @@ describe('path and query parameter names', () => {
     expect(parse('/api/Items/{item_id}.json', [pathParam('item_id')]).apiMethodName).toBe('getItemsByItemId');
   });
 
+  it("escapes quotes in the path's literal text, which the URL string would otherwise end at", () => {
+    const item = parse("/api/Items/it's/{id}", [pathParam('id')], 'get', { operationId: 'getIt' });
+
+    expect(item.apiUrl).toBe("it\\'s/${id}");
+    expect(item.apiUrlFormatted).toBe("`/it\\'s/${id}`");
+    expect(parse("/api/Items/it's", []).apiUrlFormatted).toBe("'/it\\'s'");
+    expect(parse('/api/Items/a`b', []).apiUrlFormatted).toBe("'/a\\`b'");
+  });
+
+  it('names a method only with characters a name can hold', () => {
+    // A path segment `it's` without an operationId, and a Google-style operationId
+    expect(parse("/api/Items/it's", []).apiMethodName).toBe('getItemsItS');
+    expect(parse('/api/Items', [], 'get', { operationId: 'items:list' }).apiMethodName).toBe('itemsList');
+    expect(parse('/api/Items', [], 'get', { operationId: '2fa' }).apiMethodName).toBe('_2fa');
+    expect(parse('/api/Items', [], 'get', { operationId: 'получитьЗаказ' }).apiMethodName).toBe('получитьЗаказ');
+  });
+
   it('sends a query param named __proto__ as an entry, not as the params object\'s prototype', () => {
     const item = parse('/api/Items', [{ ...query('__proto__'), required: true }]);
 
@@ -99,6 +116,21 @@ describe('path and query parameter names', () => {
 
     const slice = tree.readContent(`${RTK_SCHEMATIC_OPTIONS.path}/items.api.ts`);
     expect(slice).toContain("query: ({ pageSize, defaultParam } = {}) => ({");
-    expect(slice).toContain("params: omitBy({ 'page_size': pageSize, 'default': defaultParam }, isNil),");
+    expect(slice).toContain("params: { ...(pageSize != null ? { 'page_size': pageSize } : {}), ...(defaultParam != null ? { 'default': defaultParam } : {}) },");
+  });
+
+  it('lets RTK query params be named like the lodash helpers slices used to import', async () => {
+    const tree = await runFullSchematics({
+      openapi: '3.0.1',
+      info: { title: 'T', version: '1' },
+      paths: { '/api/Items': { get: { tags: ['Items'], parameters: [query('isNil'), query('omitBy')], responses: ok } } },
+      components: { schemas: {} }
+    } as unknown as ISwaggerSchema, { ...RTK_SCHEMATIC_OPTIONS, scopeEndpointsWithTags: false });
+    resetFetchMocks();
+
+    const slice = tree.readContent(`${RTK_SCHEMATIC_OPTIONS.path}/items.api.ts`);
+    // `omitBy({ isNil, omitBy }, isNil)` would call the caller's values instead of lodash
+    expect(slice).not.toContain('lodash-es');
+    expect(slice).toContain('params: { ...(isNil != null ? { isNil } : {}), ...(omitBy != null ? { omitBy } : {}) },');
   });
 });

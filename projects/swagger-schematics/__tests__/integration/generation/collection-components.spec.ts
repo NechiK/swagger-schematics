@@ -124,3 +124,37 @@ describe('array, tuple and record components', () => {
     expect(types.ITags).toBeUndefined();
   });
 });
+
+describe('interfaces that allow more properties', () => {
+  afterEach(() => {
+    resetFetchMocks();
+  });
+
+  it('get an index signature from additionalProperties (e.g. .NET [JsonExtensionData])', async () => {
+    const tree = await runFullSchematics({
+      openapi: '3.0.3',
+      info: { title: 'T', version: '1' },
+      paths: {},
+      components: {
+        schemas: {
+          Tag: { type: 'object', properties: { name: { type: 'string' } } },
+          Extension: {
+            type: 'object',
+            required: ['id'],
+            properties: { id: { type: 'integer' }, note: { type: 'string', nullable: true } },
+            additionalProperties: { $ref: '#/components/schemas/Tag' }
+          },
+          Loose: { type: 'object', properties: { id: { type: 'string' } }, additionalProperties: true },
+          Closed: { type: 'object', properties: { id: { type: 'string' } }, additionalProperties: false }
+        }
+      }
+    } as unknown as ISwaggerSchema, ANGULAR_SCHEMATIC_OPTIONS);
+    const file = (name: string) => tree.readContent(`${OUT}/interfaces/${name}.interface.ts`);
+
+    // The value admits every property's type too (TS2411), and undefined for the optional one
+    expect(file('extension')).toContain('  [key: string]: ITag | number | string | null | undefined;');
+    expect(file('extension')).toContain("import { ITag } from './tag.interface';");
+    expect(file('loose')).toContain('  [key: string]: any;');
+    expect(file('closed')).not.toContain('[key: string]');
+  });
+});

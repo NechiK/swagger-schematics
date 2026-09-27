@@ -1,10 +1,24 @@
 # Roadmap
 
-Known issues and follow-ups that aren't fixed yet, sorted by priority (High, Medium, Low), each with where it is, an example, the fix and whether 2.0.0 introduced it. None are open right now: everything found in the review of PR #36 (2.0.0) was fixed in 2.0.0.
+Known issues and follow-ups that aren't fixed yet, sorted by priority (High, Medium, Low), each with where it is, an example, the fix and whether 2.0.0 introduced it.
 
 Add an entry when an issue is found, remove it when its fix lands, and add a CHANGELOG entry for it as usual.
 
 [Feature ideas](#feature-ideas) at the end are candidates, not commitments: things other generators offer, kept here so they aren't lost.
+
+## High
+
+### Query parameters that are objects aren't serialized
+- **Where:** `types/utils/params.ts` (`resolveParamType`, `formatQueryParams`, the parsed param's `objectEntry`) and both API templates; headers already have the equivalent (`headerSerialization`).
+- **Example:** `{ "name": "filter", "in": "query", "schema": { "$ref": "#/components/schemas/Filter" } }` (Swashbuckle writes this for a `[FromQuery]` DTO), or the same with `"content": { "application/json": { ... } }`. Angular puts the object into `params` as is, which fails to compile (TS2769: HttpClient `params` takes only primitives and arrays of them); RTK compiles but sends `filter=[object Object]`.
+- **Fix:** serialize per the parameter's `style`/`explode` (query defaults: `form`, `explode: true`): `form` + explode spreads the properties as their own params (`role=admin&id=1`, what ASP.NET Core model binding expects), `form` without explode sends `filter=role,admin,id,1`, `deepObject` sends `filter[role]=admin`, and JSON `content` sends `filter={"role":"admin"}`. Unset properties are left out, as for headers.
+- **Introduced by 2.0.0:** no, 1.4.0 behaves the same.
+
+### Path parameter values aren't URL-encoded
+- **Where:** `api/helpers/api.helper.ts`, where `apiUrl` interpolates path params (`${id}`), used by both frameworks.
+- **Example:** `getByName('a/b')` requests `/api/Items/a/b`, which is a different route; a `?` or `#` in the value cuts the path, and `%` is taken as the start of an escape.
+- **Fix:** interpolate `${encodeURIComponent(id)}` (a no-op for numbers, GUIDs and plain words). It changes the request for a caller who already encodes values, which would then be encoded twice, so it needs a major version or an opt-in option (e.g. `encodePathParams`, on by default in the next major), with a CHANGELOG entry under ♻️ Changed.
+- **Introduced by 2.0.0:** no, 1.4.0 behaves the same.
 
 ## Feature ideas
 

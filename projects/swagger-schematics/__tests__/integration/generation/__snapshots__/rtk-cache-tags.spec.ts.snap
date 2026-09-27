@@ -3,7 +3,6 @@
 exports[`RTK cache tags registers the tag on the slice, provides it from queries and invalidates it from mutations 1`] = `
 "
 import { api as baseApi } from '@th-common/store/api-base';
-
 import { TApiTag as CacheTag } from './api-tag.enum';
 
 

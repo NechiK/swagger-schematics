@@ -4,9 +4,6 @@ exports[`RTK Query Schematics Integration Binary Response Support should generat
 "
 import { api as baseApi } from '@th-common/store/api-base';
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 
 export const documentApi = baseApi.injectEndpoints({
   overrideExisting: false,
@@ -16,7 +13,7 @@ export const documentApi = baseApi.injectEndpoints({
       query: ({ page, force }) => ({
         url: '/document',
         method: 'GET',
-        params: omitBy({ page, force }, isNil),
+        params: { ...(page != null ? { page } : {}), force },
       }),
     }),
     /** Download a document */
@@ -24,7 +21,7 @@ export const documentApi = baseApi.injectEndpoints({
       query: ({ documentId, thumbnail }) => ({
         url: \`/document/\${documentId}/download\`,
         method: 'GET',
-        params: omitBy({ thumbnail }, isNil),
+        params: { ...(thumbnail != null ? { thumbnail } : {}) },
         responseHandler: (response) => response.blob(),
       }),
     }),
@@ -69,9 +66,6 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
 exports[`RTK Query Schematics Integration RTK API Slice Generation should generate full RTK API slice 1`] = `
 "
 import { api as baseApi } from '@th-common/store/api-base';
-
-import { omitBy, isNil } from 'lodash-es';
-
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
 import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
 import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
@@ -108,7 +102,7 @@ export const claimApi = baseApi.injectEndpoints({
         url: '/claim',
         method: 'POST',
         body,
-        params: omitBy({ width, height }, isNil),
+        params: { ...(width != null ? { width } : {}), ...(height != null ? { height } : {}) },
       }),
     }),
     /** Creates Claim */
@@ -198,7 +192,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ status, force }) => ({
         url: '/claim/by-filter',
         method: 'DELETE',
-        params: omitBy({ status, force }, isNil),
+        params: { status, ...(force != null ? { force } : {}) },
       }),
     }),
     /** Search claims with optional filters */
@@ -206,7 +200,7 @@ export const claimApi = baseApi.injectEndpoints({
       query: ({ name, status, priority }) => ({
         url: '/claim/search',
         method: 'GET',
-        params: omitBy({ name, status, priority }, isNil),
+        params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) },
       }),
     }),
   }),

@@ -246,7 +246,8 @@ describe('header parameters', () => {
         components: { schemas: {
           Filter: { type: 'object', properties: { role: { type: 'string' } } },
           Filters: { type: 'array', items: { $ref: '#/components/schemas/Filter' } },
-          FilterOrText: { oneOf: [{ $ref: '#/components/schemas/Filter' }, { type: 'string' }] }
+          FilterOrText: { oneOf: [{ $ref: '#/components/schemas/Filter' }, { type: 'string' }] },
+          FilterAlias: { $ref: '#/components/schemas/Filter' }
         } },
         paths: { '/api/Items': { get: {
           tags: ['Items'],
@@ -284,6 +285,10 @@ describe('header parameters', () => {
       it('sends an allOf as an object only when one of its members is an object', () => {
         expect(headersOf({ allOf: [filter, { description: 'The filter' }] })).toBe(`headers: { 'X-Value': ${asObject(',')} }`);
         expect(headersOf({ allOf: [{ type: 'string', enum: ['active', 'closed'] }] })).toBe("headers: { 'X-Value': String(xValue) }");
+      });
+
+      it('sends a $ref to a component that is only a $ref like the component it points to', () => {
+        expect(headersOf({ $ref: '#/components/schemas/FilterAlias' })).toBe(`headers: { 'X-Value': ${asObject(',')} }`);
       });
 
       it('sends an allOf wrapping an array of objects or a union like the wrapped schema', () => {

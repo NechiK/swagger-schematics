@@ -176,3 +176,58 @@ describe('path-level parameters', () => {
     expect(item.map(api => api.httpMethod)).toEqual(['GET']);
   });
 });
+
+/**
+ * OpenAPI requires every `{placeholder}` to be declared as a path parameter. When a document
+ * leaves one out, the generated method still takes a real argument for it.
+ */
+describe('undeclared path parameters', () => {
+  const schema = schemaWithPaths({
+    '/api/Orders/{id}': {
+      put: {
+        tags: ['Orders'],
+        requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { id: { type: 'integer' } } } } } },
+        responses: ok
+      }
+    },
+    '/api/Orders/{orderId}/lines': { get: { tags: ['Orders'], responses: ok } },
+    '/api/Orders/{ID}/notes': { get: { tags: ['Orders'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }], responses: ok } }
+  });
+  const parse = () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    try {
+      return { apiList: transformSwaggerSchema(schema).Orders.apiList, warnings: warn.mock.calls.map(call => String(call[0])) };
+    } finally {
+      warn.mockRestore();
+    }
+  };
+
+  it('become required string params, not a guess at a property of the body', () => {
+    const [put, get] = parse().apiList;
+
+    // Was `this.getUrl(`/${body.id}`)` with `(body)`, which sends `undefined` when the body has no id
+    expect(put.apiMethodParams).toBe('id: string, body: object');
+    expect(put.apiUrl).toBe('${id}');
+    // Was `${orderId}`, a variable nothing declared
+    expect(get.apiMethodParams).toBe('orderId: string');
+    expect(get.apiUrl).toBe('${orderId}/lines');
+  });
+
+  it('use a declared param whose name differs only in case', () => {
+    const notes = parse().apiList[2];
+
+    // Was `${iD}` (the placeholder camelized), a variable nothing declared
+
+    expect(notes.apiMethodParams).toBe('id: number');
+    expect(notes.apiUrl).toBe('${id}/notes');
+  });
+
+  it('are reported, so the document can be fixed', () => {
+    const { warnings } = parse();
+
+    expect(warnings).toContainEqual(expect.stringContaining("Path parameter 'id' of PUT /api/Orders/{id} is not declared"));
+    expect(warnings).toContainEqual(expect.stringContaining("Path parameter 'orderId' of GET /api/Orders/{orderId}/lines is not declared"));
+    expect(warnings).toContainEqual(expect.stringContaining("Path parameter '{ID}' of GET /api/Orders/{ID}/notes is declared as 'id'"));
+    expect(transformSwaggerSchema(schema, { silent: true }).Orders.apiList).toHaveLength(3);
+  });
+});

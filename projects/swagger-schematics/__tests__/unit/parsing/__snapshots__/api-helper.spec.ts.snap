@@ -919,14 +919,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
       {
         "apiMethodName": "updateClaimNoteById",
         "apiMethodParamNames": [
+          "id",
           "body",
         ],
-        "apiMethodParams": "body: ICreateNoteDTO",
-        "apiMethodRequestType": "{ body: ICreateNoteDTO }",
+        "apiMethodParams": "id: string, body: ICreateNoteDTO",
+        "apiMethodRequestType": "{ id: string; body: ICreateNoteDTO }",
         "apiMethodType": "put",
         "apiPath": "/api/Claim/note/{id}",
-        "apiUrl": "note/\${body.id}",
-        "apiUrlFormatted": "\`/note/\${body.id}\`",
+        "apiUrl": "note/\${id}",
+        "apiUrlFormatted": "\`/note/\${id}\`",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: ICreateNoteDTO",
@@ -958,7 +959,25 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
-        "pathParams": [],
+        "pathParams": [
+          {
+            "functionSymbol": "id: string",
+            "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
+            "objectSymbol": "id",
+            "originalParam": {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+              },
+            },
+            "typeSymbol": "string",
+          },
+        ],
         "queryParams": [],
         "queryParamsFormatted": "",
         "requestMethod": "put",

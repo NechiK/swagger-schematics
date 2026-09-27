@@ -120,9 +120,9 @@ export class ClaimApiService extends ApiBaseService {
   }
 
   /** Update note by id */
-  updateClaimNoteById(body: ICreateNoteDTO): Observable<void> {
+  updateClaimNoteById(id: string, body: ICreateNoteDTO): Observable<void> {
     return this.httpClient.put<void>(
-      this.getUrl(\`/note/\${body.id}\`),
+      this.getUrl(\`/note/\${id}\`),
       body
     );
   }

@@ -173,9 +173,9 @@ export const claimApi = baseApi.injectEndpoints({
       }),
     }),
     /** Update note by id */
-    claimUpdateClaimNoteById: builder.mutation<void, { body: ICreateNoteDTO }>({
-      query: ({ body }) => ({
-        url: \`/claim/note/\${body.id}\`,
+    claimUpdateClaimNoteById: builder.mutation<void, { id: string; body: ICreateNoteDTO }>({
+      query: ({ id, body }) => ({
+        url: \`/claim/note/\${id}\`,
         method: 'PUT',
         body,
       }),

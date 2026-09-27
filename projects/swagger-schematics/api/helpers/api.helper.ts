@@ -251,6 +251,48 @@ function escapeUrlText(text: string): string {
     return text.replace(/[\\'`]/g, '\\$&').replace(/\$\{/g, '\\${');
 }
 
+/**
+ * The declared path parameter for a `{placeholder}`: the one with its name, else the only one
+ * whose name differs just in case (`{Id}` declared as `id`), which a case-sensitive lookup misses.
+ */
+function findPathParam<T extends { in: string; name: string }>(params: T[], placeholder: string): T | undefined {
+    const pathParams = params.filter(param => param.in === 'path');
+    const exact = pathParams.find(param => param.name === placeholder);
+    if (exact) {
+        return exact;
+    }
+    const byCase = pathParams.filter(param => param.name.toLowerCase() === placeholder.toLowerCase());
+    return byCase.length === 1 ? byCase[0] : undefined;
+}
+
+/**
+ * The operation with a required `string` path parameter for each `{placeholder}` in the path
+ * that it declares none for, and those names; also the placeholders matched to a parameter
+ * whose name differs only in case. OpenAPI requires every placeholder to be declared, but a
+ * document that leaves one out still needs a value for it, and the generated method would
+ * otherwise interpolate an undeclared variable.
+ */
+function withUndeclaredPathParams(operation: TOperation, segments: string[]): {
+    operation: TOperation;
+    undeclaredPathParams: string[];
+    caseMismatches: Array<[string, string]>;
+} {
+    const params = (operation.parameters ?? []) as TParam[];
+    const placeholders = [...new Set(segments.flatMap(segment => (segment.match(/\{[^}]+}/g) ?? []).map(match => match.slice(1, -1))))];
+    const undeclaredPathParams = placeholders.filter(name => !findPathParam(params, name));
+    const caseMismatches = placeholders
+        .map(name => [name, findPathParam(params, name)?.name] as [string, string | undefined])
+        .filter((pair): pair is [string, string] => pair[1] !== undefined && pair[1] !== pair[0]);
+    if (!undeclaredPathParams.length) {
+        return { operation, undeclaredPathParams, caseMismatches };
+    }
+    const parameters = [
+        ...(operation.parameters ?? []),
+        ...undeclaredPathParams.map(name => ({ name, in: 'path', required: true, schema: { type: 'string' } }))
+    ] as TOperation['parameters'];
+    return { operation: { ...operation, parameters }, undeclaredPathParams, caseMismatches };
+}
+
 export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: TTransformSwaggerSchemaOptions): IParsedApiSchema => {
     const apiPathPrefix = normalizeApiPathPrefix(options?.apiPathKey || '/api/');
 
@@ -298,8 +340,17 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             : declaredOperations;
 
         apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
-            [operationKey, operation]
+            [operationKey, declaredOperation]
         ): IParsedApiItem => {
+            const { operation, undeclaredPathParams, caseMismatches } = withUndeclaredPathParams(declaredOperation, segments);
+            if (!options?.silent) {
+                undeclaredPathParams.forEach(name => console.warn(`Path parameter '${name}' of ${operationKey.toUpperCase()} ${apiPathKey} ` +
+                    "is not declared in the operation's parameters; the generated method takes it as a required string. " +
+                    'Declare it in the OpenAPI document to give it its type.'));
+                caseMismatches.forEach(([placeholder, name]) => console.warn(`Path parameter '{${placeholder}}' of ` +
+                    `${operationKey.toUpperCase()} ${apiPathKey} is declared as '${name}'; the generated method uses '${name}' for it. ` +
+                    'Parameter names are case-sensitive: use the same case in the path and the parameter.'));
+            }
             const apiMethodName = getApiMethodName(operation, operationKey, apiPathKey, apiPathPrefix, { silent: options?.silent });
             const {
                 queryParams,
@@ -334,17 +385,15 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
             // Build API URL, handling path params that may come from body for PUT/POST
             // Every template expression in a segment is replaced, keeping the literal text around
             // it (`{name}.{ext}`, `{id}.json`)
+            // (every one has a path param: see withUndeclaredPathParams)
             const apiUrl = segments.map(urlSegment => urlSegment.split(/(\{[^}]+})/).map(part => {
                 const paramName = /^\{([^}]+)}$/.exec(part)?.[1];
                 if (paramName === undefined) {
                     return escapeUrlText(part);
                 }
-                const pathParam = pathParams.find(p => p.originalParam.name === paramName);
-                // For PUT/POST with body and no separate path param, use body.paramName
-                if (!pathParam && bodyParam && ['put', 'post'].includes(operationKey)) {
-                    return `\${${bodyParam.objectSymbol}.${camelize(paramName)}}`;
-                }
-                return `\${${pathParam?.objectSymbol ?? toParamSymbol(paramName)}}`;
+                const pathParam = findPathParam(pathParams.map(p => p.originalParam), paramName);
+                const parsedPathParam = pathParams.find(p => p.originalParam === pathParam);
+                return `\${${parsedPathParam?.objectSymbol ?? toParamSymbol(paramName)}}`;
             }).join('')).join('/');
 
             const isQuery = ['get', 'head'].includes(operationKey);

@@ -424,7 +424,7 @@ Each item in `apiList` has the following properties:
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
 | `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays and tuples of objects and `application/json` content params as JSON (a `oneOf`/`anyOf` with an array of objects among its members decides at runtime: only an array holding an object is sent as JSON); empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
-| `pathParams`             | array    | Parsed path params; `originalParam.name` is the name in the path template, `objectSymbol` its variable |
+| `pathParams`             | array    | Parsed path params, one per `{placeholder}` in the path (a placeholder the operation doesn't declare gets a required `string` param); `originalParam.name` is the declared name, `objectSymbol` its variable |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |
 | `summary`                | string   | Operation summary from OpenAPI spec                                                                  |
 | `description`            | string   | Operation description from OpenAPI spec                                                              |

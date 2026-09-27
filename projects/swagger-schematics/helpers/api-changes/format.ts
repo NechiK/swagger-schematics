@@ -67,22 +67,34 @@ function markdownLine(change: IApiChange): string {
 }
 
 /**
+ * Why a run has no change list: no snapshot yet ('missing'), one that isn't valid JSON or can't be
+ * compared with the schema ('unreadable'), or no `schemaSnapshotPath` ('not-configured').
+ */
+export type TSnapshotState = 'missing' | 'unreadable' | 'not-configured';
+
+/**
  * Markdown report for a pull request description, cut to `maxLength` with a
- * "...and N more" line when the change list is long.
+ * "...and N more" line when the change list is long. `snapshotState` says why `changes` is null.
  */
 export function formatMarkdownReport(
     changes: IApiChange[] | null,
     files: IFileCounts,
     maxLength = MAX_REPORT_LENGTH,
-    snapshotConfigured = true
+    snapshotState: TSnapshotState = 'missing'
 ): string {
     const footer = `\n_${filesLine(files)}_\n`;
 
     if (changes === null) {
-        return snapshotConfigured
-            ? `## API changes\n\nNo previous schema snapshot to compare against, so the changes can't be listed yet. ` +
-                `This run saved one; the next run lists what changed.\n${footer}`
-            : `## API changes\n\nSet \`schemaSnapshotPath\` to list API changes; without a schema snapshot this report only counts files.\n${footer}`;
+        switch (snapshotState) {
+            case 'unreadable':
+                return `## API changes\n\nThe previous schema snapshot couldn't be read or compared with the schema, so the changes ` +
+                    `can't be listed on this run. This run replaced it; the next run lists what changed.\n${footer}`;
+            case 'not-configured':
+                return `## API changes\n\nSet \`schemaSnapshotPath\` to list API changes; without a schema snapshot this report only counts files.\n${footer}`;
+            default:
+                return `## API changes\n\nNo previous schema snapshot to compare against, so the changes can't be listed yet. ` +
+                    `This run saved one; the next run lists what changed.\n${footer}`;
+        }
     }
     if (!changes.length) {
         return `## API changes: none\n\nNothing in the schema changed the generated types or endpoints.\n${footer}`;

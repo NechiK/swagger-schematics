@@ -42,7 +42,7 @@ describe('formatMarkdownReport', () => {
   });
 
   it("doesn't claim a snapshot was saved when none is configured", () => {
-    const report = formatMarkdownReport(null, FILES, undefined, false);
+    const report = formatMarkdownReport(null, FILES, undefined, 'not-configured');
 
     expect(report).toContain('Set `schemaSnapshotPath` to list API changes');
     expect(report).not.toContain('This run saved one');
@@ -51,6 +51,13 @@ describe('formatMarkdownReport', () => {
   it('explains a missing baseline and an unchanged schema', () => {
     expect(formatMarkdownReport(null, FILES)).toContain('No previous schema snapshot');
     expect(formatMarkdownReport([], FILES)).toContain('## API changes: none');
+  });
+
+  it("doesn't call a snapshot that couldn't be read or compared missing", () => {
+    const report = formatMarkdownReport(null, FILES, undefined, 'unreadable');
+
+    expect(report).toContain("The previous schema snapshot couldn't be read or compared with the schema");
+    expect(report).not.toContain('No previous schema snapshot');
   });
 
   it('stays within the length limit and counts what it left out', () => {

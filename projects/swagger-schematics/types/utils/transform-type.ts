@@ -318,6 +318,12 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
  * `IA | null` does, and so does `'>' | '<'` (the brackets are literal text).
  */
 function hasTopLevelOperator(typeSymbol: string, operators: string): boolean {
+    return topLevelOperatorIndexes(typeSymbol, operators).length > 0;
+}
+
+/** The positions of the top-level `operators` in a rendered type symbol (see hasTopLevelOperator). */
+function topLevelOperatorIndexes(typeSymbol: string, operators: string): number[] {
+    const indexes: number[] = [];
     let depth = 0;
     let quote: string | undefined;
     for (let i = 0; i < typeSymbol.length; i++) {
@@ -335,10 +341,10 @@ function hasTopLevelOperator(typeSymbol: string, operators: string): boolean {
         } else if (char === '>' || char === ')' || char === '}' || char === ']') {
             depth--;
         } else if (depth === 0 && operators.includes(char)) {
-            return true;
+            indexes.push(i);
         }
     }
-    return false;
+    return indexes;
 }
 
 /**
@@ -360,14 +366,34 @@ function wrapForPostfix(typeSymbol: string): string {
 }
 
 /**
- * A record type alias as an index signature: `Record<string, TJson>` -> `{ [key: string]: TJson }`.
+ * A query array's type with its elements' nullability left out: HttpClient's `params` only takes
+ * arrays of string | number | boolean, so `(number | null)[]` (Swashbuckle's `List<int?>`, or items
+ * that `$ref` a nullable component) wouldn't compile, and a null element has no query-string form
+ * anyway. Any other type is returned as is.
+ */
+export function withNonNullableElements(typeSymbol: string): string {
+    const match = /^\(([\s\S]*) \| null\)\[\]$/.exec(typeSymbol);
+    // The parentheses must enclose the whole element: not `(A) | (B | null)[]`
+    return match && !hasTopLevelOperator(typeSymbol, '|&') ? `${wrapForPostfix(match[1])}[]` : typeSymbol;
+}
+
+/**
+ * A type alias's records as index signatures: `Record<string, TJson>` -> `{ [key: string]: TJson }`,
+ * also as a member of a top-level union or intersection (`string | TJson[] | Record<string, TJson>`).
  * TypeScript resolves a generic alias like `Record` eagerly, so a record that refers back to
- * itself (`TJson = Record<string, TJson>`, or the JsonObject/JsonValue pair) is a circular alias
- * error; an object type is resolved lazily and compiles. Anything else is returned as is.
+ * itself (`TJson = Record<string, TJson>`, the JsonObject/JsonValue pair, or a JSON value union)
+ * is a circular alias error; an object type is resolved lazily and compiles. Anything else is
+ * returned as is.
  */
 export function toIndexSignature(typeExpression: string): string {
-    const match = /^Record<string, ([\s\S]*)>$/.exec(typeExpression);
-    return match && !hasTopLevelOperator(typeExpression, '|&') ? `{ [key: string]: ${match[1]} }` : typeExpression;
+    const bounds = [-1, ...topLevelOperatorIndexes(typeExpression, '|&'), typeExpression.length];
+    return bounds.slice(1).map((end, index) => {
+        const start = bounds[index];
+        const member = typeExpression.slice(start + 1, end);
+        const match = /^(\s*)Record<string, ([\s\S]*)>(\s*)$/.exec(member);
+        const converted = match ? `${match[1]}{ [key: string]: ${match[2]} }${match[3]}` : member;
+        return start < 0 ? converted : typeExpression[start] + converted;
+    }).join('');
 }
 
 /**
@@ -778,6 +804,14 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     }];
 }
 
+/** Whether an `enum` lists booleans only (and `null`): `[true, false]`, or `[true]` for a constant. */
+function isBooleanEnum(schema: TSchemaByType): boolean {
+    const values = (schema as { enum?: unknown }).enum;
+    return Array.isArray(values)
+        && values.some(value => typeof value === 'boolean')
+        && values.every(value => typeof value === 'boolean' || value === null);
+}
+
 /**
  * Check if a schema is a primitive wrapper (type without properties or enum)
  * These are schemas that define a primitive type, possibly with nullable, format, etc.
@@ -799,7 +833,7 @@ export function isPrimitiveWrapper(schema: TSchemaByType): boolean {
     // OpenAPI 3.1 type arrays: `["null"]`, and nullable primitives like `["string", "null"]`
     // (the 3.1 spelling of 3.0's `nullable: true`), inline like their single-type forms
     if (hasTypeArray(schema)) {
-        return !('enum' in schema)
+        return (!('enum' in schema) || isBooleanEnum(schema))
             && schema.type.every(typeName => ['integer', 'number', 'string', 'boolean', 'null'].includes(typeName));
     }
 
@@ -815,8 +849,9 @@ export function isPrimitiveWrapper(schema: TSchemaByType): boolean {
         return false;
     }
     
-    // Not a primitive wrapper if it's an enum (enums should still be generated as types)
-    if ('enum' in schema) {
+    // Not a primitive wrapper if it's an enum (enums should still be generated as types), unless
+    // its values are booleans, which a TypeScript enum can't hold (`true = true` doesn't compile)
+    if ('enum' in schema && !isBooleanEnum(schema)) {
         return false;
     }
     

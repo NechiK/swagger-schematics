@@ -273,12 +273,13 @@ function parseDefaultMethodName(methodPrefix: string, apiPathKey: string) {
     const segmentsWithParams = apiPathKey.match(/(([a-zA-Z]+\/)+{(\w+)})+/g);
     if (segmentsWithParams) {
         return [methodPrefix, ...segments.map(urlSegment => {
-            const isParam = urlSegment.match(/\{(.*)}/);
+            // Every parameter of the segment (`{name}.{ext}` -> ByNameExt)
+            const params = urlSegment.match(/\{[^}]+}/g);
             const isApi = urlSegment.match(/^api/i);
             if (isApi) {
                 return '';
-            } else if (isParam) {
-                return camelize(`By ${isParam[1]}`);
+            } else if (params) {
+                return camelize(`By ${params.map(param => param.slice(1, -1)).join(' ')}`);
             } else {
                 return capitalize(urlSegment);
             }

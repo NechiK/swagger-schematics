@@ -88,20 +88,22 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
         // allOf -> intersection type (A & B & C). Delegate to transformType,
         // whose allOf handling also renders sibling own-properties and lifts a
         // { type: "null" } member to a trailing `| null`; getCompositionImports
-        // (importRefs above) already includes the own-property refs.
+        // (importRefs above) already includes the own-property refs. A record member
+        // renders as an index signature, so it may refer to the alias (see toIndexSignature).
         const [typeExpression] = transformType(schema, swagger, options);
         return {
-            typeExpression,
+            typeExpression: toIndexSignature(typeExpression),
             importRefs: removeImportDuplicates(importRefs)
         };
     }
 
     if (isOneOf(schema) || isAnyOf(schema)) {
         // oneOf/anyOf -> union type (A | B | C). Delegate to transformType so a
-        // { type: "null" } member collapses to `| null` instead of `any`.
+        // { type: "null" } member collapses to `| null` instead of `any`, and a record
+        // member renders as an index signature (a JSON value union refers to itself).
         const [typeExpression] = transformType(schema, swagger, options);
         return {
-            typeExpression,
+            typeExpression: toIndexSignature(typeExpression),
             importRefs: removeImportDuplicates(importRefs)
         };
     }

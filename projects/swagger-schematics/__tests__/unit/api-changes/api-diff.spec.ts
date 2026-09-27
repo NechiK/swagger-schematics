@@ -144,5 +144,11 @@ describe('diffApiModels', () => {
       expect(renamed('angular')).toEqual(['breaking: Endpoint changed']);
       expect(renamed('react-rtk')).toEqual(['breaking: Endpoint changed']);
     });
+
+    it('compares header names case-insensitively, as HTTP does', () => {
+      // Re-casing a header keeps its variable, so a new optional query param next to it is still only added
+      expect(severityOf('angular', schemaWith([id, query('a'), header('X-Tenant')]), schemaWith([id, query('a'), header('x-tenant'), query('b')])))
+        .toEqual(['added: Optional parameter added']);
+    });
   });
 });

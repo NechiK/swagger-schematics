@@ -21,6 +21,10 @@ describe('toEnumMemberName', () => {
     expect(toEnumMemberName('2fast', 0)).toBe('_2fast');
   });
 
+  it("renames __proto__, which would set the enum object's prototype instead of adding a member", () => {
+    expect(toEnumMemberName('__proto__', 0)).toBe('Proto');
+  });
+
   it('falls back to an indexed name when nothing sanitizable remains', () => {
     expect(toEnumMemberName('***', 3)).toBe('Value3');
   });

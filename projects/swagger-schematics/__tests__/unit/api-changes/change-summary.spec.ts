@@ -70,6 +70,25 @@ describe('runChangeSummaryAfterGeneration', () => {
     expect(fs.existsSync(path.join(dir, 'report.md'))).toBe(true);
     expect(messages).toContainEqual(['warn', expect.stringContaining('Could not compare the schema with the snapshot')]);
     expect(JSON.parse(fs.readFileSync(snapshot, 'utf-8')).components.schemas).toEqual({});
+    // The report doesn't claim there was no snapshot
+    const report = fs.readFileSync(path.join(dir, 'report.md'), 'utf-8');
+    expect(report).toContain("The previous schema snapshot couldn't be read or compared with the schema");
+    expect(report).not.toContain('No previous schema snapshot');
+  });
+
+  it("doesn't claim a dry run replaces a snapshot that isn't valid JSON", async () => {
+    const snapshot = path.join(dir, 'snapshot.json');
+    fs.writeFileSync(snapshot, '{not json');
+
+    await runChangeSummaryAfterGeneration({
+      config: config({ schemaSnapshotPath: relative('snapshot.json') }),
+      dryRun: true,
+      files: FILES,
+      logger
+    });
+
+    expect(messages).toContainEqual(['warn', expect.stringContaining('a run without --dry-run replaces it')]);
+    expect(fs.readFileSync(snapshot, 'utf-8')).toBe('{not json');
   });
 
   it('only warns when the summary fails without a report requested', async () => {

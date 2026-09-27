@@ -243,7 +243,11 @@ describe('header parameters', () => {
       const headersOf = (schema: unknown, explode = false) => transformSwaggerSchema({
         openapi: '3.1.0',
         info: { title: 'T', version: '1' },
-        components: { schemas: { Filter: { type: 'object', properties: { role: { type: 'string' } } } } },
+        components: { schemas: {
+          Filter: { type: 'object', properties: { role: { type: 'string' } } },
+          Filters: { type: 'array', items: { $ref: '#/components/schemas/Filter' } },
+          FilterOrText: { oneOf: [{ $ref: '#/components/schemas/Filter' }, { type: 'string' }] }
+        } },
         paths: { '/api/Items': { get: {
           tags: ['Items'],
           parameters: [{ name: 'X-Value', in: 'header', required: true, explode, schema }],
@@ -282,6 +286,13 @@ describe('header parameters', () => {
         expect(headersOf({ allOf: [{ type: 'string', enum: ['active', 'closed'] }] })).toBe("headers: { 'X-Value': String(xValue) }");
       });
 
+      it('sends an allOf wrapping an array of objects or a union like the wrapped schema', () => {
+        // NSwag and Swashbuckle wrap a $ref in allOf to add a description or nullability
+        expect(headersOf({ allOf: [{ $ref: '#/components/schemas/Filters' }] })).toBe("headers: { 'X-Value': JSON.stringify(xValue) }");
+        expect(headersOf({ allOf: [{ $ref: '#/components/schemas/FilterOrText' }] }))
+          .toBe(`headers: { 'X-Value': (typeof xValue === 'object' && !Array.isArray(xValue) ? ${asObject(',')} : String(xValue)) }`);
+      });
+
       it('sends a prefixItems tuple holding an object as JSON', () => {
         expect(headersOf({ type: 'array', prefixItems: [{ type: 'string' }, filter] })).toBe("headers: { 'X-Value': JSON.stringify(xValue) }");
         expect(headersOf({ type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }] })).toBe("headers: { 'X-Value': String(xValue) }");
@@ -289,10 +300,21 @@ describe('header parameters', () => {
 
       it('checks arrays first at runtime for a oneOf/anyOf with an array of objects among its members', () => {
         const mixed = (separator: string) =>
-          `(Array.isArray(xValue) ? JSON.stringify(xValue) : typeof xValue === 'object' ? ${asObject(separator)} : String(xValue))`;
+          "(Array.isArray(xValue) ? (xValue.some((item: unknown) => typeof item === 'object' && item !== null) ? JSON.stringify(xValue) : String(xValue)) : " +
+          `typeof xValue === 'object' ? ${asObject(separator)} : String(xValue))`;
 
         expect(headersOf({ oneOf: [filter, { type: 'array', items: filter }] })).toBe(`headers: { 'X-Value': ${mixed(',')} }`);
         expect(headersOf({ anyOf: [{ type: 'string' }, { type: 'array', items: filter }] }, true)).toBe(`headers: { 'X-Value': ${mixed('=')} }`);
+      });
+
+      it('sends a primitive array of such a union comma-separated, and only an array holding an object as JSON', () => {
+        const headers = headersOf({ oneOf: [{ type: 'array', items: filter }, { type: 'array', items: { type: 'string' } }] });
+        const value = headers.slice("headers: { 'X-Value': ".length, -' }'.length).replace('(item: unknown)', 'item');
+        const send = new Function('xValue', `return ${value};`) as (header: unknown) => string;
+
+        expect(send(['a', 'b'])).toBe('a,b');
+        expect(send([{ role: 'admin' }])).toBe('[{"role":"admin"}]');
+        expect(send({ role: 'admin' })).toBe('role,admin');
       });
 
       it('keeps String() for primitives, arrays of primitives and unions of them', () => {

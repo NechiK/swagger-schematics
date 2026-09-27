@@ -6,7 +6,7 @@ import { resolveFramework } from '../../interfaces/swagger-schematics/framework'
 import { fetchSwaggerSchema } from '../swagger-schema.helper';
 import { buildApiModel } from './api-model';
 import { diffApiModels, IApiChange } from './api-diff';
-import { formatConsoleSummary, formatMarkdownReport, IFileCounts } from './format';
+import { formatConsoleSummary, formatMarkdownReport, IFileCounts, TSnapshotState } from './format';
 import { readSchemaSnapshot, resolveProjectPath, serializeSchemaSnapshot, writeTextFile } from './schema-snapshot';
 
 export interface IChangeSummaryRun {
@@ -38,6 +38,11 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
     const current = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
     const snapshotPath = snapshotSetting ? resolveProjectPath(snapshotSetting) : null;
     let changes: IApiChange[] | null = null;
+    let snapshotState: TSnapshotState = snapshotPath ? 'missing' : 'not-configured';
+    // A dry run writes nothing, so a snapshot that can't be used stays as it is
+    const replaced = run.dryRun
+        ? 'a run without --dry-run replaces it with the current schema.'
+        : 'it is replaced with the current schema, and changes are listed from the next run.';
 
     if (snapshotPath) {
         const previous = readSchemaSnapshot(snapshotPath);
@@ -57,12 +62,12 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
                 changes = diffApiModels(buildApiModel(previous.schema, modelOptions), buildApiModel(current, modelOptions));
             } catch (error) {
                 // A snapshot this generator can't read would otherwise fail every run: replace it instead
-                logger.warn(`Could not compare the schema with the snapshot ${snapshotSetting} (${(error as Error).message}); ` +
-                    `it is replaced with the current schema, and changes are listed from the next run.`);
+                logger.warn(`Could not compare the schema with the snapshot ${snapshotSetting} (${(error as Error).message}); ${replaced}`);
+                snapshotState = 'unreadable';
             }
         } else if (previous.reason === 'invalid') {
-            logger.warn(`Schema snapshot ${snapshotSetting} is not valid JSON (${previous.error}); ` +
-                `it is replaced with the current schema, and changes are listed from the next run.`);
+            logger.warn(`Schema snapshot ${snapshotSetting} is not valid JSON (${previous.error}); ${replaced}`);
+            snapshotState = 'unreadable';
         } else {
             logger.info(`No schema snapshot at ${snapshotSetting} yet, so API changes can't be listed on this run.`);
         }
@@ -82,7 +87,7 @@ export async function runChangeSummary(run: IChangeSummaryRun): Promise<void> {
     }
 
     if (run.reportPath) {
-        writeTextFile(path.resolve(process.cwd(), run.reportPath), formatMarkdownReport(changes, run.files, undefined, !!snapshotPath));
+        writeTextFile(path.resolve(process.cwd(), run.reportPath), formatMarkdownReport(changes, run.files, undefined, snapshotState));
         logger.info(`Wrote the API change report to ${run.reportPath}`);
     }
 

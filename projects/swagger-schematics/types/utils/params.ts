@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, rendersNull } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition, isNullSchema, getMappedType, rendersNull, withNonNullableElements } from "./transform-type";
 import { ISwaggerSchema, TSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
@@ -63,9 +63,10 @@ export interface IParsedParam<T> {
      * 'object-or-value-exploded': a `oneOf`/`anyOf` mixing objects and primitives, checked at
      * runtime; 'json': a `content: application/json` param, or an array of objects (which
      * `simple` style doesn't define); 'mixed' / 'mixed-exploded': a `oneOf`/`anyOf` where one
-     * member is an array of objects, checked at runtime (any array as JSON, an object as in
-     * 'object', anything else with `String()`). Unset: `String(value)`, which already gives
-     * `simple` style for primitives and arrays of primitives (`1,2`).
+     * member is an array of objects, checked at runtime (an array holding an object as JSON, an
+     * object as in 'object', anything else, a primitive array included, with `String()`).
+     * Unset: `String(value)`, which already gives `simple` style for primitives and arrays of
+     * primitives (`1,2`).
      */
     headerSerialization?: THeaderSerialization;
 }
@@ -309,7 +310,15 @@ export function toParamSymbol(name: string): string {
 
 /** An object literal entry for a param: shorthand when the key is the variable, else a quoted key. */
 function toObjectEntry(key: string, symbol: string): string {
-    return key === symbol ? symbol : `${toStringLiteral(key)}: ${symbol}`;
+    return key === symbol ? symbol : `${toObjectKey(key)}: ${symbol}`;
+}
+
+/**
+ * A param name as an object literal key. `__proto__` is computed: a plain `'__proto__': value`
+ * sets the object's prototype instead of adding the entry, so the param would never be sent.
+ */
+function toObjectKey(key: string): string {
+    return key === '__proto__' ? `[${toStringLiteral(key)}]` : toStringLiteral(key);
 }
 
 export const transformOperationParams = (operation: TOperation, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
@@ -571,7 +580,7 @@ function formatHeaderValue(symbol: string, serialization?: THeaderSerialization)
                 `${formatObject(serialization === 'object-or-value' ? ',' : '=')} : String(${symbol}))`;
         case 'mixed':
         case 'mixed-exploded':
-            return `(Array.isArray(${symbol}) ? JSON.stringify(${symbol}) : typeof ${symbol} === 'object' ? ` +
+            return `(Array.isArray(${symbol}) ? (${symbol}.some((item: unknown) => typeof item === 'object' && item !== null) ? JSON.stringify(${symbol}) : String(${symbol})) : typeof ${symbol} === 'object' ? ` +
                 `${formatObject(serialization === 'mixed' ? ',' : '=')} : String(${symbol}))`;
         case 'json':
             return `JSON.stringify(${symbol})`;
@@ -641,10 +650,16 @@ function getHeaderValueShape(
         return 'object';
     }
     // `allOf` is an intersection: an object if any member is one (an `allOf` wrapping a
-    // string enum `$ref`, as NSwag and Swashbuckle write it, is a string)
-    const allOf = (schema as { allOf?: TSchema[] }).allOf ?? [];
-    if (allOf.some(member => getHeaderValueShape(member, swagger, options, new Set(seen)) === 'object')) {
+    // string enum `$ref`, as NSwag and Swashbuckle write it, is a string), else the shape of a
+    // member that isn't a plain value (an `allOf` wrapping an array of objects, or a union)
+    const allOfShapes = ((schema as { allOf?: TSchema[] }).allOf ?? [])
+        .map(member => getHeaderValueShape(member, swagger, options, new Set(seen)));
+    if (allOfShapes.includes('object')) {
         return 'object';
+    }
+    const allOfShape = allOfShapes.find(shape => shape !== 'value');
+    if (allOfShape) {
+        return allOfShape;
     }
     const members = [
         ...((schema as { oneOf?: TSchema[] }).oneOf ?? []),
@@ -713,42 +728,10 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
         return { typeSymbol: 'any', isParamNullable: false, importRefs: [] };
     }
 
-    const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(param.in === 'query' ? withNonNullableItems(schema) : schema, swagger, options);
-    const typeSymbol = withNullability(rawTypeSymbol, schema, swagger);
+    const [rawTypeSymbol, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+    const typeSymbol = withNullability(param.in === 'query' ? withNonNullableElements(rawTypeSymbol) : rawTypeSymbol, schema, swagger);
     const isParamNullable = isNullable(schema, swagger) || rendersNull(typeSymbol);
     return { typeSymbol, isParamNullable, importRefs };
-}
-
-/**
- * A query array whose items are nullable, with the items' nullability left out: HttpClient's
- * `params` only takes arrays of string | number | boolean, so `(number | null)[]` (Swashbuckle's
- * `List<int?>`) wouldn't compile, and a null element has no query-string form anyway. Only
- * inline items change; any other schema is returned as is.
- */
-function withNonNullableItems(schema: TSchema): TSchema {
-    const items = typeof schema === 'object' && !isRef(schema) ? (schema as { items?: unknown }).items : undefined;
-    if (!items || typeof items !== 'object' || isRef(items as TSchema)) {
-        return schema;
-    }
-    const nonNullItems: Record<string, unknown> = { ...(items as Record<string, unknown>) };
-    delete nonNullItems.nullable;
-    const { type, oneOf, anyOf, enum: enumValues } = nonNullItems;
-    if (Array.isArray(type) && type.some(member => member !== 'null')) {
-        nonNullItems.type = type.filter(member => member !== 'null');
-    }
-    if (Array.isArray(oneOf)) {
-        nonNullItems.oneOf = oneOf.filter(member => !isNullSchema(member));
-    }
-    if (Array.isArray(anyOf)) {
-        nonNullItems.anyOf = anyOf.filter(member => !isNullSchema(member));
-    }
-    if (Array.isArray(enumValues)) {
-        nonNullItems.enum = enumValues.filter(value => value !== null);
-    }
-    if (nonNullItems.default === null) {
-        delete nonNullItems.default;
-    }
-    return { ...(schema as object), items: nonNullItems } as unknown as TSchema;
 }
 
 export function transformParamToFunctionSymbol(param: TParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): string {

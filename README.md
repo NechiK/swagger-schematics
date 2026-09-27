@@ -214,7 +214,7 @@ For a CI pipeline, add `--change-report=<file>` to also write the summary as mar
 npx swagger-schematics all --change-report=api-changes.md
 ```
 
-If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems are only warnings: a snapshot that can't be saved, or one that can't be compared with the schema (it is then replaced, and changes are listed from the next run).
+If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems are only warnings: a snapshot that can't be saved, or one that can't be compared with the schema (it is then replaced, the report says so, and changes are listed from the next run; a `--dry-run` leaves it as it is).
 
 ### Filtering APIs
 
@@ -422,7 +422,7 @@ Each item in `apiList` has the following properties:
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Parsed query params; `originalParam.name` is the name sent in the query string, `objectSymbol` its variable (`page_size` → "pageSize", `default` → "defaultParam"), `objectEntry` the object entry that maps one to the other (`'page_size': pageSize`) |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
-| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays and tuples of objects and `application/json` content params as JSON; empty when none |
+| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays and tuples of objects and `application/json` content params as JSON (a `oneOf`/`anyOf` with an array of objects among its members decides at runtime: only an array holding an object is sent as JSON); empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
 | `pathParams`             | array    | Parsed path params; `originalParam.name` is the name in the path template, `objectSymbol` its variable |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |

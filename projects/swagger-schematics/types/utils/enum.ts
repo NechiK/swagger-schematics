@@ -10,7 +10,9 @@ const VALID_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
  */
 export function toEnumMemberName(raw: string | number, index: number): string {
     const value = String(raw);
-    if (VALID_IDENTIFIER.test(value)) {
+    // `__proto__` is a valid identifier, but the enum's `E["__proto__"] = ...` would set its
+    // prototype instead of adding the member
+    if (VALID_IDENTIFIER.test(value) && value !== '__proto__') {
         return value;
     }
     const classified = strings.classify(value.replace(/[^A-Za-z0-9]+/g, ' ').trim()).replace(/\s+/g, '');

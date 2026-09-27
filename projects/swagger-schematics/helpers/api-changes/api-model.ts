@@ -140,11 +140,13 @@ function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IAp
                 : `${strings.classify(groupKey)}ApiService.${item.apiMethodName}()`;
             const label = `${item.httpMethod} ${item.apiPath}`;
             // Keyed by the declared name: a variable can change when another param takes it (a clash
-            // suffix), and the declared param then no longer gets the value existing calls pass
+            // suffix), and the declared param then no longer gets the value existing calls pass.
+            // Header names are case-insensitive, so re-casing one (`X-Tenant` -> `x-tenant`) is no change
             const params: Record<string, string> = Object.create(null);
             ([['path', item.pathParams], ['query', item.queryParams], ['header', item.headerParams]] as const)
                 .forEach(([location, locationParams]) => locationParams.forEach(param => {
-                    params[`${location} ${param.originalParam.name}`] = `${param.objectSymbol}${param.isOptional ? '?' : ''}: ${param.typeSymbol}`;
+                    const name = location === 'header' ? param.originalParam.name.toLowerCase() : param.originalParam.name;
+                    params[`${location} ${name}`] = `${param.objectSymbol}${param.isOptional ? '?' : ''}: ${param.typeSymbol}`;
                 }));
             if (item.bodyParam) {
                 params[`body ${item.bodyParam.objectSymbol}`] = `${item.bodyParam.objectSymbol}: ${item.bodyParam.typeSymbol}`;

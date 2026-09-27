@@ -46,7 +46,14 @@ const SCHEMA = {
           { $ref: '#/components/schemas/JsonObject' }, { type: 'array', items: { $ref: '#/components/schemas/JsonValue' } }
         ]
       },
-      JsonObject: { type: 'object', additionalProperties: { $ref: '#/components/schemas/JsonValue' } }
+      JsonObject: { type: 'object', additionalProperties: { $ref: '#/components/schemas/JsonValue' } },
+      JsonNode: {
+        oneOf: [
+          { type: 'string' }, { type: 'null' }, { type: 'array', items: { $ref: '#/components/schemas/JsonNode' } },
+          { type: 'object', additionalProperties: { $ref: '#/components/schemas/JsonNode' } }
+        ]
+      },
+      Tree: { allOf: [{ type: 'object', additionalProperties: { $ref: '#/components/schemas/Tree' } }] }
     }
   }
 } as unknown as ISwaggerSchema;
@@ -85,6 +92,15 @@ describe('array, tuple and record components', () => {
     expect(tree.readContent(`${OUT}/interfaces/json-object.type.ts`)).toContain('export type TJsonObject = { [key: string]: TJsonValue };');
     expect(tree.readContent(`${OUT}/interfaces/json-value.type.ts`))
       .toContain('export type TJsonValue = string | number | boolean | TJsonObject | TJsonValue[] | null;');
+  });
+
+  it('let a record written inline in a union or allOf refer back to the alias', async () => {
+    const tree = await runFullSchematics(SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+
+    // `| Record<string, TJsonNode>` would be a circular alias error (TS2456)
+    expect(tree.readContent(`${OUT}/interfaces/json-node.type.ts`))
+      .toContain('export type TJsonNode = string | TJsonNode[] | { [key: string]: TJsonNode } | null;');
+    expect(tree.readContent(`${OUT}/interfaces/tree.type.ts`)).toContain('export type TTree = { [key: string]: TTree };');
   });
 
   it('are referenced by their alias and imported from its file', async () => {

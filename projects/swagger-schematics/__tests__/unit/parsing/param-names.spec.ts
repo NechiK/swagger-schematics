@@ -60,6 +60,20 @@ describe('path and query parameter names', () => {
     expect(parse('/api/Items/{item_id}.json', [pathParam('item_id')]).apiUrl).toBe('${itemId}.json');
   });
 
+  it('names a method without an operationId after every param of a segment', () => {
+    const file = (name: string) => ({ name, in: 'path', required: true, schema: { type: 'string' } });
+
+    // Not `getItemsByName}{ext`, which doesn't compile
+    expect(parse('/api/Items/{name}.{ext}', [file('name'), file('ext')]).apiMethodName).toBe('getItemsByNameExt');
+    expect(parse('/api/Items/{item_id}.json', [pathParam('item_id')]).apiMethodName).toBe('getItemsByItemId');
+  });
+
+  it('sends a query param named __proto__ as an entry, not as the params object\'s prototype', () => {
+    const item = parse('/api/Items', [{ ...query('__proto__'), required: true }]);
+
+    expect(item.queryParamsFormatted).toBe("params: { ['__proto__']: proto }");
+  });
+
   it('gives a query param whose variable another param already has its location as a suffix', () => {
     const item = parse('/api/Items/{id}', [pathParam('id'), query('id'), query('page_size'), query('pageSize')]);
 

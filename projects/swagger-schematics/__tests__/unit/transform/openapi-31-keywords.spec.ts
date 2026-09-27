@@ -395,11 +395,52 @@ describe('nullability the schema checks and the rendered type agree on', () => {
     expect(item.apiMethodParams).toBe('{ ids, names }: { ids: number[]; names?: string[] | null }');
   });
 
+  it('leaves null out of query array elements that get it from a $ref, allOf or a union member', () => {
+    const item = parse([
+      { name: 'a', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/NullableText' } } },
+      { name: 'b', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/Color' } } },
+      { name: 'c', in: 'query', schema: { type: 'array', items: { allOf: [{ $ref: '#/components/schemas/Color' }] } } },
+      { name: 'd', in: 'query', schema: { type: 'array', items: { anyOf: [{ type: ['integer', 'null'] }, { type: 'string' }] } } }
+    ], {
+      NullableText: { type: ['string', 'null'] },
+      Color: { type: ['string', 'null'], enum: ['red', null] }
+    });
+
+    expect(item.apiMethodParams).toBe('{ a, b, c, d }: { a?: string[]; b?: TColor[]; c?: TColor[]; d?: (number | string)[] } = {}');
+  });
+
   it('makes a reference to an untyped enum with a null value nullable', () => {
     const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: { Color: { enum: ['red', null] } } } } as unknown as ISwaggerSchema;
 
     expect(transformProperties({ c: { $ref: '#/components/schemas/Color' } } as never, swagger, {}, ['c']).propertiesContent)
       .toEqual([['c', 'TColor | null']]);
+  });
+});
+
+describe('boolean enums', () => {
+  const swagger = {
+    openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {},
+    components: { schemas: {
+      Flag: { type: 'boolean', enum: [true, false] },
+      AlwaysTrue: { type: 'boolean', enum: [true] },
+      NullableFlag: { type: ['boolean', 'null'], enum: [true, false, null] }
+    } }
+  } as unknown as ISwaggerSchema;
+
+  it("generate no enum: a TypeScript enum can't hold booleans (`true = true`)", () => {
+    Object.entries(swagger.components!.schemas!).forEach(([name, schema]) =>
+      expect(getGeneratedSchemaKind(schema as TSchema, { name })).toBeNull());
+  });
+
+  it('are inlined as boolean at every reference, keeping their nullability', () => {
+    const properties = {
+      a: { $ref: '#/components/schemas/Flag' },
+      b: { $ref: '#/components/schemas/AlwaysTrue' },
+      c: { $ref: '#/components/schemas/NullableFlag' }
+    };
+
+    expect(transformProperties(properties as never, swagger, {}, ['a', 'b', 'c']).propertiesContent)
+      .toEqual([['a', 'boolean'], ['b', 'boolean'], ['c', 'boolean | null']]);
   });
 });
 

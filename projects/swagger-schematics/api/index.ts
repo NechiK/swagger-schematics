@@ -22,7 +22,7 @@ import { transformRefsToImport } from '../types/helpers/template.helper';
 import { renderJsDoc } from '../types/utils/js-doc';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, resolveFramework } from '../interfaces/swagger-schematics/framework';
-import { buildAngularHttpCallArgs, buildAngularHttpCall } from './helpers/angular-template.helper';
+import { buildAngularHttpCall } from './helpers/angular-template.helper';
 import { getBaseApiImportPath, resolveAngularBaseApiDir } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
@@ -175,7 +175,6 @@ export default function(options: SwaggerApiSchema) {
             // Add framework-specific helpers
             if (framework === 'angular') {
                 Object.assign(templateContext, {
-                    buildHttpCallArgs: buildAngularHttpCallArgs,
                     buildHttpCall: buildAngularHttpCall,
                 });
             }

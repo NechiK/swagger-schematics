@@ -1,5 +1,5 @@
 import { transformSwaggerSchema } from '@lib/api/helpers/api.helper';
-import { buildAngularHttpCallArgs } from '@lib/api/helpers/angular-template.helper';
+import { buildAngularHttpCall } from '@lib/api/helpers/angular-template.helper';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 /**
@@ -17,7 +17,8 @@ const callArgs = (method: string, operation: Record<string, unknown>) => {
     openapi: '3.0.1', info: { title: 'T', version: '1' }, components: { schemas: {} },
     paths: { '/api/Orders/{id}': { [method]: { tags: ['Orders'], responses: ok, ...operation } } }
   } as unknown as ISwaggerSchema;
-  return buildAngularHttpCallArgs(transformSwaggerSchema(schema, { silent: true }).Orders.apiList[0]);
+  // The arguments after the URL
+  return buildAngularHttpCall(transformSwaggerSchema(schema, { silent: true }).Orders.apiList[0]).args.slice(1);
 };
 
 describe('Angular HttpClient call arguments', () => {

@@ -1,11 +1,10 @@
 import { IParsedApiItem } from '../../types/utils/params';
 
 /**
- * Build Angular HttpClient call arguments (everything after the URL)
- * Handles the different argument patterns for GET, POST, PUT, PATCH, DELETE
- * Returns an array of argument strings for flexible template formatting
+ * The arguments after the URL for HttpClient's shorthand methods, whose signatures differ:
+ * post/put/patch take (url, body, options), get/head/options/delete take (url, options).
  */
-export function buildAngularHttpCallArgs(item: IParsedApiItem): string[] {
+function buildShorthandCallArgs(item: IParsedApiItem): string[] {
     const { apiMethodType, bodyFormatted, queryParamsFormatted, headerParamsFormatted, isBinaryResponse } = item;
     const parts: string[] = [];
     // Binary responses need responseType: 'blob' in the options object
@@ -56,14 +55,14 @@ const BODY_METHODS = ['post', 'put', 'patch'];
  * HttpClient has no `trace()`, and its `get()`, `head()` and `options()` take no body, so a
  * TRACE operation, or a GET, HEAD or OPTIONS operation that declares a request body, goes
  * through `request(method, url, { body, params, headers })` instead of dropping the body.
- * Everything else uses the shorthand method with the arguments of buildAngularHttpCallArgs.
+ * Everything else uses the shorthand method (`get`, `post`, ...).
  */
 export function buildAngularHttpCall(item: IParsedApiItem): { method: string; args: string[] } {
     const url = `this.getUrl(${item.apiUrlFormatted})`;
     const needsRequest = item.apiMethodType === 'trace'
         || (!!item.bodyParam && !BODY_METHODS.includes(item.apiMethodType) && item.apiMethodType !== 'delete');
     if (!needsRequest) {
-        return { method: item.requestMethod, args: [url, ...buildAngularHttpCallArgs(item)] };
+        return { method: item.requestMethod, args: [url, ...buildShorthandCallArgs(item)] };
     }
     const options = [
         item.bodyParam ? `body: ${item.bodyFormatted}` : '',

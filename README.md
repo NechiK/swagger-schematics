@@ -396,7 +396,6 @@ The following variables are available in API service templates:
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
 | `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |
 | `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and GET, HEAD or OPTIONS with a request body go through `request(method, url, { body, ... })` |
-| `buildHttpCallArgs`       | function           | Angular: the arguments after the URL for the shorthand method (`item.requestMethod`); kept for existing templates, which don't get the `request()` handling above |
 
 ### IParsedApiItem Properties
 

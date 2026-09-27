@@ -1,5 +1,5 @@
 import { TSchema, TSchemaByType } from '../../interfaces/version_3_1/swagger.interface';
-import { isComposition, isPrimitiveWrapper } from './transform-type';
+import { isCollectionSchema, isComposition, isPrimitiveWrapper } from './transform-type';
 
 /** What the types schematic generates for a `components.schemas` entry. */
 export type TGeneratedSchemaKind = 'enum' | 'interface' | 'type-alias';
@@ -37,6 +37,12 @@ export function getGeneratedSchemaKind(
     // comment (see transformCompositionSchema) rather than skipped, so a $ref
     // pointing at it does not dangle.
     if (isComposition(typedSchema)) {
+        return 'type-alias';
+    }
+
+    // Arrays, tuples and records are TypeScript expressions (`string[]`, `Record<string, number>`),
+    // which an interface can't express
+    if (isCollectionSchema(typedSchema)) {
         return 'type-alias';
     }
 

@@ -162,4 +162,17 @@ describe('path-level parameters', () => {
 
     expect(get.parameters).toHaveLength(2);
   });
+
+  it('ignores specification extensions and other path-item fields, which are not operations', () => {
+    const path = {
+      summary: 'Things',
+      'x-controller': 'ThingsController',
+      'x-internal': { owner: 'team-a' },
+      get: { tags: ['Things'], responses: { '200': { description: 'ok', content: { 'application/json': { schema: { type: 'string' } } } } } }
+    } as unknown as IPath;
+
+    expect(getPathOperations(path).map(([key]) => key)).toEqual(['get']);
+    const item = transformSwaggerSchema(schemaWithPaths({ '/api/Things': path }), { silent: true }).Things.apiList;
+    expect(item.map(api => api.httpMethod)).toEqual(['GET']);
+  });
 });

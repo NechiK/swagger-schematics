@@ -1,5 +1,5 @@
-import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
-import { IPath, IPathBase, ISwaggerSchema, PATH_KEYS } from "../../interfaces/version_3_1/swagger.interface";
+import { OPERATION_KEYS, TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
+import { IPath, ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { TParam } from "../../interfaces/version_3_1/params.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
@@ -137,7 +137,9 @@ export const getPathOperations = (
     const pathLevelParams = resolveParams(path.parameters ?? [], swagger, ref => onUnresolvedParam?.(ref));
 
     return Object.keys(path).map((pathKey: string) => {
-        if (!PATH_KEYS.includes(pathKey as keyof IPathBase)) {
+        // Only HTTP methods are operations; other keys are path-item fields (summary,
+        // parameters, ...) or specification extensions (x-controller)
+        if (OPERATION_KEYS.includes(pathKey as TPathOperationKey)) {
             const operationKey = pathKey as TPathOperationKey;
             const operation = path[operationKey];
             if (operation) {

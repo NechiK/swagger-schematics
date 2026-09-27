@@ -6,29 +6,6 @@ Remove an entry when its fix lands, and add a CHANGELOG entry for it as usual.
 
 [Feature ideas](#feature-ideas) at the end are candidates, not commitments: things other generators offer, kept here so they aren't lost.
 
-## Medium
-
-### `x-` extensions on a path item crash generation
-- **Where:** `api/helpers/api.helper.ts`, `getPathOperations()`
-- **Problem:** every path-item key that isn't a known field (`parameters`, `summary`, ...) is treated as an HTTP operation.
-- **Example:** `'/api/Orders': { 'x-controller': 'OrdersController', get: {...} }` fails with `TypeError: Cannot read properties of undefined (reading '200')` in `resolveSuccessResponse`. `documentDeclaresOperations()` also counts such keys as operations.
-- **Fix:** accept only `get`, `put`, `post`, `delete`, `options`, `head`, `patch` and `trace`.
-- **Status:** pre-existing, in a function 2.0.0 changed.
-
-### Component schemas that are arrays, tuples or records generate empty interfaces
-- **Where:** `types/utils/schema-kind.ts`, `getGeneratedSchemaKind()`, with `isPrimitiveWrapper()`
-- **Problem:** an array or record component falls through to `'interface'`.
-- **Example:** `Position: { type: array, prefixItems: [number, number], minItems: 2, items: false }` gives `export interface IPosition {}`, so `p[0]` doesn't compile. `Tags: { type: array, items: string }` gives `ITags {}` and `Dict: { type: object, additionalProperties: integer }` gives `IDict {}`.
-- **Fix:** return `'type-alias'` for array components and for records without `properties`, render them with `transformTypeWithAllImports()`, and make `getRefImportType()` return `'type'` for them.
-- **Status:** pre-existing; since 2.0.0 for tuples.
-
-### Nullability is dropped in nested positions
-- **Where:** `types/utils/transform-type.ts`, tuple positions, array `items`, `additionalProperties` and union members
-- **Problem:** `| null` is only added at the property or parameter level (`withNullability()`).
-- **Example:** `prefixItems: [{ type: ['string', 'null'] }], minItems: 1` gives `[string, ...unknown[]]`. `items: { type: ['string', 'null'] }` gives `string[]`. `additionalProperties: { type: 'integer', nullable: true }` gives `Record<string, number>`. A `$ref` to a nullable schema is already correct: `(IX | null)[]`.
-- **Fix:** apply `withNullability()` to each element, rest, item, record value and union member before wrapping.
-- **Status:** pre-existing; since 2.0.0 for tuples.
-
 ## Low
 
 ### Angular
@@ -44,6 +21,7 @@ Remove an entry when its fix lands, and add a CHANGELOG entry for it as usual.
 - **Boolean schemas crash:** `prefixItems: [true]` or `items: true` throws `Cannot use 'in' operator to search for '$ref' in true`. Map `true` to `unknown` and `false` to `never` in `transformType()` and `isRef()`. *Pre-existing; since 2.0.0 for tuples.*
 - **Property names that aren't identifiers aren't quoted:** `first-name` or `@odata.type` produce `first-name?: string`, a syntax error (also inside inline `allOf` object literals). *Pre-existing.*
 - **An enum containing `null` generates `null = null`** (TS18033), e.g. `type: ['string', 'null'], enum: ['red', null]`. Skip `null` values; nullability already comes from the reference. *Pre-existing.*
+- **A record without `type` renders as `any`:** `{ additionalProperties: { $ref: Item } }` (valid JSON Schema, no `type: object`) gives `any` instead of `Record<string, IItem>`, inline and as a component (which then stays an empty interface). Treat a schema with `additionalProperties` and no `type` as an object. *Pre-existing.* (`transformType()`, `isCollectionSchema()`)
 - **Enum member names can collide:** `'a-b'` and `'a b'` both become `AB`. *Pre-existing.*
 
 ### API change summary and CLI

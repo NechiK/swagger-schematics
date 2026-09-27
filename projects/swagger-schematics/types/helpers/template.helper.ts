@@ -1,7 +1,7 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
 import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
-import { isAllOf, isOneOf, isAnyOf, isNot } from "../utils/transform-type";
+import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports } from "../utils/transform-type";
 import { IDocSource, renderJsDoc } from "../utils/js-doc";
 
 // Property rendering lives with the rest of the type transformation; re-exported
@@ -72,8 +72,9 @@ export function buildImport(fromPath: string, toPath: string, symbolName: string
 }
 
 /**
- * Transform a composition schema (allOf, oneOf, anyOf, not) into a type
- * expression, import refs and an optional leading JSDoc comment.
+ * Transform a schema that generates a type alias - a composition (allOf, oneOf, anyOf, not),
+ * or an array, tuple or record - into a type expression, import refs and an optional
+ * leading JSDoc comment.
  */
 export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     typeExpression: string;
@@ -112,6 +113,16 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
             typeExpression: 'unknown',
             importRefs: [],
             leadingComment: `/** Any value except \`${excluded}\`. Generated from an OpenAPI \`not\` schema, which has no TypeScript equivalent. */`
+        };
+    }
+
+    // Arrays, tuples and records render like they do inline; their nullability is added
+    // where the alias is referenced, as for an interface
+    if (isCollectionSchema(schema)) {
+        const [typeExpression, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+        return {
+            typeExpression,
+            importRefs: removeImportDuplicates(importRefs)
         };
     }
 

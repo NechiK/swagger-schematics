@@ -73,6 +73,27 @@ export function isComposition(schema: TSchemaByType): boolean {
 }
 
 /**
+ * Whether a component schema is an array, a tuple or a record (`type: object` with
+ * `additionalProperties` and no `properties`): its type is a TypeScript expression (`string[]`, `[number, number]`,
+ * `Record<string, number>`), so it generates a type alias rather than an empty interface.
+ */
+export function isCollectionSchema(schema: TSchemaByType): boolean {
+    if (isComposition(schema) || 'enum' in schema) {
+        return false;
+    }
+    const type = (schema as { type?: unknown }).type;
+    const types: unknown[] = Array.isArray(type) ? type : [type];
+    if (types.includes('array')) {
+        return true;
+    }
+    const properties = (schema as { properties?: object }).properties;
+    const additionalProperties = (schema as { additionalProperties?: unknown }).additionalProperties;
+    return types.includes('object')
+        && (!properties || Object.keys(properties).length === 0)
+        && (additionalProperties === true || (typeof additionalProperties === 'object' && additionalProperties !== null));
+}
+
+/**
  * Whether a schema is the bare JSON Schema null type: { "type": "null" }
  * (or a type array equal to ["null"]). OpenAPI 3.1 uses this as a member of
  * oneOf/anyOf (and, rarely, allOf) to express nullability - e.g.
@@ -187,14 +208,14 @@ function hasPrefixItems(schema: TSchemaWithType): schema is TSchemaTuple {
  */
 function transformTuple(schema: TSchemaTuple, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const minItems = schema.minItems ?? 0;
-    const { types, imports } = transformCompositionSchemas(getTuplePositions(schema), swagger, options);
+    const { types, imports } = transformElementTypes(getTuplePositions(schema), swagger, options);
     const elements = types.map((typeSymbol, index) => index < minItems ? typeSymbol : `${wrapForPostfix(typeSymbol)}?`);
 
     const rest = getTupleRest(schema);
     if (rest === null) {
         elements.push('...unknown[]');
     } else if (rest !== 'closed') {
-        const [restSymbol, restImport] = transformType(rest, swagger, options);
+        const [restSymbol, restImport] = transformElementType(rest, swagger, options);
         elements.push(`...${wrapForPostfix(restSymbol)}[]`);
         if (restImport) {
             imports.push(restImport);
@@ -375,10 +396,18 @@ function transformAllOf(schema: ISchemaAllOf, swagger: ISwaggerSchema, options?:
  */
 function transformUnion(members: TSchema[], swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const nonNullMembers = members.filter(member => !isNullSchema(member));
-    const nullable = nonNullMembers.length !== members.length;
+    let nullable = nonNullMembers.length !== members.length;
 
-    const results = transformCompositionSchemas(nonNullMembers, swagger, options);
-    const typeSymbol = results.types.join(' | ');
+    // A nullable member makes the union nullable: `| null` goes once, at the end
+    const results = transformElementTypes(nonNullMembers, swagger, options);
+    const memberTypes = results.types.map(memberType => {
+        if (memberType.endsWith(' | null')) {
+            nullable = true;
+            return memberType.slice(0, -' | null'.length);
+        }
+        return memberType;
+    });
+    const typeSymbol = Array.from(new Set(memberTypes)).join(' | ');
 
     if (!typeSymbol) {
         // No non-null members (e.g. oneOf: [{ type: "null" }]) - the type is just null.
@@ -401,6 +430,29 @@ function transformOneOf(schema: ISchemaOneOf, swagger: ISwaggerSchema, options?:
  */
 function transformAnyOf(schema: ISchemaAnyOf, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     return transformUnion(schema.anyOf, swagger, options);
+}
+
+/**
+ * An element's type - an array item, tuple position, record value or union member - with its
+ * own nullability, which a property or parameter would get from withNullability():
+ * `items: { type: ['string', 'null'] }` -> `string | null`, so the array is `(string | null)[]`.
+ */
+function transformElementType(schema: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
+    const [typeSymbol, importRef] = transformType(schema, swagger, options);
+    return [withNullability(typeSymbol, schema, swagger), importRef];
+}
+
+function transformElementTypes(schemas: TSchema[], swagger: ISwaggerSchema, options?: ITransformTypeOptions): { types: string[], imports: IImportRef[] } {
+    const types: string[] = [];
+    const imports: IImportRef[] = [];
+    for (const schema of schemas) {
+        const [typeSymbol, importRef] = transformElementType(schema, swagger, options);
+        types.push(typeSymbol);
+        if (importRef) {
+            imports.push(importRef);
+        }
+    }
+    return { types, imports };
 }
 
 /**
@@ -551,7 +603,7 @@ function transformObjectSchema(schema: ISchemaObject, swagger: ISwaggerSchema, o
             return ['Record<string, any>'];
         } else {
             // additionalProperties is a schema
-            const [valueType, importRef] = transformType(schema.additionalProperties, swagger, options);
+            const [valueType, importRef] = transformElementType(schema.additionalProperties, swagger, options);
             return [`Record<string, ${valueType}>`, importRef];
         }
     }
@@ -736,7 +788,7 @@ function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema, o
     if (!arrayProperty) {
         return ['any[]'];
     } else {
-        const [typeSymbol, importRef] = transformType(arrayProperty, swagger, options);
+        const [typeSymbol, importRef] = transformElementType(arrayProperty, swagger, options);
         return [`${wrapForPostfix(typeSymbol)}[]`, importRef];
     }
 }
@@ -764,10 +816,11 @@ export function transformRefProperty(refProperty: TSchemaByType, refPropertyKey:
 
 /**
  * What a referenced component generates, in the same order the types schematic decides it
- * (see getGeneratedSchemaKind): a composition is a type alias even when it also has `enum`.
+ * (see getGeneratedSchemaKind): a composition is a type alias even when it also has `enum`,
+ * and so is an array, tuple or record.
  */
 function getRefImportType(refProperty: TSchemaByType): IImportRef['type'] {
-    if (isComposition(refProperty)) {
+    if (isComposition(refProperty) || isCollectionSchema(refProperty)) {
         return 'type';
     }
     return isRefPropertyEnum(refProperty) ? 'enum' : 'interface';

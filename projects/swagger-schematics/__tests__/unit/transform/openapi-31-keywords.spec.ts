@@ -224,6 +224,46 @@ describe('oneOf/anyOf members that are arrays or records', () => {
   });
 });
 
+describe('nullability in nested positions', () => {
+  const swagger = {
+    openapi: '3.1.0',
+    info: { title: 'T', version: '1' },
+    paths: {},
+    components: {
+      schemas: {
+        Dto: { type: 'object', properties: { a: { type: 'string' } } },
+        NullableDto: { type: ['object', 'null'], properties: { a: { type: 'string' } } }
+      }
+    }
+  } as unknown as ISwaggerSchema;
+  const typeOf = (schema: unknown) => transformType(schema as TSchema, swagger)[0];
+  const nullableString = { type: ['string', 'null'] };
+
+  it.each([
+    ['array items (3.1)', { type: 'array', items: nullableString }, '(string | null)[]'],
+    ['array items (3.0)', { type: 'array', items: { type: 'string', nullable: true } }, '(string | null)[]'],
+    ['tuple positions and rest', { type: 'array', prefixItems: [nullableString], minItems: 1, items: { type: 'integer', nullable: true } },
+      '[string | null, ...(number | null)[]]'],
+    ['optional tuple positions', { type: 'array', prefixItems: [nullableString], items: false }, '[(string | null)?]'],
+    ['record values', { type: 'object', additionalProperties: { type: 'integer', nullable: true } }, 'Record<string, number | null>'],
+    ['union members, with null once at the end', { oneOf: [nullableString, { type: 'integer' }] }, 'string | number | null'],
+    ['union members next to a null member', { anyOf: [nullableString, { type: 'null' }] }, 'string | null']
+  ])('keeps null in %s', (_, schema, expected) => {
+    expect(typeOf(schema)).toBe(expected);
+  });
+
+  it('keeps references to nullable components as before', () => {
+    expect(typeOf({ type: 'array', items: { $ref: '#/components/schemas/NullableDto' } })).toBe('(INullableDto | null)[]');
+    expect(typeOf({ oneOf: [{ $ref: '#/components/schemas/NullableDto' }, { $ref: '#/components/schemas/Dto' }] }))
+      .toBe('INullableDto | IDto | null');
+  });
+
+  it('leaves non-nullable elements alone', () => {
+    expect(typeOf({ type: 'array', items: { type: 'string' } })).toBe('string[]');
+    expect(typeOf({ type: 'object', additionalProperties: { $ref: '#/components/schemas/Dto' } })).toBe('Record<string, IDto>');
+  });
+});
+
 describe('string literals containing brackets', () => {
   const swagger = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {}, components: { schemas: {} } } as unknown as ISwaggerSchema;
 

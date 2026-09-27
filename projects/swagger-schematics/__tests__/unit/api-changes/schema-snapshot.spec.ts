@@ -3,15 +3,22 @@ import { resolveProjectPath, serializeSchemaSnapshot } from '@lib/helpers/api-ch
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 describe('schema snapshot', () => {
-  it('serializes with sorted keys, keeping array order, so key order in the source does not matter', () => {
-    const a = { paths: {}, openapi: '3.0.1', info: { version: '1', title: 'T' }, tags: [{ name: 'b' }, { name: 'a' }] };
-    const b = { info: { title: 'T', version: '1' }, tags: [{ name: 'b' }, { name: 'a' }], openapi: '3.0.1', paths: {} };
+  it('serializes the schema in its own key order, which the generated code depends on', () => {
+    // The first `content` media type decides the generated body type, so it must read back first
+    const schema = {
+      paths: {},
+      openapi: '3.0.1',
+      info: { version: '1', title: 'T' },
+      tags: [{ name: 'b' }, { name: 'a' }],
+      components: { requestBodies: { Patch: { content: { 'application/merge-patch+json': {}, 'application/json': {} } } } }
+    };
 
-    const serialized = serializeSchemaSnapshot(a as unknown as ISwaggerSchema);
+    const serialized = serializeSchemaSnapshot(schema as unknown as ISwaggerSchema);
+    const reparsed = JSON.parse(serialized);
 
-    expect(serialized).toBe(serializeSchemaSnapshot(b as unknown as ISwaggerSchema));
-    expect(Object.keys(JSON.parse(serialized))).toEqual(['info', 'openapi', 'paths', 'tags']);
-    expect(JSON.parse(serialized).tags).toEqual([{ name: 'b' }, { name: 'a' }]);
+    expect(Object.keys(reparsed)).toEqual(['paths', 'openapi', 'info', 'tags', 'components']);
+    expect(Object.keys(reparsed.components.requestBodies.Patch.content)).toEqual(['application/merge-patch+json', 'application/json']);
+    expect(reparsed).toEqual(schema);
     expect(serialized.endsWith('}\n')).toBe(true);
   });
 
@@ -26,7 +33,7 @@ describe('schema snapshot', () => {
 
     const reparsed = JSON.parse(serializeSchemaSnapshot(schema));
 
-    expect(Object.keys(reparsed.components.schemas)).toEqual(['Order', '__proto__']);
+    expect(Object.keys(reparsed.components.schemas)).toEqual(['__proto__', 'Order']);
     expect(reparsed.components.schemas.__proto__).toEqual({ type: 'string' });
   });
 });

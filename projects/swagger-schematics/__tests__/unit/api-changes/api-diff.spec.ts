@@ -61,6 +61,21 @@ describe('diffApiModels', () => {
     ]);
   });
 
+  it('reports a new required property as breaking and a new optional one as added', () => {
+    const withProperties = (properties: Record<string, string>): IApiModel =>
+      ({ types: { ICreateOrderDto: { kind: 'interface', properties } }, endpoints: {} });
+
+    const changes = diffApiModels(
+      withProperties({ name: 'name: string' }),
+      withProperties({ name: 'name: string', customerId: 'customerId: number', note: 'note?: string' })
+    );
+
+    expect(changes).toEqual([
+      { severity: 'breaking', kind: 'Required property added', subject: 'ICreateOrderDto.customerId', ref: 'customerId: number' },
+      { severity: 'added', kind: 'Property added', subject: 'ICreateOrderDto.note', ref: 'note?: string' }
+    ]);
+  });
+
   it('finds nothing between identical models', () => {
     expect(diffApiModels(CURRENT, CURRENT)).toEqual([]);
   });

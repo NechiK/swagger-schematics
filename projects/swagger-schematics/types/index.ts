@@ -130,8 +130,8 @@ export default function(options: SwaggerSchema): Rule {
                       legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
                   }
               );
-              // Filter out self-references
-              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`);
+              // Filter out self-references: a recursive composition refers to its own alias, T<Name>
+              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `T${parsed.name}`);
               itemSource = apply(typeAliasTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,

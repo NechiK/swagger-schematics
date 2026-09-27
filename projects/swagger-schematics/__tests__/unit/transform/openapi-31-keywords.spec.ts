@@ -16,6 +16,10 @@ describe('OpenAPI 3.1 schema keywords', () => {
         Kind: { type: 'string', const: 'dog' },
         UntypedKind: { const: 'cat' },
         Nothing: { type: 'null' },
+        NothingArray: { type: ['null'] },
+        NullableGuid: { type: ['string', 'null'], format: 'uuid' },
+        IdOrName: { type: ['integer', 'string'] },
+        NullableStatus: { type: ['string', 'null'], enum: ['A', 'B'] },
         NullableDto: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Dto' }] },
         NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] }
       }
@@ -74,6 +78,21 @@ describe('OpenAPI 3.1 schema keywords', () => {
       expect(typeOf({ $ref: '#/components/schemas/Nothing' })).toBe('null');
       expect(getGeneratedSchemaKind({ type: 'null' } as never)).toBeNull();
     });
+
+    it("inlines type arrays of primitives (['null'], ['string', 'null']) like their single-type forms", () => {
+      expect(typeOf({ $ref: '#/components/schemas/NothingArray' })).toBe('null');
+      expect(typeOf({ $ref: '#/components/schemas/NullableGuid' })).toBe('string | null');
+      expect(typeOf({ $ref: '#/components/schemas/IdOrName' })).toBe('number | string');
+      expect(propertiesOf({ id: { $ref: '#/components/schemas/NullableGuid' } }).id).toBe('id?: string | null');
+      expect(getGeneratedSchemaKind({ type: ['null'] } as never)).toBeNull();
+      expect(getGeneratedSchemaKind({ type: ['string', 'null'], format: 'uuid' } as never)).toBeNull();
+    });
+
+    it('still generates an enum or interface for a type array with enum or object', () => {
+      expect(getGeneratedSchemaKind({ type: ['string', 'null'], enum: ['A', 'B'] } as never)).toBe('enum');
+      expect(getGeneratedSchemaKind({ type: ['object', 'null'], properties: { a: { type: 'string' } } } as never)).toBe('interface');
+      expect(typeOf({ $ref: '#/components/schemas/NullableStatus' })).toBe('TNullableStatus | null');
+    });
   });
 
   describe('prefixItems (tuples)', () => {
@@ -98,6 +117,14 @@ describe('OpenAPI 3.1 schema keywords', () => {
     it('renders items as the rest element', () => {
       expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }], minItems: 1, items: { oneOf: [{ type: 'string' }, { type: 'integer' }] } }))
         .toBe('[string, ...(string | number)[]]');
+    });
+
+    it('parenthesizes an intersection before ? and [] so they apply to the whole type', () => {
+      const both = { allOf: [{ $ref: '#/components/schemas/Dto' }, { $ref: '#/components/schemas/Point' }] };
+      expect(typeOf({ type: 'array', prefixItems: [both], items: false })).toBe('[(IDto & IPoint)?]');
+      expect(typeOf({ type: 'array', prefixItems: [both], minItems: 1, items: false })).toBe('[IDto & IPoint]');
+      expect(typeOf({ type: 'array', prefixItems: [{ type: 'string' }], minItems: 1, items: both })).toBe('[string, ...(IDto & IPoint)[]]');
+      expect(typeOf({ type: 'array', items: both })).toBe('(IDto & IPoint)[]');
     });
 
     it('imports every schema the tuple references', () => {

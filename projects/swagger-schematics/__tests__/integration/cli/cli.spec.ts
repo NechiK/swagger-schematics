@@ -227,6 +227,21 @@ describe('swagger-schematics CLI', () => {
       expect(runCli('all')).toContain('API changes since the last snapshot: none');
     }, 180000);
 
+    it('should list no changes for an unchanged schema whose generated code depends on key order', () => {
+      const schema = JSON.parse(JSON.stringify(SCHEMA));
+      schema.components.schemas.BaseDto = { type: 'object', properties: { id: { type: 'integer' } } };
+      // allOf plus properties (Swashbuckle inheritance) renders its properties in document order,
+      // `total` before `currency`, which a key-sorted snapshot would read back the other way round
+      schema.components.schemas.OrderDto = {
+        allOf: [{ $ref: '#/components/schemas/BaseDto' }],
+        properties: { total: { type: 'number' }, currency: { type: 'string' } }
+      };
+      fs.writeFileSync(path.join(projectDir, 'schema.json'), JSON.stringify(schema));
+      runCli('all');
+
+      expect(runCli('all')).toContain('API changes since the last snapshot: none');
+    }, 180000);
+
     it('should print the summary but write no snapshot or report on --dry-run', () => {
       runCli('all');
       const snapshotBefore = fs.readFileSync(snapshotFile(), 'utf8');

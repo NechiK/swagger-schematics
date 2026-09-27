@@ -1,6 +1,6 @@
 import { TOperation, TPathOperationKey } from "../../interfaces/version_3_1/operation.interface";
 import { ICookieParam, IHeaderParam, IPathParam, IQueryParam, TParam } from "../../interfaces/version_3_1/params.interface";
-import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability } from "./transform-type";
+import { IImportRef, transformTypeWithAllImports, ITransformTypeOptions, isNullable, withNullability, isRef, getRefPropertyDefinition } from "./transform-type";
 import { ISwaggerSchema } from "../../interfaces/version_3_1/swagger.interface";
 import { IRequestBody } from "../../interfaces/version_3_1/request.interface";
 import { IRef } from "../../interfaces/version_3_1/ref.interface";
@@ -46,7 +46,17 @@ export interface IParsedParam<T> {
 
     /** Whether the value can be null (the schema is nullable), so null must be left out of the request. */
     isNullable: boolean;
+
+    /**
+     * Header params only: how the value is written when `String(value)` would be wrong.
+     * 'object' / 'object-exploded': OpenAPI `simple` style for an object (`role,admin,id,1` /
+     * `role=admin,id=1`); 'json': a `content: application/json` param. Unset: `String(value)`,
+     * which already gives `simple` style for primitives and arrays (`1,2`).
+     */
+    headerSerialization?: THeaderSerialization;
 }
+
+export type THeaderSerialization = 'object' | 'object-exploded' | 'json';
 
 /**
  * A parsed request body parameter - the original is the operation's
@@ -166,6 +176,13 @@ export interface IParsedApiItem {
     apiMethodRequestType: string;
 
     /**
+     * Whether every field of `apiMethodRequestType` is optional (no path params, no body, only
+     * optional query/header params), so an RTK endpoint can be called without an argument.
+     * The default RTK template then types the argument `{ ... } | void` and destructures it with `= {}`.
+     */
+    isApiMethodRequestOptional: boolean;
+
+    /**
      * Whether this is a query operation (GET/HEAD) vs mutation (POST/PUT/DELETE/etc).
      */
     isQuery: boolean;
@@ -190,7 +207,8 @@ export interface IParsedApiItem {
 
     /**
      * Pre-formatted header params for HTTP options, sent under their exact names.
-     * Optional ones are left out when null/undefined; values are sent as strings.
+     * Optional ones are left out when null/undefined; values are sent as strings
+     * (objects in OpenAPI `simple` style, JSON `content` params as JSON).
      * Example: "headers: { 'If-Match': String(ifMatch) }" or empty string if none.
      */
     headerParamsFormatted: string;
@@ -321,6 +339,7 @@ export const transformOperationParams = (operation: TOperation, swagger: ISwagge
                 objectSymbol: symbol,
                 isOptional,
                 isNullable: isParamNullable,
+                ...(apiParam.in === 'header' ? { headerSerialization: getHeaderSerialization(apiParam, swagger, options) } : {}),
             };
 
             switch (apiParam.in) {
@@ -420,6 +439,17 @@ export function buildApiMethodRequestType(params: {
     return `{ ${typeParts.join('; ')} }`;
 }
 
+/** Whether a request object has fields and all of them are optional (see IParsedApiItem.isApiMethodRequestOptional). */
+export function isApiMethodRequestOptional(params: {
+    pathParams: IParsedParam<IPathParam>[];
+    queryParams: IParsedParam<IQueryParam>[];
+    headerParams?: IParsedParam<IHeaderParam>[];
+    bodyParam: TParsedBodyParam | null;
+}): boolean {
+    const optionalFields = [...params.queryParams, ...(params.headerParams ?? [])];
+    return params.pathParams.length === 0 && !params.bodyParam && optionalFields.length > 0 && optionalFields.every(isParamOptional);
+}
+
 /**
  * Formats URL with proper quoting (backticks for interpolation, single quotes otherwise).
  */
@@ -461,12 +491,61 @@ export function formatHeaderParams(headerParams: IParsedParam<IHeaderParam>[]): 
     const entries = headerParams.map(param => {
         // Names are letters, digits, '-' and '_' only (see toHeaderParamSymbol), so plain quotes are safe
         const name = `'${param.originalParam.name}'`;
-        const value = `String(${param.objectSymbol})`;
+        const value = formatHeaderValue(param.objectSymbol, param.headerSerialization);
         return canBeNullish(param)
             ? `...(${param.objectSymbol} != null ? { ${name}: ${value} } : {})`
             : `${name}: ${value}`;
     });
     return `headers: { ${entries.join(', ')} }`;
+}
+
+/** A header value as a string, per the param's serialization (see IParsedParam.headerSerialization). */
+function formatHeaderValue(symbol: string, serialization?: THeaderSerialization): string {
+    switch (serialization) {
+        case 'object':
+        case 'object-exploded': {
+            // Unset (null/undefined) properties are left out rather than sent as empty values
+            const separator = serialization === 'object' ? ',' : '=';
+            return `Object.entries(${symbol}).filter(entry => entry[1] != null).map(entry => entry.join('${separator}')).join(',')`;
+        }
+        case 'json':
+            return `JSON.stringify(${symbol})`;
+        default:
+            return `String(${symbol})`;
+    }
+}
+
+/**
+ * How a header param's value must be serialized (OpenAPI: headers use `style: simple`).
+ * Primitives and arrays need nothing special; objects and JSON `content` do.
+ */
+function getHeaderSerialization(param: IHeaderParam, swagger: ISwaggerSchema, options?: ITransformTypeOptions): THeaderSerialization | undefined {
+    if (param.content) {
+        const mediaType = Object.keys(param.content)[0] ?? '';
+        return /[/+]json\b/i.test(mediaType) ? 'json' : undefined;
+    }
+    let schema = param.schema;
+    if (schema && isRef(schema)) {
+        const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
+        // typeMapping replaces the component's type (e.g. with `string`), so its schema says nothing about the value
+        if (options?.typeMapping?.[refPropertyKey]) {
+            return undefined;
+        }
+        schema = refPropertySchema;
+    }
+    if (!schema || typeof schema !== 'object') {
+        return undefined;
+    }
+    const type = (schema as { type?: unknown }).type;
+    const isObject = type === 'object'
+        || (Array.isArray(type) && type.includes('object'))
+        || 'properties' in schema
+        || 'additionalProperties' in schema
+        || 'allOf' in schema;
+    if (!isObject) {
+        return undefined;
+    }
+    return param.explode ? 'object-exploded' : 'object';
 }
 
 /**

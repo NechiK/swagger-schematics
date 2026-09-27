@@ -82,6 +82,10 @@ function diffMembers(owner: string, previous: Record<string, string>, current: R
             return [{ severity: 'breaking', kind: `${label} removed`, subject }];
         }
         if (!(name in previous)) {
+            // A new required property breaks object literals written against the previous interface
+            if (label === 'Property' && !current[name].startsWith(`${name}?`)) {
+                return [{ severity: 'breaking', kind: 'Required property added', subject, ref: current[name] }];
+            }
             return [{ severity: 'added', kind: `${label} added`, subject, ref: current[name] }];
         }
         if (previous[name] !== current[name]) {

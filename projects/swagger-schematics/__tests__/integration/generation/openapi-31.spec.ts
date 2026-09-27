@@ -141,6 +141,12 @@ describe('OpenAPI 3.1 keywords and references to composition schemas', () => {
         Kind: { const: 'dog' },
         Base: { type: 'object', properties: { id: { type: 'integer' } } },
         Derived: { allOf: [{ $ref: '#/components/schemas/Base' }], properties: { extra: { type: 'string' } } },
+        // Recursive composition: the alias refers to itself
+        TreeNode: {
+          allOf: [{ $ref: '#/components/schemas/Base' }],
+          properties: { children: { type: 'array', items: { $ref: '#/components/schemas/TreeNode' } } }
+        },
+        Guid: { type: ['string', 'null'], format: 'uuid' },
         Pet: {
           type: 'object',
           required: ['kind', 'id', 'owner'],
@@ -152,7 +158,9 @@ describe('OpenAPI 3.1 keywords and references to composition schemas', () => {
             position: { type: 'array', prefixItems: [{ type: 'number' }, { type: 'number' }], minItems: 2, items: false },
             tags: { type: 'array', prefixItems: [{ $ref: '#/components/schemas/Dto' }], minItems: 1, items: { type: 'string' } },
             extra: { type: 'array', prefixItems: [{ type: 'string' }] },
-            nothing: { type: 'null' }
+            nothing: { type: 'null' },
+            tree: { $ref: '#/components/schemas/TreeNode' },
+            guid: { $ref: '#/components/schemas/Guid' }
           }
         }
       }
@@ -216,6 +224,18 @@ describe('OpenAPI 3.1 keywords and references to composition schemas', () => {
     expect(pet).toContain("import { TAnyId } from './any-id.type';");
     expect(pet).toContain("import { TNullableDto } from './nullable-dto.type';");
     expect(pet).toContain("import { IDto } from './dto.interface';");
+    // A 3.1 nullable primitive (`type: [string, null]`) is inlined, with no empty IGuid interface
+    expect(pet).toContain('guid?: string | null;');
+    expect(tree.files).not.toContain(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/guid.interface.ts`);
+  });
+
+  it('does not import a recursive composition alias into its own file', async () => {
+    const tree = await runFullSchematics(SCHEMA, ANGULAR_SCHEMATIC_OPTIONS);
+    const treeNode = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/tree-node.type.ts`);
+
+    expect(treeNode).toContain('export type TTreeNode = IBase & { children?: TTreeNode[] };');
+    expect(treeNode).not.toContain("from './tree-node.type'");
+    expect(treeNode).toContain("import { IBase } from './base.interface';");
   });
 
   it.each([

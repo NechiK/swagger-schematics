@@ -82,8 +82,8 @@ export const ordersApi = baseApi.injectEndpoints({
         headers: { 'Idempotency-Key': String(idempotencyKey) },
       }),
     }),
-    ordersGetOrders: builder.query<IOrderDto[], { page?: number; xTrace?: string }>({
-      query: ({ page, xTrace }) => ({
+    ordersGetOrders: builder.query<IOrderDto[], { page?: number; xTrace?: string } | void>({
+      query: ({ page, xTrace } = {}) => ({
         url: '/orders',
         method: 'GET',
         params: omitBy({ page }, isNil),

@@ -200,7 +200,7 @@ API changes since the last snapshot: 3 breaking, 2 added
 ```
 
 - The run compares the schema with the snapshot the previous run saved, then saves the new one. **Commit the snapshot** with the generated code; the first run only creates it.
-- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone.
+- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, a new required property (object literals of that interface must now set it), or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone: new interfaces, enum members, endpoints and optional properties.
 - Names, types and signatures come from the generator itself, so they match the generated files (`IUserDto`, `UsersApiService.getById()`, or `usersApi.getById` for RTK).
 - A renamed property or endpoint shows as removed plus added.
 - `--dry-run` prints the summary without writing anything, which is a quick way to see what the back-end changed before regenerating.
@@ -402,6 +402,7 @@ Each item in `apiList` has the following properties:
 | `apiMethodParams`        | string   | Method parameters as string (e.g., "id: number, body: IRequest")                                     |
 | `apiMethodParamNames`    | string[] | Array of parameter names (e.g., ["id", "body"])                                                      |
 | `apiMethodRequestType`   | string   | Combined request type (e.g., "{ id: number; body: IRequest }")                                       |
+| `isApiMethodRequestOptional` | boolean | `true` when every field of `apiMethodRequestType` is optional (only optional query/header params); the RTK template then types the argument `{ ... } \| void` and defaults it to `{}`, so the endpoint can be called without one |
 | `apiMethodType`          | string   | HTTP method lowercase (e.g., "get", "post")                                                          |
 | `httpMethod`             | string   | HTTP method uppercase (e.g., "GET", "POST")                                                          |
 | `apiUrl`                 | string   | URL path with interpolation (e.g., "${id}/notes")                                                    |
@@ -415,7 +416,7 @@ Each item in `apiList` has the following properties:
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
 | `queryParams`            | array    | Array of parsed query parameters                                                                     |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
-| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); empty when none |
+| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects are sent in OpenAPI `simple` style and `application/json` content params as JSON; empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
 | `pathParams`             | array    | Array of parsed path parameters                                                                      |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |

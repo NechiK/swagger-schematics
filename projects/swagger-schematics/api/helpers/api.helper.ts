@@ -5,7 +5,7 @@ import { IRef } from "../../interfaces/version_3_1/ref.interface";
 import { getApiMethodName, getApiResponseSymbol, resolveSuccessResponse, isBinaryResponse } from "../../types/utils/api";
 import { removeImportDuplicates } from "../../types/helpers/template.helper";
 import { transformRequestBody } from "../../types/utils/request-body";
-import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
+import { IParsedApiItem, transformOperationParams, transformParamsToApiMethodParams, extractApiMethodParamNames, buildApiMethodRequestType, isApiMethodRequestOptional, formatApiUrl, formatQueryParams, formatHeaderParams, formatBody } from "../../types/utils/params";
 import { IImportRef, ITransformTypeOptions } from "../../types/utils/transform-type";
 import { camelize, classify } from "@angular-devkit/core/src/utils/strings";
 
@@ -289,6 +289,12 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                     bodyParam,
                 }),
                 apiMethodRequestType: buildApiMethodRequestType({
+                    pathParams,
+                    queryParams,
+                    headerParams,
+                    bodyParam,
+                }),
+                isApiMethodRequestOptional: isApiMethodRequestOptional({
                     pathParams,
                     queryParams,
                     headerParams,

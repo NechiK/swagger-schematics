@@ -15,13 +15,16 @@ export const <%= apiExportName %> = <%= cacheTag ? `baseApi.enhanceEndpoints({ a
   endpoints: (builder) => ({
 <% for (let item of apiList) {
   let args = item.apiMethodParamNames.length > 0 ? '{ ' + item.apiMethodParamNames.join(', ') + ' }' : '';
+  // All fields optional: the endpoint can be called without an argument (useListQuery())
+  let requestType = item.isApiMethodRequestOptional ? item.apiMethodRequestType + ' | void' : item.apiMethodRequestType;
+  if (item.isApiMethodRequestOptional) { args += ' = {}'; }
   let builderMethod = item.isQuery ? 'builder.query' : 'builder.mutation';
   let endpointName = scopeEndpointsWithTags ? item.scopedApiMethodName : item.apiMethodName;
   let queryParamsList = item.queryParams.map(p => p.objectSymbol);
   let rawUrl = item.apiUrl ? (dasherize(name) + '/' + item.apiUrl) : dasherize(name);
   let hasInterpolation = rawUrl.includes('${');
   let fullUrl = hasInterpolation ? '`/' + rawUrl + '`' : "'/" + rawUrl + "'";
-%><%= renderJsDoc(item, '    ') %>    <%= endpointName %>: <%= builderMethod %><<%= item.responseTypeSymbol %>, <%= item.apiMethodRequestType %>>({
+%><%= renderJsDoc(item, '    ') %>    <%= endpointName %>: <%= builderMethod %><<%= item.responseTypeSymbol %>, <%= requestType %>>({
       query: (<%= args %>) => ({
         url: <%= fullUrl %>,
         method: '<%= item.httpMethod %>',

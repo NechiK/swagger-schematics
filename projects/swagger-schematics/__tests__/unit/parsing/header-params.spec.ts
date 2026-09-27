@@ -87,6 +87,15 @@ describe('header parameters', () => {
     expect(put.apiMethodRequestType).toBe('{ id: number; ifMatch?: string; xVersion?: number | null; body: IOrderDto }');
   });
 
+  it('marks an RTK request whose fields are all optional, so the endpoint can be called without an argument', () => {
+    expect(list.apiMethodRequestType).toBe('{ page?: number; xTrace?: string }');
+    expect(list.isApiMethodRequestOptional).toBe(true);
+    // A path param, a body or a required header makes the argument required
+    expect(getById.isApiMethodRequestOptional).toBe(false);
+    expect(put.isApiMethodRequestOptional).toBe(false);
+    expect(del.isApiMethodRequestOptional).toBe(false);
+  });
+
   describe('required nullable parameters', () => {
     // OpenAPI 3.1: parameters keep the boolean `required`, nullability is a `null` type member
     const schema = {
@@ -178,6 +187,57 @@ describe('header parameters', () => {
 
     expect(parsed.headerParamsFormatted).toBe('');
     expect(parsed.apiMethodParams).toBe('');
+  });
+
+  describe('value serialization (style: simple)', () => {
+    const item = transformSwaggerSchema({
+      openapi: '3.0.1',
+      info: { title: 'T', version: '1' },
+      components: { schemas: { Filter: { type: 'object', properties: { role: { type: 'string' }, id: { type: 'integer' } } } } },
+      paths: {
+        '/api/Items': {
+          get: {
+            tags: ['Items'],
+            parameters: [
+              { name: 'X-Filter', in: 'header', required: true, schema: { $ref: '#/components/schemas/Filter' } },
+              { name: 'X-Exploded', in: 'header', explode: true, schema: { type: 'object', additionalProperties: { type: 'string' } } },
+              { name: 'X-Context', in: 'header', content: { 'application/json': { schema: { type: 'object' } } } },
+              { name: 'X-Ids', in: 'header', required: true, schema: { type: 'array', items: { type: 'integer' } } }
+            ],
+            responses: { '204': { description: 'ok' } }
+          }
+        }
+      }
+    } as unknown as ISwaggerSchema, { silent: true }).Items.apiList[0];
+
+    it('sends an object as key,value pairs (key=value when exploded), leaving out unset properties', () => {
+      expect(item.headerParamsFormatted).toContain(
+        "'X-Filter': Object.entries(xFilter).filter(entry => entry[1] != null).map(entry => entry.join(',')).join(',')"
+      );
+      expect(item.headerParamsFormatted).toContain(
+        "...(xExploded != null ? { 'X-Exploded': Object.entries(xExploded).filter(entry => entry[1] != null).map(entry => entry.join('=')).join(',') } : {})"
+      );
+    });
+
+    it('sends a header whose $ref is mapped by typeMapping with String(), since the mapped type decides', () => {
+      const mapped = transformSwaggerSchema({
+        openapi: '3.0.1',
+        info: { title: 'T', version: '1' },
+        components: { schemas: { Filter: { type: 'object', properties: { role: { type: 'string' } } } } },
+        paths: { '/api/Items': { get: {
+          tags: ['Items'],
+          parameters: [{ name: 'X-Filter', in: 'header', required: true, schema: { $ref: '#/components/schemas/Filter' } }],
+          responses: { '204': { description: 'ok' } }
+        } } }
+      } as unknown as ISwaggerSchema, { silent: true, typeMapping: { Filter: 'string' } }).Items.apiList[0];
+
+      expect(mapped.headerParamsFormatted).toBe("headers: { 'X-Filter': String(xFilter) }");
+    });
+
+    it('sends a JSON content header as JSON, and an array as comma-separated values', () => {
+      expect(item.headerParamsFormatted).toContain("...(xContext != null ? { 'X-Context': JSON.stringify(xContext) } : {})");
+      expect(item.headerParamsFormatted).toContain("'X-Ids': String(xIds)");
+    });
   });
 
   describe('variable names and clashes', () => {

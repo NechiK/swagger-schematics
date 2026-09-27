@@ -26,24 +26,14 @@ export function readSchemaSnapshot(filePath: string): TSnapshotRead {
     }
 }
 
-/** Recursively sorts object keys (array order is kept), so the file only changes when the schema does. */
-function sortKeys(value: unknown): unknown {
-    if (Array.isArray(value)) {
-        return value.map(sortKeys);
-    }
-    if (value && typeof value === 'object') {
-        // Null prototype: a key named `__proto__` (legal in JSON) stays an own property instead of
-        // replacing the object's prototype and vanishing from the snapshot
-        return Object.keys(value as Record<string, unknown>).sort().reduce((sorted, key) => {
-            sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-            return sorted;
-        }, Object.create(null) as Record<string, unknown>);
-    }
-    return value;
-}
-
+/**
+ * The schema as fetched, in the document's own key order: the generated code depends on it
+ * (e.g. the first `content` media type, the order of properties in an intersection), so the
+ * snapshot must read back into the same model the current schema builds. A key named
+ * `__proto__` (legal in JSON) is an own property after JSON.parse and is kept.
+ */
 export function serializeSchemaSnapshot(schema: ISwaggerSchema): string {
-    return JSON.stringify(sortKeys(schema), null, 2) + '\n';
+    return JSON.stringify(schema, null, 2) + '\n';
 }
 
 export function writeTextFile(filePath: string, content: string): void {

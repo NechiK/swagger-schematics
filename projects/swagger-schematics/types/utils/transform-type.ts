@@ -188,14 +188,14 @@ function hasPrefixItems(schema: TSchemaWithType): schema is TSchemaTuple {
 function transformTuple(schema: TSchemaTuple, swagger: ISwaggerSchema, options?: ITransformTypeOptions): TTypeWithImport {
     const minItems = schema.minItems ?? 0;
     const { types, imports } = transformCompositionSchemas(getTuplePositions(schema), swagger, options);
-    const elements = types.map((typeSymbol, index) => index < minItems ? typeSymbol : `${wrapUnion(typeSymbol)}?`);
+    const elements = types.map((typeSymbol, index) => index < minItems ? typeSymbol : `${wrapForPostfix(typeSymbol)}?`);
 
     const rest = getTupleRest(schema);
     if (rest === null) {
         elements.push('...unknown[]');
     } else if (rest !== 'closed') {
         const [restSymbol, restImport] = transformType(rest, swagger, options);
-        elements.push(`...${wrapUnion(restSymbol)}[]`);
+        elements.push(`...${wrapForPostfix(restSymbol)}[]`);
         if (restImport) {
             imports.push(restImport);
         }
@@ -280,17 +280,17 @@ export function isBinarySchema(schema: TSchema | undefined): boolean {
 }
 
 /**
- * Whether a rendered type symbol contains a top-level union - a `|` outside
- * any brackets. `Record<string, string | null>` has none; `IA | null` does.
+ * Whether a rendered type symbol contains one of `operators` at the top level - outside
+ * any brackets. `Record<string, string | null>` has no top-level `|`; `IA | null` does.
  */
-function hasTopLevelUnion(typeSymbol: string): boolean {
+function hasTopLevelOperator(typeSymbol: string, operators: string): boolean {
     let depth = 0;
     for (const char of typeSymbol) {
         if (char === '<' || char === '(' || char === '{' || char === '[') {
             depth++;
         } else if (char === '>' || char === ')' || char === '}' || char === ']') {
             depth--;
-        } else if (char === '|' && depth === 0) {
+        } else if (depth === 0 && operators.includes(char)) {
             return true;
         }
     }
@@ -299,11 +299,20 @@ function hasTopLevelUnion(typeSymbol: string): boolean {
 
 /**
  * Parenthesizes a type symbol when it contains a top-level union, so it can be
- * composed into `[]` array or `&` intersection positions without changing
- * precedence: `IA | null` -> `(IA | null)`, `IBase` stays `IBase`.
+ * composed into an `&` intersection without changing precedence:
+ * `IA | null` -> `(IA | null)`, `IBase` stays `IBase`.
  */
 export function wrapUnion(typeSymbol: string): string {
-    return hasTopLevelUnion(typeSymbol) ? `(${typeSymbol})` : typeSymbol;
+    return hasTopLevelOperator(typeSymbol, '|') ? `(${typeSymbol})` : typeSymbol;
+}
+
+/**
+ * Parenthesizes a type symbol when it contains a top-level union or intersection, so a
+ * postfix `[]` or tuple `?` applies to the whole type: `IA & IB` -> `(IA & IB)[]`, where
+ * `IA & IB[]` would mean `IA & Array<IB>`.
+ */
+function wrapForPostfix(typeSymbol: string): string {
+    return hasTopLevelOperator(typeSymbol, '|&') ? `(${typeSymbol})` : typeSymbol;
 }
 
 /**
@@ -608,8 +617,12 @@ export function parseRefToSymbol(property: IRef, swagger: ISwaggerSchema, option
     // Check if the referenced schema is a primitive wrapper (not an object with properties)
     // These should be inlined rather than imported
     if (isPrimitiveWrapper(refPropertySchema)) {
-        const primitiveType = constLiteral(refPropertySchema) ?? transformPrimitives(refPropertySchema as TSchemaWithType)[0];
-        const isNullable = isSchemaValueNullable(refPropertySchema);
+        const primitiveType = constLiteral(refPropertySchema)
+            ?? (hasTypeArray(refPropertySchema)
+                ? transformTypeArray(refPropertySchema, swagger, options)[0]
+                : transformPrimitives(refPropertySchema as TSchemaWithType)[0]);
+        // `["null"]` already renders as null
+        const isNullable = isSchemaValueNullable(refPropertySchema) && primitiveType !== 'null';
         return [isNullable ? `${primitiveType} | null` : primitiveType];
     }
     
@@ -640,6 +653,13 @@ export function isPrimitiveWrapper(schema: TSchemaByType): boolean {
     // literal type, inlined like a primitive (`'dog'`, `null`) rather than an empty interface
     if (constLiteral(schema) !== undefined || (schema as { type?: unknown }).type === 'null') {
         return true;
+    }
+
+    // OpenAPI 3.1 type arrays: `["null"]`, and nullable primitives like `["string", "null"]`
+    // (the 3.1 spelling of 3.0's `nullable: true`), inline like their single-type forms
+    if (hasTypeArray(schema)) {
+        return !('enum' in schema)
+            && schema.type.every(typeName => ['integer', 'number', 'string', 'boolean', 'null'].includes(typeName));
     }
 
     // Must have a primitive type
@@ -701,7 +721,7 @@ function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema, o
         return ['any[]'];
     } else {
         const [typeSymbol, importRef] = transformType(arrayProperty, swagger, options);
-        return [`${wrapUnion(typeSymbol)}[]`, importRef];
+        return [`${wrapForPostfix(typeSymbol)}[]`, importRef];
     }
 }
 

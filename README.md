@@ -11,11 +11,36 @@ Supports:
 
 Supported OpenAPI versions:
 - **OpenAPI 3.0.x** - full support, including `nullable`, `format: binary`, and multipart uploads
-- **OpenAPI 3.1.x** - full support, including type arrays (`type: ["string", "null"]`), `contentMediaType` binary content, and schema-less `application/octet-stream` responses
+- **OpenAPI 3.1.x** - full support, including type arrays (`type: ["string", "null"]`), nullable `oneOf`/`anyOf` with a `{ "type": "null" }` member, `const` (literal types, e.g. `kind: 'dog'`), `prefixItems` tuples (`[number, number]`), `type: "null"`, `contentMediaType` binary content, and schema-less `application/octet-stream` responses
 - Newer 3.x versions are treated as 3.1 with a warning; **Swagger 2.0 is not supported** (a warning is logged and generation is attempted best-effort)
+- Known gaps (e.g. object query parameters, `oneOf` discriminators) are listed in the [roadmap](https://github.com/NechiK/swagger-schematics/blob/develop/ROADMAP.md)
+
+## Contents
+
+- [Getting started](#getting-started)
+- [What gets generated](#what-gets-generated)
+- [Configuration](#configuration)
+  - [Available options](#available-options)
+  - [Removed schemas and endpoints](#removed-schemas-and-endpoints)
+  - [API change summary](#api-change-summary)
+  - [Filtering APIs](#filtering-apis)
+  - [Angular: `provideApi()`](#angular-provideapi)
+  - [RTK cache tags](#rtk-cache-tags)
+  - [Documentation comments](#documentation-comments)
+- [OpenAPI Vendor Extensions](#openapi-vendor-extensions)
+- [Custom Templates](#custom-templates)
+- [Changelog and roadmap](#changelog-and-roadmap)
 
 
-## How to use?
+## Getting started
+
+### Requirements
+
+- Node.js `^20.19.0 || ^22.12.0 || >=24.0.0`, npm 10+
+- Angular output: Angular 15+ (the generated code uses `inject()` and `makeEnvironmentProviders`); checked against Angular 20 under `strict`
+- React output: Redux Toolkit 2.x (RTK Query)
+
+### Usage
 
 1. Install package
 
@@ -29,6 +54,8 @@ npm i -D swagger-schematics
 npx swagger-schematics all swaggerUrl --path=/src/app/core --framework=angular
 ```
 
+`all` generates types and then API services from a single load of the schema, so both always come from the same version of the document.
+
 Or run the schematics individually:
 
 ```bash
@@ -36,7 +63,7 @@ npx swagger-schematics types swaggerUrl --path=/src/app/core
 npx swagger-schematics api swaggerUrl --path=/src/app/core --framework=angular
 ```
 
-Useful flags: `--dry-run` (report files without writing), `--help`, `--version`.
+Useful flags: `--dry-run` (report files without writing), `--change-report=<file>` (see [API change summary](#api-change-summary)), `--help`, `--version`.
 Any schematic option can be passed as `--option=value` (kebab-case accepted, e.g. `--swagger-schema-url`).
 
 <details>
@@ -54,7 +81,7 @@ Note: the `schematics` binary comes from `@angular-devkit/schematics-cli` in you
 installed, or npx will fetch an unrelated npm package that happens to own that name.
 </details>
 
-3. Enjoy!
+3. Import the generated services and types from `path` (see [What gets generated](#what-gets-generated)). Commit them together with `.swagger-schematics-manifest.json`.
 
 ### Run via npm scripts (recommended)
 
@@ -74,7 +101,30 @@ npm always sets the working directory to the project root before running a scrip
 - discovery of the `openapi-schematics.json` config file
 - resolution of your project's ESLint for the `eslintFix` option
 
-Running `npx schematics` directly from a subdirectory shifts all of these at once (config silently not found, schema path not resolving, wrong lint setup). With `npm run openapi`, behavior is identical for every developer and in CI.
+Running `npx swagger-schematics` directly from a subdirectory shifts all of these at once (config silently not found, schema path not resolving, wrong lint setup). With `npm run openapi`, behavior is identical for every developer and in CI.
+
+
+## What gets generated
+
+Everything goes into `path`. For a schema with an `Orders` controller, an `OrderDto` object and an `OrderStatus` enum:
+
+```
+<path>/
+├── enums/
+│   └── order-status.enum.ts          # export enum TOrderStatus
+├── interfaces/
+│   ├── order-dto.interface.ts        # export interface IOrderDto
+│   └── any-id.type.ts                # export type TAnyId (allOf/oneOf/anyOf/not, arrays, tuples, records)
+├── orders-api.service.ts             # Angular: OrdersApiService
+├── orders.api.ts                     # React RTK: ordersApi slice
+├── api-tag.enum.ts                   # React RTK with rtkCacheTags: export enum TApiTag
+└── .swagger-schematics-manifest.json # files owned by the generator, commit it
+```
+
+Base files are generated once, and never overwritten, so you can edit them:
+
+- **Angular**: `_api-base.service.ts` and `_api-base-url.token.ts` in the `baseApiPath` directory (default: `path`). `_provide-api.ts` is generated next to them and regenerated on every run (see [`provideApi()`](#angular-provideapi))
+- **React RTK**: the base API file at `baseApiPath` (default: `th-common/store/api-base.ts`), which the slices extend with `injectEndpoints`
 
 
 ## Configuration
@@ -146,6 +196,8 @@ You can also map nullable wrapper types to their base types. This is useful when
 
 When mapping to another schema, the `nullable` property from the original type is preserved, so `NullableOfDistributionType` becomes `TDistributionType | null` with the proper import.
 
+A mapped schema generates no file of its own, since nothing references it by its own name (`nullable-of-distribution-type.enum.ts` above is not generated; a file from an earlier run is deleted as stale). A schema that a mapping points to, like `DistributionType`, is still generated.
+
 ### Available options
 
 | Name                     | Type    | Schematics | Description                                                                                                                                                      |
@@ -155,14 +207,19 @@ When mapping to another schema, the `nullable` property from the original type i
 | `baseApiPath`            | string  | api        | Location of the base API file. For Angular: the `_api-base.service.ts` file path or its directory (both accepted); defaults to `path`. For RTK: the base api file path; defaults to `th-common/store/api-base.ts`. Supports tsconfig path alias resolution for imports |
 | `project`                | string  | types      | Generate in a specific Angular CLI workspace project                                                                                                             |
 | `apiPathKey`             | string  | api        | Path prefix that selects which API paths are generated; stripped before grouping and method naming. Defaults to `/api/`                                          |
-| `apiServiceTemplatePath` | string  | api        | Custom template path for API service generation                                                                                                                  |
-| `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
+| `apiServiceTemplatePath` | string  | api        | Directory of custom API service templates, relative to the project root (see [Custom Templates](#custom-templates))                                             |
+| `baseApiTemplatePath`    | string  | api        | Directory of custom base API templates, relative to the project root (see [Custom Templates](#custom-templates))                                                |
 | `framework`              | string  | api        | Target framework: `"angular"` or `"react-rtk"`. **Required** for `api` (no default) - set it in `openapi-schematics.json` or pass `--framework`                |
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
-| `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`)   |
+| `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`). A mapped schema generates no file of its own   |
 | `eslintFix`              | boolean | api, types | Run your project's ESLint with autofix on generated files, applying your own config (import sorting, quotes, commas). Defaults to `false`. Never blocks generation: if ESLint is missing or fails, a warning is logged and files keep their generated content |
-| `legacyOptionalProperties` | boolean | types      | Legacy optionality for back-ends that don't emit a `required` array yet. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`) |
-| `removeStaleFiles`       | boolean | api, types | Delete previously generated files whose schema or endpoint group is no longer in the document (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
+| `legacyOptionalProperties` | boolean | api, types | Legacy optionality for back-ends that don't emit a `required` array yet, and for code written before parameters followed `required`. When `true`, a property is optional (`?`) if it is **nullable** instead of if it is absent from `required` — so non-nullable fields become required — and a query or header parameter that is `required` but nullable is optional. `\| null` typing is unaffected. Defaults to `false` (spec behavior: optionality follows `required`; a required nullable parameter must be passed, and `null` leaves it out of the request) |
+| `includeApis`            | string[] | api       | Generate only these APIs: controller names as in the path (`Orders` for `/api/Orders/...`), case-insensitive, `*` as a wildcard. On the CLI, comma-separated. Unset: every API (see [Filtering APIs](#filtering-apis)) |
+| `excludeApis`            | string[] | api       | Skip these APIs, same matching as `includeApis`, e.g. `["Admin", "Internal*"]` |
+| `excludeDeprecated`      | boolean | api        | Skip operations marked `deprecated` (e.g. .NET `[Obsolete]`). Defaults to `false` |
+| `rtkCacheTags`           | boolean | api        | React RTK only: generate [cache tags](#rtk-cache-tags) so queries refetch after a mutation in the same slice. Defaults to `false` |
+| `schemaSnapshotPath`     | string  | `all` (CLI) | Where to keep a copy of the schema, relative to the project root, e.g. `/src/app/core/openapi.snapshot.json`. Turns on the [API change summary](#api-change-summary): each `swagger-schematics all` run compares the new schema with it, prints what changed, and updates it. Commit it with the generated code |
+| `removeStaleFiles`       | boolean | api, types | Delete previously generated files that are no longer generated: their schema or endpoint group left the document, or a filter excludes it (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)). Defaults to `true`; `false` keeps them and lists them as warnings |
 | `templateHelpersPath`    | string  | api        | Path to a JavaScript file exporting custom helper functions for use in templates                                                                                 |
 
 All configuration options can also be passed as CLI arguments using `--optionName=value` syntax.
@@ -178,6 +235,136 @@ To know which files it owns, the generator keeps a `.swagger-schematics-manifest
 - **`--dry-run`** reports the deletions as `DELETE` lines without touching the files.
 - An endpoint group whose paths declare no operations no longer generates an empty service.
 
+
+### API change summary
+
+Set `schemaSnapshotPath` and every `swagger-schematics all` run tells you what the back-end changed, in the names you use in code:
+
+```
+API changes since the last snapshot: 3 breaking, 2 added
+  ⚠ Property changed  IOrderDto.total  total?: number → total?: string
+  ⚠ Property removed  IUserDto.middleName
+  ⚠ Endpoint removed  DELETE /api/Orders/{id}  OrdersApiService.deleteOrdersById()
+  + Interface added   IRoleDto
+  + Endpoint added    GET /api/Users/{id}/roles  UsersApiService.getRolesByUsersId()
+```
+
+- The run compares the schema with the snapshot the previous run saved, then saves the new one. **Commit the snapshot** with the generated code; the first run only creates it.
+- **Breaking** means code written against the previous generation may stop compiling or behave differently: a removed interface, property, enum member or endpoint, a new required property (object literals of that interface must now set it), or a changed property type, optionality, nullability or endpoint signature. **Added** is new surface that leaves existing code alone: new interfaces, enum members, endpoints and optional properties, and new optional endpoint parameters that existing calls can leave out (e.g. an optional header, or an optional query param next to existing ones; Angular's first query param is breaking when a body or a headers object follows it, since it shifts their position).
+- Names, types and signatures come from the generator itself, so they match the generated files (`IUserDto`, `UsersApiService.getById()`, or `usersApi.getById` for RTK).
+- A renamed property or endpoint shows as removed plus added.
+- `--dry-run` prints the summary without writing anything, which is a quick way to see what the back-end changed before regenerating.
+- Only the `swagger-schematics all` command runs it: a single `types` or `api` run would update the snapshot for half the API.
+
+For a CI pipeline, add `--change-report=<file>` to also write the summary as markdown, e.g. to use as a pull request description. It stays under 4000 characters (the Azure DevOps limit) and ends with a count of the rest when the list is longer:
+
+```bash
+npx swagger-schematics all --change-report=api-changes.md
+```
+
+If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems are only warnings: a snapshot that can't be saved, or one that can't be compared with the schema (it is then replaced, the report says so, and changes are listed from the next run; a `--dry-run` leaves it as it is).
+
+### Filtering APIs
+
+Every API in the document is generated unless you narrow it down, e.g. when one back-end serves several front-ends:
+
+```json
+{
+  "includeApis": ["Orders", "Users", "Catalog"],
+  "excludeApis": ["Admin", "Internal*"],
+  "excludeDeprecated": true
+}
+```
+
+- Names are the controller segment of the path (`Orders` for `/api/Orders/{id}`), matched case-insensitively; `*` matches anything, and the PascalCase form works too (`ReplacementQueue` for `/api/replacement-queue`)
+- `includeApis` keeps only the listed APIs; `excludeApis` then drops from what is left
+- `excludeDeprecated` skips deprecated operations; an API left with none is skipped entirely
+- An entry that matches no API is reported as a warning, to catch typos. If such an `includeApis` entry leaves nothing to generate (`includeApis: ['Oders']`), the existing services are kept rather than deleted
+- The service of an API that becomes excluded is deleted on the next run (see [Removed schemas and endpoints](#removed-schemas-and-endpoints)), also when the filters exclude every API, and the [API change summary](#api-change-summary) applies the same filters
+- Filtering applies to API services only: the `types` schematic still generates every schema in the document
+
+### Angular: `provideApi()`
+
+Next to the base API files, the api schematic generates `_provide-api.ts`, so a standalone app configures the generated services in one line:
+
+```ts
+bootstrapApplication(AppComponent, {
+  providers: [provideHttpClient(), provideApi({ baseUrl: environment.apiUrl })],
+});
+
+// Or resolve the URL at runtime: the function runs in an injection context
+provideApi({ baseUrl: () => inject(AppConfig).apiUrl });
+```
+
+It provides the `API_BASE_URL` token the generated services read, and is regenerated on every run. It is generated only when `_api-base-url.token.ts` exists, so a custom base template without that token gets no provider (and one generated earlier is removed).
+
+### RTK cache tags
+
+With `rtkCacheTags: true` (React RTK only), a list refetches by itself after a create, update or delete in the same slice. Your components don't change:
+
+```ts
+// api-tag.enum.ts (generated): one member per slice
+export enum TApiTag {
+  Orders = 'Orders',
+  Users = 'Users'
+}
+
+// orders.api.ts (generated; the enum is imported under an alias so it can never
+// clash with a schema type of the same name)
+import { TApiTag as CacheTag } from './api-tag.enum';
+
+export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [CacheTag.Orders] }).injectEndpoints({
+  endpoints: (builder) => ({
+    getOrders: builder.query<IOrderDto[], void>({
+      query: () => ({ url: '/orders', method: 'GET' }),
+      providesTags: [CacheTag.Orders],
+    }),
+    putOrdersById: builder.mutation<void, { id: number; body: IOrderDto }>({
+      query: ({ id, body }) => ({ url: `/orders/${id}`, method: 'PUT', body }),
+      invalidatesTags: [CacheTag.Orders],
+    }),
+  }),
+});
+```
+
+- GET and HEAD endpoints provide their slice's tag; POST, PUT, PATCH and DELETE invalidate it; OPTIONS and TRACE get no tag
+- Tags are per slice: updating order 5 also refetches an `Orders` query for order 7 if one is on screen, and a change in one slice doesn't refresh another
+- Tag types are registered by each slice (`enhanceEndpoints({ addTagTypes })`), so the base API file needs no changes
+- Turning the option off again removes the tags, and the enum file with the default `removeStaleFiles: true` (with `false` it is kept and listed as a warning)
+- Slices whose names give the same member (`v1.0` and `v10` are both `V10`) get a numeric suffix (`V10_2`)
+
+To tag across slices, override with `enhanceEndpoints` using the same enum. The object form replaces the generated tags, so repeat the slice's own tag; the function form adds to them:
+
+```ts
+// Replace
+ordersApi.enhanceEndpoints({
+  addTagTypes: [TApiTag.Users],
+  endpoints: { getOrders: { providesTags: [TApiTag.Orders, TApiTag.Users] } },
+});
+
+// Add
+ordersApi.enhanceEndpoints({
+  addTagTypes: [TApiTag.Users],
+  endpoints: {
+    getOrders: (definition) => {
+      definition.providesTags = [...(definition.providesTags as TApiTag[]), TApiTag.Users];
+    },
+  },
+});
+
+// Refresh by hand, e.g. after a websocket event
+dispatch(ordersApi.util.invalidateTags([TApiTag.Orders]));
+```
+
+### Documentation comments
+
+Descriptions from the schema become JSDoc in the generated code, so they show up as hover text in the editor:
+
+- **Service methods and RTK endpoints**: the operation's `summary`, `description` (on its own paragraph, unless it repeats the summary) and `@deprecated`
+- **Interfaces, enums and type aliases**: the schema's `description` and `deprecated`
+- **Interface properties**: the property's `description` and `deprecated`, in the same comment as `@aggregatable` (see [OpenAPI Vendor Extensions](#openapi-vendor-extensions))
+
+With ASP.NET, XML doc comments (`<summary>`, `<remarks>`) reach the schema through Swashbuckle's `IncludeXmlComments`, and `[Obsolete]` becomes `deprecated`, which editors show as strikethrough. Anything undocumented renders exactly as before.
 
 ## OpenAPI Vendor Extensions
 
@@ -228,6 +415,15 @@ Note that this describes only *which* columns may be aggregated. Building the re
 
 You can provide your own EJS templates to fully customize the generated code. Use the `apiServiceTemplatePath` and `baseApiTemplatePath` options to specify paths to your custom templates.
 
+Both options point to a **directory**, absolute or relative to the project root (like `swaggerSchemaUrl`). A directory that doesn't exist or holds no `.template` file fails the run, so a wrong path never generates, or deletes, anything. Every file in it is rendered, and file names are templates too, so keep the built-in names:
+
+| Framework | `apiServiceTemplatePath` (one file per controller)   | `baseApiTemplatePath` (generated once)                         |
+|-----------|-------------------------------------------------------|----------------------------------------------------------------|
+| Angular   | `__name@dasherize__-api.service.ts.template`          | `_api-base.service.ts.template`, `_api-base-url.token.ts.template` |
+| React RTK | `__name@dasherize__.api.ts.template`                  | `api-base.ts.template`                                         |
+
+The easiest start is to copy the built-in templates from `node_modules/swagger-schematics/api/templates/<angular|react-rtk>/` (`api-service` or `api` for services, `base-api` for the base files) and edit them.
+
 ### Example configuration with custom templates
 
 ```json
@@ -251,9 +447,16 @@ The following variables are available in API service templates:
 | `apiList`                 | IParsedApiItem[]   | Array of parsed API operations                                                                      |
 | `importRefs`              | IImportRef[]       | Array of import references for types                                                                |
 | `transformRefsToImport`   | function           | Helper to generate import statements from refs                                                      |
+| `baseApiImportPath`       | string             | Import path of the base API file from this file (tsconfig alias when one matches, e.g. "@th-common/store/api-base", otherwise relative) |
+| `scopeEndpointsWithTags`  | boolean            | The `scopeEndpointsWithTags` option (defaults to `false`)                                           |
+| `cacheTag`                | string \| null     | RTK: the slice's `TApiTag` member (e.g., "Orders") when `rtkCacheTags` is on, otherwise `null`       |
+| `renderJsDoc`             | function           | `renderJsDoc(item, '  ')` renders the operation's `summary`, `description` and `@deprecated` as a JSDoc comment at the given indent (empty string when there is nothing to document) |
 | `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
 | `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |
+| `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and OPTIONS with a request body go through `request(method, url, { ... })`; a GET, HEAD or TRACE request body is left out, since a browser can't send it. The URL is built with `this.getUrl(...)`, so the service must extend the generated `ApiBaseService` |
+
+Every configuration option (e.g. `framework`, `path`, `rtkCacheTags`) and every export of your [`templateHelpersPath`](#custom-template-helpers) file is available as a variable too.
 
 ### IParsedApiItem Properties
 
@@ -266,9 +469,11 @@ Each item in `apiList` has the following properties:
 | `apiMethodParams`        | string   | Method parameters as string (e.g., "id: number, body: IRequest")                                     |
 | `apiMethodParamNames`    | string[] | Array of parameter names (e.g., ["id", "body"])                                                      |
 | `apiMethodRequestType`   | string   | Combined request type (e.g., "{ id: number; body: IRequest }")                                       |
+| `isApiMethodRequestOptional` | boolean | `true` when every field of `apiMethodRequestType` is optional (only optional query/header params); the RTK template then types the argument `{ ... } \| void` and defaults it to `{}`, so the endpoint can be called without one |
 | `apiMethodType`          | string   | HTTP method lowercase (e.g., "get", "post")                                                          |
 | `httpMethod`             | string   | HTTP method uppercase (e.g., "GET", "POST")                                                          |
 | `apiUrl`                 | string   | URL path with interpolation (e.g., "${id}/notes")                                                    |
+| `apiPath`                | string   | The operation's path as written in the document (e.g., "/api/Users/{id}")                          |
 | `apiUrlFormatted`        | string   | URL formatted for code (e.g., `` `/${id}/notes` ``)                                                  |
 | `isQuery`                | boolean  | True for GET/HEAD methods                                                                            |
 | `requestMethod`          | string   | HTTP method for httpClient (e.g., "get", "post")                                                     |
@@ -276,9 +481,14 @@ Each item in `apiList` has the following properties:
 | `response`               | object   | Raw OpenAPI success response object, or undefined if the operation has none                          |
 | `bodyParam`              | object   | Parsed body parameter or null                                                                        |
 | `bodyFormatted`          | string   | Body parameter name or empty string                                                                  |
-| `queryParams`            | array    | Array of parsed query parameters                                                                     |
+| `queryParams`            | array    | Parsed query params; `originalParam.name` is the name sent in the query string, `objectSymbol` its variable (`page_size` → "pageSize", `default` → "defaultParam"), `objectEntry` the object entry that maps one to the other (`'page_size': pageSize`) |
 | `queryParamsFormatted`   | string   | Query params formatted for HTTP options                                                              |
-| `pathParams`             | array    | Array of parsed path parameters                                                                      |
+| `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays and tuples of objects and `application/json` content params as JSON (a `oneOf`/`anyOf` with an array of objects among its members decides at runtime: only an array holding an object is sent as JSON); empty when none |
+| `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
+| `pathParams`             | array    | Parsed path params, one per `{placeholder}` in the path (a placeholder the operation doesn't declare gets a required `string` param); `originalParam.name` is the declared name, `objectSymbol` its variable |
+| `cookieParams`           | array    | Parsed cookie params. The built-in templates don't send them: browsers attach cookies themselves |
+| `hasOmittableQueryParams` | boolean | `true` when any query param can be absent (optional or nullable)                                     |
+| `isBinaryResponse`       | boolean  | `true` when the success response is binary (typed `Blob`): Angular adds `responseType: 'blob'`, RTK a `responseHandler` |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |
 | `summary`                | string   | Operation summary from OpenAPI spec                                                                  |
 | `description`            | string   | Operation description from OpenAPI spec                                                              |
@@ -329,46 +539,58 @@ module.exports = {
 #### Using Helpers in Templates
 
 ```ejs
-import { Injectable } from "@angular/core";
-import { ApiResponse } from "./api-response";
-
-@Injectable({ providedIn: 'root' })
-export class <%= classify(name) %>ApiService {
-  private baseUrl = '<%= BASE_URL %>/<%= API_VERSION %>/<%= name %>';
-
-<% for (let item of apiList) { %>
-<%= buildJsDoc(item) %>
-  <%= formatEndpointName(item.apiMethodName) %>(): Observable<<%= wrapResponseType(item.responseTypeSymbol) %>> {
-    return this.http.<%= item.requestMethod %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
-  }
-<% } %>
-}
-```
-
-> **Note:** The helpers file must be a CommonJS module (using `module.exports`). ES modules with `export default` are also supported.
-
-### Example Custom Template (Angular)
-
-```ejs
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { Observable } from "rxjs";
+import { ApiResponse } from "./api-response";
 
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
 
 @Injectable({ providedIn: 'root' })
 export class <%= classify(name) %>ApiService {
-  private baseUrl = '/api/<%= name %>';
-
-  constructor(private http: HttpClient) {}
-
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = '<%= BASE_URL %>/<%= API_VERSION %>/<%= name %>';
 <% for (let item of apiList) { %>
-  /**
-   * <%= item.summary || item.apiMethodName %>
-   */
-  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
-    return this.http.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
+<%= buildJsDoc(item) %>
+  <%= formatEndpointName(item.apiMethodName) %>(<%= item.apiMethodParams %>): Observable<<%= wrapResponseType(item.responseTypeSymbol) %>> {
+    return this.http.<%= item.requestMethod %><<%= wrapResponseType(item.responseTypeSymbol) %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
   }
 <% } %>
 }
 ```
+
+This example only shows how helpers are called: it sends the path but no body, query or header params, so methods such as PUT and POST won't compile as they are. For real services, start from the example below, which uses `buildHttpCall`.
+
+> **Note:** The helpers file must be a CommonJS module (using `module.exports`). ES modules with `export default` are also supported.
+
+### Example Custom Template (Angular)
+
+A `__name@dasherize__-api.service.ts.template` that keeps the built-in request handling (body, query and header params, binary responses) and changes the method names:
+
+```ejs
+import { Injectable } from "@angular/core";
+import { Observable } from "rxjs";
+import { ApiBaseService } from "<%= baseApiImportPath %>";
+
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
+
+@Injectable({ providedIn: 'root' })
+export class <%= classify(name) %>ApiService extends ApiBaseService {
+  readonly endpoint = '<%= name %>';
+<% for (let item of apiList) {
+  const call = buildHttpCall(item);
+  // Binary responses use the untyped overload: responseType 'blob' makes it Observable<Blob>
+  const responseGeneric = item.isBinaryResponse ? '' : `<${item.responseTypeSymbol}>`;
+%>
+<%= renderJsDoc(item, '  ') %>  <%= item.scopedApiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+    return this.httpClient.<%= call.method %><%= responseGeneric %>(<%= call.args.join(', ') %>);
+  }
+<% } %>}
+```
+
+
+## Changelog and roadmap
+
+- [CHANGELOG](https://github.com/NechiK/swagger-schematics/blob/develop/projects/swagger-schematics/CHANGELOG.md): what changed in each version, with upgrade notes for breaking changes
+- [ROADMAP](https://github.com/NechiK/swagger-schematics/blob/develop/ROADMAP.md): known issues and feature ideas
+- [MIT License](https://github.com/NechiK/swagger-schematics/blob/develop/LICENSE)

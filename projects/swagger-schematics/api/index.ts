@@ -17,17 +17,19 @@ import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
 import { SwaggerApiSchema } from './schema';
-import { transformSwaggerSchema } from './helpers/api.helper';
+import { buildCacheTags, findUnmatchedIncludePatterns, isEmptyApiOutputIntended, transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
+import { renderJsDoc } from '../types/utils/js-doc';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { FRAMEWORK_CONFIGS, resolveFramework } from '../interfaces/swagger-schematics/framework';
-import { buildAngularHttpCallArgs } from './helpers/angular-template.helper';
+import { buildAngularHttpCall } from './helpers/angular-template.helper';
 import { getBaseApiImportPath, resolveAngularBaseApiDir } from './helpers/import-path.helper';
 import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-api-rules';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
+import { resolveTemplateDir, templateDirSource } from './helpers/template-path.helper';
 import * as path from 'path';
 
 import { existsSync } from 'fs';
@@ -54,6 +56,40 @@ function loadTemplateHelpers(helpersPath: string): Record<string, unknown> {
     }
 }
 
+/**
+ * Generates `_provide-api.ts` (a standalone `provideApi({ baseUrl })`) next to
+ * the Angular base files. It builds on the API_BASE_URL token, so it is only
+ * generated when `_api-base-url.token.ts` exists; a custom base template
+ * without the token gets no provider rather than one that doesn't compile.
+ * Runs after the base API rule, so a token created in this run counts.
+ *
+ * Like the base files it is not recorded in the stale-files manifest: it does
+ * not come from the schema, and counting it would defeat the "a schema that
+ * produced nothing deletes nothing" safety net.
+ */
+function createProvideApiRule(baseApiDir: string): Rule {
+    return (tree: Tree, context: SchematicContext) => {
+        const tokenPath = `${baseApiDir}/_api-base-url.token.ts`;
+        const providerPath = `${baseApiDir}/_provide-api.ts`;
+        if (!tree.exists(tokenPath)) {
+            // A provider from an earlier run would now import a missing token and break the build.
+            // Only ours is removed: it is the file that imports that token.
+            const previousProvider = tree.read(providerPath)?.toString();
+            if (previousProvider?.includes(`from './_api-base-url.token'`)) {
+                tree.delete(providerPath);
+                context.logger.info(`provideApi: ${tokenPath} not found, so the previously generated ${providerPath} is removed.`);
+            } else {
+                context.logger.info(`provideApi: ${tokenPath} not found, so _provide-api.ts is not generated.`);
+            }
+            return;
+        }
+        return mergeWith(apply(url('./templates/angular/provider'), [
+            applyTemplates({}),
+            move(baseApiDir)
+        ]), MergeStrategy.Overwrite);
+    };
+}
+
 export default function(options: SwaggerApiSchema) {
     const apiRule: Rule = async (tree: Tree, context: SchematicContext) => {
         const config = getOpenapiSchematicsConfig(options);
@@ -65,6 +101,15 @@ export default function(options: SwaggerApiSchema) {
         const framework = resolveFramework(config.framework);
         const frameworkConfig = FRAMEWORK_CONFIGS[framework];
 
+        // Select templates based on framework. Custom template paths are checked before the
+        // schema is loaded, so a wrong one fails fast.
+        const apiServiceTemplates = config.apiServiceTemplatePath
+            ? templateDirSource(resolveTemplateDir('apiServiceTemplatePath', config.apiServiceTemplatePath))
+            : url(frameworkConfig.templates.apiService);
+        const baseApiTemplates = config.baseApiTemplatePath
+            ? templateDirSource(resolveTemplateDir('baseApiTemplatePath', config.baseApiTemplatePath))
+            : url(frameworkConfig.templates.baseApi);
+
         const swagger: ISwaggerSchema = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
 
         const versionInfo = detectOpenApiVersion(swagger);
@@ -74,12 +119,12 @@ export default function(options: SwaggerApiSchema) {
 
         const parsedApiSchemas = transformSwaggerSchema(swagger, {
             typeMapping: config.typeMapping,
-            apiPathKey: config.apiPathKey
+            legacyOptionalProperties: config.legacyOptionalProperties,
+            apiPathKey: config.apiPathKey,
+            includeApis: config.includeApis,
+            excludeApis: config.excludeApis,
+            excludeDeprecated: config.excludeDeprecated
         });
-
-        // Select templates based on framework
-        const apiServiceTemplates = url(config.apiServiceTemplatePath || frameworkConfig.templates.apiService);
-        const baseApiTemplates = url(config.baseApiTemplatePath || frameworkConfig.templates.baseApi);
 
         // Loop-invariant: the base API location, file extension, and custom
         // helpers depend only on the config, so resolve (and require) them once
@@ -97,6 +142,22 @@ export default function(options: SwaggerApiSchema) {
         const rules: Rule[] = [];
         const generatedFiles = new Set<string>();
 
+        // RTK cache tags: one TApiTag member per slice, generated into `path`
+        if (config.rtkCacheTags && framework !== 'react-rtk') {
+            context.logger.warn(`rtkCacheTags applies to framework 'react-rtk' only; ignored for '${framework}'.`);
+        }
+        const useCacheTags = !!config.rtkCacheTags && framework === 'react-rtk';
+        const cacheTags = buildCacheTags(Object.keys(parsedApiSchemas));
+        // No slices, no enum: an empty schema must generate nothing (see the stale-files safety net)
+        if (useCacheTags && cacheTags.size) {
+            const cacheTagsSource = apply(url('./templates/react-rtk/cache-tags'), [
+                applyTemplates({ cacheTags: [...cacheTags.values()] }),
+                move(config.path),
+                recordGeneratedFiles(generatedFiles)
+            ]);
+            rules.push(mergeWith(cacheTagsSource, MergeStrategy.Overwrite));
+        }
+
         Object.keys(parsedApiSchemas).forEach(apiSchemaKey => {
             const parsed = parseName(config.path!, apiSchemaKey);
             const apiFilePath = `${config.path}/${strings.dasherize(apiSchemaKey)}${apiFileExt}`;
@@ -106,10 +167,13 @@ export default function(options: SwaggerApiSchema) {
                 ...config,
                 ...strings,
                 transformRefsToImport,
+                renderJsDoc,
                 name: apiSchemaKey,
                 apiList: parsedApiSchemas[apiSchemaKey].apiList,
                 importRefs: parsedApiSchemas[apiSchemaKey].importRefs,
                 scopeEndpointsWithTags: config.scopeEndpointsWithTags || false,
+                // The slice's TApiTag member (e.g. 'Orders'), or null when rtkCacheTags is off
+                cacheTag: useCacheTags ? cacheTags.get(apiSchemaKey) : null,
                 baseApiImportPath: getBaseApiImportPath(tree, apiFilePath, baseApiPath),
                 ...customHelpers,
             };
@@ -117,7 +181,7 @@ export default function(options: SwaggerApiSchema) {
             // Add framework-specific helpers
             if (framework === 'angular') {
                 Object.assign(templateContext, {
-                    buildHttpCallArgs: buildAngularHttpCallArgs,
+                    buildHttpCall: buildAngularHttpCall,
                 });
             }
 
@@ -136,12 +200,28 @@ export default function(options: SwaggerApiSchema) {
             rules.push(baseApiRule);
         }
 
+        // Angular: provideApi() next to the base files, regenerated every run
+        if (framework === 'angular') {
+            rules.push(createProvideApiRule(baseApiPath.replace(/\/[^/]*$/, '')));
+        }
+
         const eslintFixRule = createEslintFixRule(config);
+        // An includeApis entry matching nothing is likely a typo; if the filters then leave nothing
+        // to generate, keep the services rather than deleting all of them
+        const unmatchedIncludes = findUnmatchedIncludePatterns(swagger, config.includeApis, config.apiPathKey);
+        const renderedApiCount = Object.keys(parsedApiSchemas).length;
         const staleFilesRule = createStaleFilesRule({
             section: 'api',
             outputPath: config.path,
             generatedFiles,
             remove: config.removeStaleFiles !== false,
+            // Filters that exclude every API are a choice, not a broken schema: their services go
+            emptyIsIntended: isEmptyApiOutputIntended(swagger, renderedApiCount, unmatchedIncludes, config.apiPathKey),
+            emptyHint: renderedApiCount
+                ? `The templates rendered no files for ${renderedApiCount} API(s): check apiServiceTemplatePath.`
+                : unmatchedIncludes.length
+                    ? `includeApis entries ${unmatchedIncludes.map(pattern => `'${pattern}'`).join(', ')} match no API: check them for typos.`
+                    : undefined,
             ownedFilePatterns: [{ dir: config.path, suffixes: [apiFileExt], exclude: [baseApiPath] }]
         });
         return chain([...rules, eslintFixRule, staleFilesRule]);

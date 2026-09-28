@@ -1,11 +1,14 @@
 import { buildRelativePath } from "@schematics/angular/utility/find-module";
 import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
-import { isAllOf, isOneOf, isAnyOf, isNot } from "../utils/transform-type";
+import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports, fromPropertyKey, toIndexSignature } from "../utils/transform-type";
+import { IDocSource, renderJsDoc } from "../utils/js-doc";
+import { toStringLiteral } from "../utils/enum";
 
 // Property rendering lives with the rest of the type transformation; re-exported
 // here because interface generation historically imported it from this module.
 export { transformProperties } from "../utils/transform-type";
+export { renderJsDoc } from "../utils/js-doc";
 
 export function removeImportDuplicates(importRefs: IImportRef[]): IImportRef[] {
     const seen = new Set<string>();
@@ -33,17 +36,20 @@ export function transformRefsToImport(refs: IImportRef[], optionsPath: string, s
 }
 
 /**
- * Render an interface's property lines. A property the server declared aggregatable
- * (`x-aggregatable`) gets a JSDoc line naming the operations it admits, so the
- * declaration is visible at the property in the editor.
+ * Render an interface's property lines. A property's `description` and `deprecated`
+ * become JSDoc, and a property the server declared aggregatable (`x-aggregatable`)
+ * gets an `@aggregatable` tag naming the operations it admits, so both are visible
+ * at the property in the editor.
  */
-export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string, aggregatable: Array<[string, string[]]> = []) {
+export function interfacePropertyLine(interfaceProperties: Array<[string, string]>, indentSize: string, aggregatable: Array<[string, string[]]> = [], docs: Array<[string, IDocSource]> = []) {
     const indentString = ' '.repeat(parseInt(indentSize, 10));
     const opsByProperty = new Map(aggregatable);
+    const docsByProperty = new Map(docs);
     return `${interfaceProperties.map(([property, type], index) => {
         const isNotLast = index !== interfaceProperties.length - 1;
-        const ops = opsByProperty.get(property.replace(/\?$/, ''));
-        const doc = ops ? `${indentString}/** @aggregatable ${ops.join(', ')} */\n` : '';
+        const name = fromPropertyKey(property);
+        const ops = opsByProperty.get(name);
+        const doc = renderJsDoc(docsByProperty.get(name), indentString, ops ? [`@aggregatable ${ops.join(', ')}`] : []);
         return `${doc}${indentString}${property}: ${type};${isNotLast ? '\n' : ''}`
     }).join('')}`;
 }
@@ -57,7 +63,7 @@ export function aggregatableColumnsType(interfaceName: string, aggregatable: Arr
     if (aggregatable.length === 0) {
         return '';
     }
-    const union = aggregatable.map(([property]) => `'${property}'`).join(' | ');
+    const union = aggregatable.map(([property]) => toStringLiteral(property)).join(' | ');
     return `\n\n/** Columns of ${interfaceName} a paged search can aggregate (see each property's @aggregatable). */\nexport type ${interfaceName}AggregatableColumn = ${union};`;
 }
 
@@ -67,8 +73,9 @@ export function buildImport(fromPath: string, toPath: string, symbolName: string
 }
 
 /**
- * Transform a composition schema (allOf, oneOf, anyOf, not) into a type
- * expression, import refs and an optional leading JSDoc comment.
+ * Transform a schema that generates a type alias - a composition (allOf, oneOf, anyOf, not),
+ * or an array, tuple or record - into a type expression, import refs and an optional
+ * leading JSDoc comment.
  */
 export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwaggerSchema, options?: ITransformTypeOptions): {
     typeExpression: string;
@@ -81,20 +88,22 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
         // allOf -> intersection type (A & B & C). Delegate to transformType,
         // whose allOf handling also renders sibling own-properties and lifts a
         // { type: "null" } member to a trailing `| null`; getCompositionImports
-        // (importRefs above) already includes the own-property refs.
+        // (importRefs above) already includes the own-property refs. A record member
+        // renders as an index signature, so it may refer to the alias (see toIndexSignature).
         const [typeExpression] = transformType(schema, swagger, options);
         return {
-            typeExpression,
+            typeExpression: toIndexSignature(typeExpression),
             importRefs: removeImportDuplicates(importRefs)
         };
     }
 
     if (isOneOf(schema) || isAnyOf(schema)) {
         // oneOf/anyOf -> union type (A | B | C). Delegate to transformType so a
-        // { type: "null" } member collapses to `| null` instead of `any`.
+        // { type: "null" } member collapses to `| null` instead of `any`, and a record
+        // member renders as an index signature (a JSON value union refers to itself).
         const [typeExpression] = transformType(schema, swagger, options);
         return {
-            typeExpression,
+            typeExpression: toIndexSignature(typeExpression),
             importRefs: removeImportDuplicates(importRefs)
         };
     }
@@ -107,6 +116,17 @@ export function transformCompositionSchema(schema: TSchemaByType, swagger: ISwag
             typeExpression: 'unknown',
             importRefs: [],
             leadingComment: `/** Any value except \`${excluded}\`. Generated from an OpenAPI \`not\` schema, which has no TypeScript equivalent. */`
+        };
+    }
+
+    // Arrays, tuples and records render like they do inline (a record as an index signature, so
+    // it may refer to itself); their nullability is added where the alias is referenced, as for
+    // an interface
+    if (isCollectionSchema(schema)) {
+        const [typeExpression, importRefs] = transformTypeWithAllImports(schema, swagger, options);
+        return {
+            typeExpression: toIndexSignature(typeExpression),
+            importRefs: removeImportDuplicates(importRefs)
         };
     }
 

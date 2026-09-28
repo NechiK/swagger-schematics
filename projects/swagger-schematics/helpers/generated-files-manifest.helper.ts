@@ -33,6 +33,14 @@ export interface IStaleFilesOptions {
     /** `removeStaleFiles` option: false keeps stale files and only reports them. */
     remove: boolean;
     /**
+     * The run generating nothing is intended (the document has content, but options such as
+     * API filters left nothing to generate), so stale files are removed as usual instead of
+     * being kept by the empty-schema safety net.
+     */
+    emptyIsIntended?: boolean;
+    /** Replaces "Check that the schema source is correct." when the safety net keeps the files. */
+    emptyHint?: string;
+    /**
      * Where this schematic's files usually live. Used only on the first run
      * (no manifest yet) to point at probable leftovers - they are listed, never deleted.
      */
@@ -107,12 +115,14 @@ function findProbableLeftovers(tree: Tree, patterns: IOwnedFilePattern[], genera
 
 /**
  * Deletes the files the previous run of this schematic generated that this run
- * did not (their schema or endpoint group was removed from the API), then
+ * did not (their schema or endpoint group was removed from the API, or an option such as
+ * an API filter no longer generates it), then
  * records this run's files in the manifest.
  *
  * Safety nets:
  * - only files listed in the manifest are candidates, so hand-written files are never touched;
- * - a run that generated nothing at all (an empty or broken schema) removes nothing;
+ * - a run that generated nothing at all (an empty or broken schema) removes nothing, unless
+ *   `emptyIsIntended` says the options chose that (API filters that left no API to render);
  * - on the first run there is no manifest, so nothing is removed - probable
  *   leftovers from earlier versions are listed for manual cleanup instead.
  */
@@ -144,18 +154,18 @@ export function createStaleFilesRule(options: IStaleFilesOptions): Rule {
                 .filter(entry => !currentSet.has(entry) && isInsideOutputDir(entry))
                 .filter(entry => tree.exists(join(outputDir, entry)));
 
-            if (stale.length && !current.length) {
-                context.logger.warn(`${options.section}: the schema produced no files, so the ${stale.length} ` +
-                    `previously generated file(s) were kept. Check that the schema source is correct.`);
+            if (stale.length && !current.length && !options.emptyIsIntended) {
+                context.logger.warn(`${options.section}: no files were generated, so the ${stale.length} ` +
+                    `previously generated file(s) were kept. ${options.emptyHint ?? 'Check that the schema source is correct.'}`);
                 next = previousEntries;
             } else if (stale.length && options.remove) {
                 stale.forEach(entry => {
                     tree.delete(join(outputDir, entry));
-                    context.logger.info(`${options.section}: ${join(outputDir, entry)} is no longer in the schema, deleting it`);
+                    context.logger.info(`${options.section}: ${join(outputDir, entry)} is no longer generated, deleting it`);
                 });
             } else if (stale.length) {
                 context.logger.warn(`${options.section}: removeStaleFiles is off, keeping files that are no longer ` +
-                    `in the schema:\n${stale.map(entry => `  ${join(outputDir, entry)}`).join('\n')}`);
+                    `generated:\n${stale.map(entry => `  ${join(outputDir, entry)}`).join('\n')}`);
                 // Keep tracking them so a later run with removal on still cleans them up
                 next = [...current, ...stale];
             }

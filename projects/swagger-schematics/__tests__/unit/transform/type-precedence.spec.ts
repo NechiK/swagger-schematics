@@ -115,22 +115,24 @@ describe('Generated type precedence and nullability', () => {
     });
   });
 
-  describe('isParamOptional via transformParamsToObject', () => {
-    const param = (typeSymbol: string, required: boolean): IParsedParam<IQueryParam> => ({
-      originalParam: { name: 'p', in: 'query', required } as IQueryParam,
+  describe('parameter optionality via transformParamsToObject', () => {
+    const param = (typeSymbol: string, isOptional: boolean): IParsedParam<IQueryParam> => ({
+      originalParam: { name: 'p', in: 'query', required: !isOptional } as IQueryParam,
       typeSymbol,
-      functionSymbol: `p: ${typeSymbol}`,
+      functionSymbol: `p${isOptional ? '?' : ''}: ${typeSymbol}`,
       interpolationSymbol: '${p}',
-      objectSymbol: 'p'
+      objectSymbol: 'p',
+      isOptional,
+      isNullable: typeSymbol.endsWith(' | null')
     });
 
     it('keeps a required param with a nested "| null" required', () => {
-      const result = transformParamsToObject([param('Record<string, string | null>', true)]);
+      const result = transformParamsToObject([param('Record<string, string | null>', false)]);
       expect(result).toContain('p: Record<string, string | null>');
       expect(result).not.toContain('p?:');
     });
 
-    it('marks a param whose type ends with | null as optional', () => {
+    it('marks an optional param with ?', () => {
       const result = transformParamsToObject([param('string | null', true)]);
       expect(result).toContain('p?: string | null');
     });

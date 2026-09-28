@@ -1,4 +1,4 @@
-import { describeErrorChain, formatSchematicError, logSchematicError, wrapRuleWithErrorLogging } from '@lib/helpers/error-logging.helper';
+import { describeErrorChain, formatSchematicError, logCliError, logSchematicError, wrapRuleWithErrorLogging } from '@lib/helpers/error-logging.helper';
 import { fetchSwaggerSchema } from '@lib/helpers/swagger-schema.helper';
 
 describe('error logging', () => {
@@ -30,8 +30,14 @@ describe('error logging', () => {
   describe('formatSchematicError', () => {
     it('should include message and stack for every cause', () => {
       const report = formatSchematicError(chainedError());
-      expect(report).toContain('Error: TypeError: fetch failed');
+      expect(report.startsWith('TypeError: fetch failed\n    at ')).toBe(true);
       expect(report).toContain('Caused by: Error: getaddrinfo ENOTFOUND swagger.internal.host');
+    });
+
+    it('should name the error type once', () => {
+      expect(formatSchematicError(new Error('boom'))).not.toContain('Error: Error:');
+      expect(formatSchematicError(new Error('boom')).startsWith('Error: boom\n')).toBe(true);
+      expect(formatSchematicError('just a string')).toBe('Error: just a string');
     });
   });
 
@@ -43,6 +49,29 @@ describe('error logging', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("'types' schematic failed"));
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('ENOTFOUND'));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('logCliError', () => {
+    it('should print a CLI failure', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      logCliError(new Error("Framework 'react' is not supported."));
+
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringMatching(/^\[swagger-schematics\] failed:\nError: Framework 'react' is not supported\./));
+      consoleSpy.mockRestore();
+    });
+
+    it('should not print a schematic failure a second time', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = chainedError();
+
+      logSchematicError('api', error);
+      logCliError(error);
+
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
       consoleSpy.mockRestore();
     });
   });

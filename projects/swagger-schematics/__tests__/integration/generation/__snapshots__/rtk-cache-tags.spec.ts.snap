@@ -1,0 +1,56 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`RTK cache tags registers the tag on the slice, provides it from queries and invalidates it from mutations 1`] = `
+"
+import { api as baseApi } from '@th-common/store/api-base';
+import { TApiTag as CacheTag } from './api-tag.enum';
+
+
+export const ordersApi = baseApi.enhanceEndpoints({ addTagTypes: [CacheTag.Orders] }).injectEndpoints({
+  overrideExisting: false,
+  endpoints: (builder) => ({
+    getOrders: builder.query<void, void>({
+      query: () => ({
+        url: '/orders',
+        method: 'GET',
+      }),
+      providesTags: [CacheTag.Orders],
+    }),
+    postOrders: builder.mutation<void, void>({
+      query: () => ({
+        url: '/orders',
+        method: 'POST',
+      }),
+      invalidatesTags: [CacheTag.Orders],
+    }),
+    headOrdersById: builder.query<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'HEAD',
+      }),
+      providesTags: [CacheTag.Orders],
+    }),
+    putOrdersById: builder.mutation<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'PUT',
+      }),
+      invalidatesTags: [CacheTag.Orders],
+    }),
+    patchOrdersById: builder.mutation<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: [CacheTag.Orders],
+    }),
+    deleteOrdersById: builder.mutation<void, { id: number }>({
+      query: ({ id }) => ({
+        url: \`/orders/\${id}\`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [CacheTag.Orders],
+    }),
+  }),
+});"
+`;

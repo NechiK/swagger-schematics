@@ -1,9 +1,6 @@
 import { Injectable } from "@angular/core";
 import { ApiBaseService } from "<%= baseApiImportPath %>";
 import { Observable } from "rxjs";
-<% if (apiList.some(item => item.hasOmittableQueryParams)) { %>
-import { omitBy, isNil } from 'lodash-es';
-<% } %>
 
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
 
@@ -17,17 +14,13 @@ export class <%= classify(name) %>ApiService extends ApiBaseService {
     super();
   }
 <% for (let item of apiList) {
-  let httpCallArgs = buildHttpCallArgs(item);
+  let httpCall = buildHttpCall(item);
 %>
-  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+<%= renderJsDoc(item, '  ') %>  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
 <% /* Binary responses use the untyped overload: responseType 'blob' in options makes it Observable<Blob> */
    let responseGeneric = item.isBinaryResponse ? '' : `<${item.responseTypeSymbol}>`;
-if (httpCallArgs.length > 0) { %>    return this.httpClient.<%= item.requestMethod %><%= responseGeneric %>(
-      this.getUrl(<%= item.apiUrlFormatted %>),
-      <%= httpCallArgs.join(',\n      ') %>
+%>    return this.httpClient.<%= httpCall.method %><%= responseGeneric %>(
+      <%= httpCall.args.join(',\n      ') %>
     );
-<% } else { %>    return this.httpClient.<%= item.requestMethod %><%= responseGeneric %>(
-      this.getUrl(<%= item.apiUrlFormatted %>)
-    );
-<% } %>  }
+  }
 <% } %>}

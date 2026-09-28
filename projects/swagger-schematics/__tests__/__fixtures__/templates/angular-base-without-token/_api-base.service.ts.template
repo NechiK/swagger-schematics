@@ -1,0 +1,12 @@
+import { HttpClient } from '@angular/common/http';
+import { inject } from '@angular/core';
+
+// A custom base template that reads its base URL from elsewhere: no API_BASE_URL token
+export abstract class ApiBaseService {
+  protected readonly httpClient = inject(HttpClient);
+  abstract readonly endpoint: string;
+
+  getUrl(url: string = ''): string {
+    return ['/api', this.endpoint, url].filter(Boolean).join('/');
+  }
+}

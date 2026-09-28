@@ -5,9 +5,6 @@ exports[`Schematics Integration API Service Generation should generate full API 
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
 import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
 import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
@@ -24,12 +21,14 @@ export class ClaimApiService extends ApiBaseService {
     super();
   }
 
+  /** Gets Claim */
   getById(id: number): Observable<IClaimDetailDTO> {
     return this.httpClient.get<IClaimDetailDTO>(
       this.getUrl(\`/\${id}\`)
     );
   }
 
+  /** Updates Claim */
   updateClaimById(id: number, body: IClaimDetailDTO): Observable<IClaimDetailDTO> {
     return this.httpClient.put<IClaimDetailDTO>(
       this.getUrl(\`/\${id}\`),
@@ -43,14 +42,16 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Create claim */
   createClaim({ width, height }: { width?: number; height?: number }, body: FormData): Observable<void> {
     return this.httpClient.post<void>(
       this.getUrl('/'),
       body,
-      { params: omitBy({ width, height }, isNil) }
+      { params: { ...(width != null ? { width } : {}), ...(height != null ? { height } : {}) } }
     );
   }
 
+  /** Creates Claim */
   createClaimByIdNote(id: number, body: ICreateNoteDTO): Observable<IClaimNoteViewDTO> {
     return this.httpClient.post<IClaimNoteViewDTO>(
       this.getUrl(\`/\${id}/note\`),
@@ -58,6 +59,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Update claim status */
   updateClaimStatus(body: number): Observable<void> {
     return this.httpClient.put<void>(
       this.getUrl('/status'),
@@ -79,6 +81,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Update claim by id reactivate */
   updateClaimByIdReactivate(id: number): Observable<void> {
     return this.httpClient.put<void>(
       this.getUrl(\`/\${id}/reactivate\`),
@@ -86,6 +89,7 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Delete multiple entities */
   deleteClaimDeletemany(body: number[]): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/deletemany'),
@@ -93,18 +97,21 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
+  /** Get service actions */
   getClaimServiceactions(serviceActionId: number): Observable<number[]> {
     return this.httpClient.get<number[]>(
       this.getUrl('/serviceactions')
     );
   }
 
+  /** Get service actions */
   getClaimServiceactionsByServiceActionId(serviceActionId: number): Observable<number[]> {
     return this.httpClient.get<number[]>(
       this.getUrl(\`/serviceactions/\${serviceActionId}\`)
     );
   }
 
+  /** Get claims by status */
   getClaimBystatus({ id, status }: { id: string; status: TClaimStatuses }): Observable<IClaimDetailDTO[]> {
     return this.httpClient.get<IClaimDetailDTO[]>(
       this.getUrl('/bystatus'),
@@ -112,30 +119,34 @@ export class ClaimApiService extends ApiBaseService {
     );
   }
 
-  updateClaimNoteById(body: ICreateNoteDTO): Observable<void> {
+  /** Update note by id */
+  updateClaimNoteById(id: string, body: ICreateNoteDTO): Observable<void> {
     return this.httpClient.put<void>(
-      this.getUrl(\`/note/\${body.id}\`),
+      this.getUrl(\`/note/\${id}\`),
       body
     );
   }
 
+  /** Deletes Claim */
   deleteClaimSingleById(id: number): Observable<void> {
     return this.httpClient.delete<void>(
       this.getUrl(\`/single/\${id}\`)
     );
   }
 
+  /** Delete claims by filter */
   deleteClaimByFilter({ status, force }: { status: string; force?: boolean }): Observable<boolean> {
     return this.httpClient.delete<boolean>(
       this.getUrl('/by-filter'),
-      { params: omitBy({ status, force }, isNil) }
+      { params: { status, ...(force != null ? { force } : {}) } }
     );
   }
 
+  /** Search claims with optional filters */
   getClaimSearch({ name, status, priority }: { name: string; status?: string | null; priority?: number | null }): Observable<IClaimDetailDTO[]> {
     return this.httpClient.get<IClaimDetailDTO[]>(
       this.getUrl('/search'),
-      { params: omitBy({ name, status, priority }, isNil) }
+      { params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) } }
     );
   }
 }
@@ -146,9 +157,6 @@ exports[`Schematics Integration Binary Response Support should generate the full
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
-
-import { omitBy, isNil } from 'lodash-es';
-
 
 
 
@@ -162,20 +170,23 @@ export class DocumentApiService extends ApiBaseService {
     super();
   }
 
+  /** List documents */
   getDocument({ page, force }: { page?: number; force: boolean }): Observable<boolean> {
     return this.httpClient.get<boolean>(
       this.getUrl('/'),
-      { params: omitBy({ page, force }, isNil) }
+      { params: { ...(page != null ? { page } : {}), force } }
     );
   }
 
-  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null }): Observable<Blob> {
+  /** Download a document */
+  getDownloadByDocumentId(documentId: number, { thumbnail }: { thumbnail?: boolean | null } = {}): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl(\`/\${documentId}/download\`),
-      { params: omitBy({ thumbnail }, isNil), responseType: 'blob' }
+      { params: { ...(thumbnail != null ? { thumbnail } : {}) }, responseType: 'blob' }
     );
   }
 
+  /** Upload document files */
   postDocumentByDocumentIdUpload(documentId: number, body: FormData): Observable<boolean> {
     return this.httpClient.post<boolean>(
       this.getUrl(\`/\${documentId}/upload\`),
@@ -212,6 +223,7 @@ exports[`Schematics Integration File Generation should generate expected files 1
   "/test-output/claim-api.service.ts",
   "/test-output/_api-base-url.token.ts",
   "/test-output/_api-base.service.ts",
+  "/test-output/_provide-api.ts",
   "/test-output/interfaces/company-search-dto.interface.ts",
   "/test-output/interfaces/claim-detail-dto.interface.ts",
   "/test-output/interfaces/id-name-dto.interface.ts",
@@ -235,6 +247,7 @@ exports[`Schematics Integration Interface Generation should generate ClaimDetail
 "import { IIdNameDTO } from './id-name-dto.interface';
 import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
+/** A detailed journal entry */
 export interface IClaimDetailDTO {
   id?: number;
   problemType?: IIdNameDTO;
@@ -248,9 +261,13 @@ export interface IClaimDetailDTO {
 exports[`Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
 "
 
+/** IdName lookup */
 export interface IIdNameDTO {
+  /** Id */
   id?: number;
+  /** Name */
   name?: string | null;
+  /** Display name */
   displayName?: string | null;
 }
 "

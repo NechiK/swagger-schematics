@@ -147,7 +147,7 @@ describe('Stale generated files', () => {
 
     expect(result.files).toContain(`${OUT}/orders-api.service.ts`);
     expect(result.files).toContain(`${OUT}/interfaces/order-dto.interface.ts`);
-    expect(log.warnings.some(message => message.includes('the schema produced no files'))).toBe(true);
+    expect(log.warnings.some(message => message.includes('no files were generated'))).toBe(true);
     // The manifest keeps tracking them, so the next good run can still clean up
     expect(JSON.parse(result.readContent(MANIFEST)).api).toContain('orders-api.service.ts');
   });

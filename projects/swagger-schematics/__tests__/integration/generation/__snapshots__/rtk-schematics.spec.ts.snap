@@ -4,28 +4,28 @@ exports[`RTK Query Schematics Integration Binary Response Support should generat
 "
 import { api as baseApi } from '@th-common/store/api-base';
 
-import { omitBy, isNil } from 'lodash-es';
-
-
 
 export const documentApi = baseApi.injectEndpoints({
   overrideExisting: false,
   endpoints: (builder) => ({
+    /** List documents */
     documentGetDocument: builder.query<boolean, { page?: number; force: boolean }>({
       query: ({ page, force }) => ({
         url: '/document',
         method: 'GET',
-        params: omitBy({ page, force }, isNil),
+        params: { ...(page != null ? { page } : {}), force },
       }),
     }),
+    /** Download a document */
     documentGetDownloadByDocumentId: builder.query<Blob, { documentId: number; thumbnail?: boolean | null }>({
       query: ({ documentId, thumbnail }) => ({
         url: \`/document/\${documentId}/download\`,
         method: 'GET',
-        params: omitBy({ thumbnail }, isNil),
+        params: { ...(thumbnail != null ? { thumbnail } : {}) },
         responseHandler: (response) => response.blob(),
       }),
     }),
+    /** Upload document files */
     documentPostDocumentByDocumentIdUpload: builder.mutation<boolean, { documentId: number; body: FormData }>({
       query: ({ documentId, body }) => ({
         url: \`/document/\${documentId}/upload\`,
@@ -66,9 +66,6 @@ exports[`RTK Query Schematics Integration File Generation should generate expect
 exports[`RTK Query Schematics Integration RTK API Slice Generation should generate full RTK API slice 1`] = `
 "
 import { api as baseApi } from '@th-common/store/api-base';
-
-import { omitBy, isNil } from 'lodash-es';
-
 import { IClaimDetailDTO } from './interfaces/claim-detail-dto.interface';
 import { IClaimNoteViewDTO } from './interfaces/claim-note-view-dto.interface';
 import { ICreateNoteDTO } from './interfaces/create-note-dto.interface';
@@ -78,12 +75,14 @@ import { TClaimStatuses } from './enums/claim-statuses.enum';
 export const claimApi = baseApi.injectEndpoints({
   overrideExisting: false,
   endpoints: (builder) => ({
+    /** Gets Claim */
     claimGetById: builder.query<IClaimDetailDTO, { id: number }>({
       query: ({ id }) => ({
         url: \`/claim/\${id}\`,
         method: 'GET',
       }),
     }),
+    /** Updates Claim */
     claimUpdateClaimById: builder.mutation<IClaimDetailDTO, { id: number; body: IClaimDetailDTO }>({
       query: ({ id, body }) => ({
         url: \`/claim/\${id}\`,
@@ -97,14 +96,16 @@ export const claimApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
     }),
+    /** Create claim */
     claimCreateClaim: builder.mutation<void, { width?: number; height?: number; body: FormData }>({
       query: ({ width, height, body }) => ({
         url: '/claim',
         method: 'POST',
         body,
-        params: omitBy({ width, height }, isNil),
+        params: { ...(width != null ? { width } : {}), ...(height != null ? { height } : {}) },
       }),
     }),
+    /** Creates Claim */
     claimCreateClaimByIdNote: builder.mutation<IClaimNoteViewDTO, { id: number; body: ICreateNoteDTO }>({
       query: ({ id, body }) => ({
         url: \`/claim/\${id}/note\`,
@@ -112,6 +113,7 @@ export const claimApi = baseApi.injectEndpoints({
         body,
       }),
     }),
+    /** Update claim status */
     claimUpdateClaimStatus: builder.mutation<void, { body: number }>({
       query: ({ body }) => ({
         url: '/claim/status',
@@ -133,12 +135,14 @@ export const claimApi = baseApi.injectEndpoints({
         body,
       }),
     }),
+    /** Update claim by id reactivate */
     claimUpdateClaimByIdReactivate: builder.mutation<void, { id: number }>({
       query: ({ id }) => ({
         url: \`/claim/\${id}/reactivate\`,
         method: 'PUT',
       }),
     }),
+    /** Delete multiple entities */
     claimDeleteClaimDeletemany: builder.mutation<boolean, { body: number[] }>({
       query: ({ body }) => ({
         url: '/claim/deletemany',
@@ -146,18 +150,21 @@ export const claimApi = baseApi.injectEndpoints({
         body,
       }),
     }),
+    /** Get service actions */
     claimGetClaimServiceactions: builder.query<number[], { serviceActionId: number }>({
       query: ({ serviceActionId }) => ({
         url: '/claim/serviceactions',
         method: 'GET',
       }),
     }),
+    /** Get service actions */
     claimGetClaimServiceactionsByServiceActionId: builder.query<number[], { serviceActionId: number }>({
       query: ({ serviceActionId }) => ({
         url: \`/claim/serviceactions/\${serviceActionId}\`,
         method: 'GET',
       }),
     }),
+    /** Get claims by status */
     claimGetClaimBystatus: builder.query<IClaimDetailDTO[], { id: string; status: TClaimStatuses }>({
       query: ({ id, status }) => ({
         url: '/claim/bystatus',
@@ -165,31 +172,35 @@ export const claimApi = baseApi.injectEndpoints({
         params: { id, status },
       }),
     }),
-    claimUpdateClaimNoteById: builder.mutation<void, { body: ICreateNoteDTO }>({
-      query: ({ body }) => ({
-        url: \`/claim/note/\${body.id}\`,
+    /** Update note by id */
+    claimUpdateClaimNoteById: builder.mutation<void, { id: string; body: ICreateNoteDTO }>({
+      query: ({ id, body }) => ({
+        url: \`/claim/note/\${id}\`,
         method: 'PUT',
         body,
       }),
     }),
+    /** Deletes Claim */
     claimDeleteClaimSingleById: builder.mutation<void, { id: number }>({
       query: ({ id }) => ({
         url: \`/claim/single/\${id}\`,
         method: 'DELETE',
       }),
     }),
+    /** Delete claims by filter */
     claimDeleteClaimByFilter: builder.mutation<boolean, { status: string; force?: boolean }>({
       query: ({ status, force }) => ({
         url: '/claim/by-filter',
         method: 'DELETE',
-        params: omitBy({ status, force }, isNil),
+        params: { status, ...(force != null ? { force } : {}) },
       }),
     }),
+    /** Search claims with optional filters */
     claimGetClaimSearch: builder.query<IClaimDetailDTO[], { name: string; status?: string | null; priority?: number | null }>({
       query: ({ name, status, priority }) => ({
         url: '/claim/search',
         method: 'GET',
-        params: omitBy({ name, status, priority }, isNil),
+        params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) },
       }),
     }),
   }),

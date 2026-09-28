@@ -128,13 +128,13 @@ describe('RTK Query Schematics Integration', () => {
     });
 
     describe('Nullable Query Parameters', () => {
-      it('should import omitBy and isNil from lodash-es', () => {
-        expect(apiSliceContent).toContain("import { omitBy, isNil } from 'lodash-es'");
+      it('should not need lodash-es', () => {
+        expect(apiSliceContent).not.toContain('lodash-es');
+        expect(apiSliceContent).not.toContain('omitBy');
       });
 
-      it('should wrap nullable params in omitBy', () => {
-        expect(apiSliceContent).toContain('params: omitBy({');
-        expect(apiSliceContent).toContain('}, isNil)');
+      it('should add optional params only when they have a value', () => {
+        expect(apiSliceContent).toContain('params: { status, ...(force != null ? { force } : {}) },');
       });
     });
   });

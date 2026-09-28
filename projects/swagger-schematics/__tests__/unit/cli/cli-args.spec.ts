@@ -21,6 +21,25 @@ describe('parseCliArgs', () => {
     expect(args.unknownCommand).toBe('generate');
   });
 
+  it('should take --change-report out of the schematic options', () => {
+    expect(parseCliArgs(['all', '--change-report=api-changes.md', '--path=/src'])).toMatchObject({
+      changeReport: 'api-changes.md',
+      options: { path: '/src' }
+    });
+    expect(parseCliArgs(['all', '--change-report', 'out/report.md']).changeReport).toBe('out/report.md');
+  });
+
+  it('should reject --change-report without a file path', () => {
+    expect(() => parseCliArgs(['all', '--change-report'])).toThrow('--change-report needs a file path');
+  });
+
+  it('should split array options on commas', () => {
+    expect(parseCliArgs(['api', '--exclude-apis=Admin, Internal*', '--include-apis', 'Orders']).options).toEqual({
+      excludeApis: ['Admin', 'Internal*'],
+      includeApis: ['Orders']
+    });
+  });
+
   it('should camelize kebab-case option names', () => {
     const args = parseCliArgs(['api', '--swagger-schema-url=./s.json', '--scope-endpoints-with-tags']);
 

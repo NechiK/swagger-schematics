@@ -5,7 +5,6 @@ exports[`API generation edge cases (Angular) response edge cases render consiste
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
 
-
 import { IModelA } from './interfaces/model-a.interface';
 import { IModelB } from './interfaces/model-b.interface';
 
@@ -19,6 +18,7 @@ export class EdgeCaseApiService extends ApiBaseService {
     super();
   }
 
+  /** Bodyless 200 next to a binary 2XX */
   getEdgeCaseDownload(): Observable<Blob> {
     return this.httpClient.get(
       this.getUrl('/download'),
@@ -26,12 +26,14 @@ export class EdgeCaseApiService extends ApiBaseService {
     );
   }
 
+  /** Response declared only as application/xml */
   getEdgeCaseReport(): Observable<IModelA> {
     return this.httpClient.get<IModelA>(
       this.getUrl('/report')
     );
   }
 
+  /** Response-level $ref */
   getEdgeCaseReferenced(): Observable<IModelB> {
     return this.httpClient.get<IModelB>(
       this.getUrl('/referenced')

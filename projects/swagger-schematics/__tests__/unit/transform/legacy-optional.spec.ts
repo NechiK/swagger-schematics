@@ -36,4 +36,22 @@ describe('transformProperties - optionality', () => {
     expect(map.reqNullable).toBe('reqNullable?: string | null');
     expect(map.optNullable).toBe('optNullable?: string | null');
   });
+
+  it('legacyOptionalProperties: treats the OpenAPI 3.1 oneOf/anyOf "null" member as nullable', () => {
+    const swagger31 = {
+      openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {},
+      components: { schemas: { Dto: { type: 'object', properties: { a: { type: 'string' } } } } }
+    } as unknown as ISwaggerSchema;
+    const props: any = {
+      refOrNull: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Dto' }] },
+      stringOrNull: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      union: { oneOf: [{ type: 'string' }, { type: 'integer' }] }
+    };
+    const { propertiesContent } = transformProperties(props, swagger31, { legacyOptionalProperties: true }, []);
+    const map = asMap(propertiesContent);
+
+    expect(map.refOrNull).toBe('refOrNull?: IDto | null');
+    expect(map.stringOrNull).toBe('stringOrNull?: string | null');
+    expect(map.union).toBe('union: string | number');
+  });
 });

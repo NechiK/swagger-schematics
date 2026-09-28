@@ -1,0 +1,141 @@
+import { IApiChange } from './api-diff';
+
+export interface IFileCounts {
+    created: number;
+    updated: number;
+    deleted: number;
+}
+
+/**
+ * Azure DevOps rejects pull request descriptions over 4000 characters, the
+ * tightest limit among the usual hosts. The markdown report stays under it so
+ * a pipeline can pass the file straight through as the description.
+ */
+export const MAX_REPORT_LENGTH = 4000;
+
+function countLine(changes: IApiChange[]): string {
+    const breaking = changes.filter(change => change.severity === 'breaking').length;
+    const added = changes.length - breaking;
+    return `${breaking} breaking, ${added} added`;
+}
+
+function filesLine(files: IFileCounts): string {
+    return `Files: ${files.created} created, ${files.updated} updated, ${files.deleted} deleted`;
+}
+
+/**
+ * Plain-text summary for the CLI output. `changes` is null when there is no
+ * previous snapshot to compare against.
+ */
+export function formatConsoleSummary(changes: IApiChange[] | null): string[] {
+    if (changes === null) {
+        return [];
+    }
+    if (!changes.length) {
+        return ['API changes since the last snapshot: none'];
+    }
+
+    const kindWidth = Math.max(...changes.map(change => change.kind.length));
+    return [
+        `API changes since the last snapshot: ${countLine(changes)}`,
+        ...changes.map(change => {
+            const marker = change.severity === 'breaking' ? '⚠' : '+';
+            const detail = [change.ref, change.from !== undefined ? `${change.from} → ${change.to}` : undefined]
+                .filter(part => !!part)
+                .join('  ');
+            return `  ${marker} ${change.kind.padEnd(kindWidth)}  ${change.subject}${detail ? `  ${detail}` : ''}`;
+        })
+    ];
+}
+
+/**
+ * Markdown inline code. A backtick can't be escaped inside a code span, so text containing
+ * backticks (e.g. a `const` value) is fenced with a longer run of backticks than any it
+ * contains, padded with spaces when it starts or ends with one (CommonMark).
+ */
+export function codeSpan(text: string): string {
+    const longestRun = Math.max(0, ...(text.match(/`+/g) ?? []).map(run => run.length));
+    const fence = '`'.repeat(longestRun + 1);
+    const padding = text.startsWith('`') || text.endsWith('`') ? ' ' : '';
+    return `${fence}${padding}${text}${padding}${fence}`;
+}
+
+function markdownLine(change: IApiChange): string {
+    const ref = change.ref ? ` (${codeSpan(change.ref)})` : '';
+    const fromTo = change.from !== undefined ? `: ${codeSpan(change.from)} → ${codeSpan(change.to ?? '')}` : '';
+    return `- ${change.kind}: ${codeSpan(change.subject)}${ref}${fromTo}`;
+}
+
+/**
+ * Why a run has no change list: no snapshot yet ('missing'), one that isn't valid JSON or can't be
+ * compared with the schema ('unreadable'), or no `schemaSnapshotPath` ('not-configured').
+ */
+export type TSnapshotState = 'missing' | 'unreadable' | 'not-configured';
+
+/**
+ * Markdown report for a pull request description, cut to `maxLength` with a
+ * "...and N more" line when the change list is long. `snapshotState` says why `changes` is null.
+ */
+export function formatMarkdownReport(
+    changes: IApiChange[] | null,
+    files: IFileCounts,
+    maxLength = MAX_REPORT_LENGTH,
+    snapshotState: TSnapshotState = 'missing'
+): string {
+    const footer = `\n_${filesLine(files)}_\n`;
+
+    if (changes === null) {
+        switch (snapshotState) {
+            case 'unreadable':
+                return `## API changes\n\nThe previous schema snapshot couldn't be read or compared with the schema, so the changes ` +
+                    `can't be listed on this run. This run replaced it; the next run lists what changed.\n${footer}`;
+            case 'not-configured':
+                return `## API changes\n\nSet \`schemaSnapshotPath\` to list API changes; without a schema snapshot this report only counts files.\n${footer}`;
+            default:
+                return `## API changes\n\nNo previous schema snapshot to compare against, so the changes can't be listed yet. ` +
+                    `This run saved one; the next run lists what changed.\n${footer}`;
+        }
+    }
+    if (!changes.length) {
+        return `## API changes: none\n\nNothing in the schema changed the generated types or endpoints.\n${footer}`;
+    }
+
+    const sections: Array<[string, IApiChange[]]> = [
+        ['### ⚠️ Breaking', changes.filter(change => change.severity === 'breaking')],
+        ['### ✨ Added', changes.filter(change => change.severity === 'added')]
+    ];
+
+    let body = `## API changes: ${countLine(changes)}\n`;
+    let omitted = 0;
+    // Room for the footer and the "...and N more" line (sized for the largest count possible here)
+    const budget = maxLength - footer.length - omittedLine(changes.length).length;
+
+    sections.forEach(([heading, sectionChanges]) => {
+        if (!sectionChanges.length) {
+            return;
+        }
+        const headingText = `\n${heading}\n`;
+        if (omitted || body.length + headingText.length > budget) {
+            omitted += sectionChanges.length;
+            return;
+        }
+        body += headingText;
+        sectionChanges.forEach(change => {
+            const line = `${markdownLine(change)}\n`;
+            if (omitted || body.length + line.length > budget) {
+                omitted++;
+            } else {
+                body += line;
+            }
+        });
+    });
+
+    if (omitted) {
+        body += omittedLine(omitted);
+    }
+    return body + footer;
+}
+
+function omittedLine(omitted: number): string {
+    return `\n_...and ${omitted} more change${omitted === 1 ? '' : 's'} (run the generator locally to see all of them)._\n`;
+}

@@ -1,0 +1,198 @@
+import { strings } from '@angular-devkit/core';
+import { ISwaggerSchema, TSchemaByType } from '../../interfaces/version_3_1/swagger.interface';
+import { TFrameworkType } from '../../interfaces/swagger-schematics/framework';
+import { getGeneratedSchemaKind, TGeneratedSchemaKind } from '../../types/utils/schema-kind';
+import { fromPropertyKey, transformIndexSignature, transformProperties } from '../../types/utils/transform-type';
+import { transformCompositionSchema } from '../../types/helpers/template.helper';
+import { buildEnumMembers } from '../../types/utils/enum';
+import { transformSwaggerSchema } from '../../api/helpers/api.helper';
+
+export interface IApiModelOptions {
+    framework: TFrameworkType;
+    typeMapping?: Record<string, string>;
+    legacyOptionalProperties?: boolean;
+    apiPathKey?: string;
+    scopeEndpointsWithTags?: boolean;
+    includeApis?: string[];
+    excludeApis?: string[];
+    excludeDeprecated?: boolean;
+}
+
+export type TTypeModel =
+    /**
+     * Property name -> its generated declaration, e.g. `total?: number | null`, and the index
+     * signature's value type when the interface allows more properties, e.g. `number | string`
+     */
+    | { kind: 'interface'; properties: Record<string, string>; indexSignature?: string }
+    /** Member name -> its value as it appears in the enum */
+    | { kind: 'enum'; members: Record<string, string> }
+    | { kind: 'type-alias'; expression: string };
+
+export interface IEndpointModel {
+    /** e.g. `GET /api/Users/{id}` */
+    label: string;
+    /** Where it lives in the generated code, e.g. `UsersApiService.getById()` */
+    symbol: string;
+    /** Parameters and result, e.g. `(id: number) => IUserDto` */
+    signature: string;
+    /** The result type, e.g. `IUserDto` */
+    response: string;
+    /** Each parameter's declaration keyed by location and name, e.g. `query page` -> `page?: number` */
+    params: Record<string, string>;
+    /**
+     * The arguments a call passes, in order, and whether a call may leave each out. Angular:
+     * each path param, then the query object, the body and the headers object; RTK: one
+     * request object. A new optional parameter is harmless only if every existing call still
+     * lines up with these.
+     */
+    args: IEndpointArg[];
+}
+
+export interface IEndpointArg {
+    /** e.g. `path id`, `query`, `body`, `headers`, `request` */
+    id: string;
+    optional: boolean;
+}
+
+/**
+ * The API as the generated code exposes it: the TypeScript symbols the types
+ * schematic emits and the endpoints the api schematic emits, keyed by the name
+ * a developer sees. Built with the generator's own naming and type rendering,
+ * so a change summary speaks in the names and types found in the generated files.
+ */
+export interface IApiModel {
+    /** Keyed by symbol, e.g. `IUserDto`, `TOrderStatus` */
+    types: Record<string, TTypeModel>;
+    /** Keyed by `METHOD path` */
+    endpoints: Record<string, IEndpointModel>;
+}
+
+const SYMBOL_PREFIX: Record<TGeneratedSchemaKind, string> = {
+    'interface': 'I',
+    'enum': 'T',
+    'type-alias': 'T'
+};
+
+export function buildApiModel(swagger: ISwaggerSchema, options: IApiModelOptions): IApiModel {
+    return {
+        types: buildTypes(swagger, options),
+        endpoints: buildEndpoints(swagger, options)
+    };
+}
+
+function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiModel['types'] {
+    const transformOptions = { typeMapping: options.typeMapping, legacyOptionalProperties: options.legacyOptionalProperties };
+    const schemas = swagger.components?.schemas ?? {};
+    const types: IApiModel['types'] = {};
+
+    Object.keys(schemas).forEach(schemaKey => {
+        const kind = getGeneratedSchemaKind(schemas[schemaKey], { name: schemaKey, typeMapping: options.typeMapping });
+        if (!kind) {
+            return;
+        }
+
+        // Same naming as the templates: parseName() keeps the last path segment, then classify
+        const symbol = SYMBOL_PREFIX[kind] + strings.classify(schemaKey.split('/').pop() as string);
+        const schema = schemas[schemaKey] as TSchemaByType;
+
+        if (kind === 'enum') {
+            // Null prototype: members named like Object.prototype keys (constructor, toString,
+            // __proto__) are real entries, not inherited ones, when the diff compares them
+            const members: Record<string, string> = Object.create(null);
+            buildEnumMembers(schema as Parameters<typeof buildEnumMembers>[0]).forEach(([name, value]) => {
+                members[name] = JSON.stringify(value);
+            });
+            types[symbol] = { kind, members };
+        } else if (kind === 'type-alias') {
+            types[symbol] = { kind, expression: transformCompositionSchema(schema, swagger, transformOptions).typeExpression };
+        } else {
+            const { propertiesContent } = transformProperties(
+                (schema as { properties?: Parameters<typeof transformProperties>[0] }).properties ?? {},
+                swagger,
+                transformOptions,
+                (schema as { required?: string[] }).required ?? []
+            );
+            const properties: Record<string, string> = Object.create(null);
+            propertiesContent.forEach(([name, type]) => {
+                properties[fromPropertyKey(name)] = `${name}: ${type}`;
+            });
+            // Same rule as the types schematic: an index signature only next to properties
+            const indexSignature = propertiesContent.length > 0
+                ? transformIndexSignature(schema, propertiesContent, swagger, transformOptions)?.[0]
+                : undefined;
+            types[symbol] = indexSignature === undefined ? { kind, properties } : { kind, properties, indexSignature };
+        }
+    });
+
+    return types;
+}
+
+function buildEndpoints(swagger: ISwaggerSchema, options: IApiModelOptions): IApiModel['endpoints'] {
+    const groups = transformSwaggerSchema(swagger, {
+        typeMapping: options.typeMapping,
+        legacyOptionalProperties: options.legacyOptionalProperties,
+        apiPathKey: options.apiPathKey,
+        includeApis: options.includeApis,
+        excludeApis: options.excludeApis,
+        excludeDeprecated: options.excludeDeprecated,
+        silent: true
+    });
+    const endpoints: IApiModel['endpoints'] = {};
+
+    Object.keys(groups).forEach(groupKey => {
+        groups[groupKey].apiList.forEach(item => {
+            // Same naming as the Angular service and RTK slice templates
+            const symbol = options.framework === 'react-rtk'
+                ? `${strings.camelize(groupKey)}Api.${options.scopeEndpointsWithTags ? item.scopedApiMethodName : item.apiMethodName}`
+                : `${strings.classify(groupKey)}ApiService.${item.apiMethodName}()`;
+            const label = `${item.httpMethod} ${item.apiPath}`;
+            // Keyed by the declared name: a variable can change when another param takes it (a clash
+            // suffix), and the declared param then no longer gets the value existing calls pass.
+            // Header names are case-insensitive, so re-casing one (`X-Tenant` -> `x-tenant`) is no change
+            const params: Record<string, string> = Object.create(null);
+            ([['path', item.pathParams], ['query', item.queryParams], ['header', item.headerParams]] as const)
+                .forEach(([location, locationParams]) => locationParams.forEach(param => {
+                    const name = location === 'header' ? param.originalParam.name.toLowerCase() : param.originalParam.name;
+                    params[`${location} ${name}`] = `${param.objectSymbol}${param.isOptional ? '?' : ''}: ${param.typeSymbol}`;
+                }));
+            if (item.bodyParam) {
+                params[`body ${item.bodyParam.objectSymbol}`] = `${item.bodyParam.objectSymbol}: ${item.bodyParam.typeSymbol}`;
+            }
+            endpoints[label] = {
+                label,
+                symbol,
+                // What callers pass: Angular methods take positional parameters, RTK endpoints one request object
+                signature: options.framework === 'react-rtk'
+                    ? `(${item.apiMethodRequestType}) => ${item.responseTypeSymbol}`
+                    : `(${item.apiMethodParams}) => ${item.responseTypeSymbol}`,
+                response: item.responseTypeSymbol,
+                params,
+                args: options.framework === 'react-rtk' ? rtkArgs(item) : angularArgs(item)
+            };
+        });
+    });
+
+    return endpoints;
+}
+
+type TParsedApiItem = ReturnType<typeof transformSwaggerSchema>[string]['apiList'][number];
+
+/** Mirrors transformParamsToApiMethodParams: path params, the query object, the body, the headers object. */
+function angularArgs(item: TParsedApiItem): IEndpointArg[] {
+    return [
+        ...item.pathParams.map(param => ({ id: `path ${param.objectSymbol}`, optional: false })),
+        // Defaults to {} when every query param is optional and nothing required follows it
+        ...(item.queryParams.length ? [{
+            id: 'query',
+            optional: !item.bodyParam && [...item.queryParams, ...item.headerParams].every(param => param.isOptional)
+        }] : []),
+        ...(item.bodyParam ? [{ id: 'body', optional: false }] : []),
+        // Defaults to {} when every header is optional
+        ...(item.headerParams.length ? [{ id: 'headers', optional: item.headerParams.every(param => param.isOptional) }] : [])
+    ];
+}
+
+/** An RTK endpoint takes one request object, which a call may leave out when every field is optional. */
+function rtkArgs(item: TParsedApiItem): IEndpointArg[] {
+    return item.apiMethodRequestType === 'void' ? [] : [{ id: 'request', optional: item.isApiMethodRequestOptional }];
+}

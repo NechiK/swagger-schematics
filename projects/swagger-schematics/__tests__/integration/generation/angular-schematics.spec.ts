@@ -126,8 +126,8 @@ describe('Schematics Integration', () => {
     });
 
     describe('Nullable Query Parameters', () => {
-      it('should import omitBy and isNil from lodash-es', () => {
-        expect(apiServiceContent).toContain("import { omitBy, isNil } from 'lodash-es'");
+      it('should not need lodash-es', () => {
+        expect(apiServiceContent).not.toContain('lodash-es');
       });
 
       it('should generate method with nullable param types', () => {
@@ -136,8 +136,10 @@ describe('Schematics Integration', () => {
         );
       });
 
-      it('should wrap params in omitBy for nullable query params', () => {
-        expect(apiServiceContent).toContain('params: omitBy({ name, status, priority }, isNil)');
+      it('should send nullable query params only when they have a value', () => {
+        expect(apiServiceContent).toContain(
+          'params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) }'
+        );
       });
     });
   });
@@ -269,7 +271,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should return Observable<Blob> for binary responses', () => {
-      expect(binaryServiceContent).toMatch(/\(documentId: number, \{ thumbnail \}: \{ thumbnail\?: boolean \| null \}\): Observable<Blob>/);
+      expect(binaryServiceContent).toMatch(/\(documentId: number, \{ thumbnail \}: \{ thumbnail\?: boolean \| null \} = \{\}\): Observable<Blob>/);
     });
 
     it('should add responseType blob to the HTTP call options', () => {
@@ -283,7 +285,7 @@ describe('Schematics Integration', () => {
     });
 
     it('should keep query params alongside responseType in options', () => {
-      expect(binaryServiceContent).toMatch(/\{ params: omitBy\(\{ thumbnail \}, isNil\), responseType: 'blob' \}/);
+      expect(binaryServiceContent).toContain("{ params: { ...(thumbnail != null ? { thumbnail } : {}) }, responseType: 'blob' }");
     });
 
     it('should type multipart upload bodies as FormData', () => {

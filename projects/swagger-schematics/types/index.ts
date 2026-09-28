@@ -10,18 +10,34 @@ import {strings} from '@angular-devkit/core';
 import {parseName} from '@schematics/angular/utility/parse-name';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
-import { isComposition, isPrimitiveWrapper } from "./utils/transform-type";
+import { getGeneratedSchemaKind } from "./utils/schema-kind";
+import { IDocSource, renderJsDoc } from "./utils/js-doc";
 import {fetchSwaggerSchema} from "../helpers/swagger-schema.helper";
 import {SwaggerSchema} from "./schema";
 import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
+import { transformIndexSignature } from './utils/transform-type';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
+
+/**
+ * A type alias's JSDoc: the schema's own docs plus the note a `not` schema
+ * carries, in ONE comment - editors show only the last of two stacked comments,
+ * so a separate note would hide the schema's description.
+ */
+function typeAliasComment(schemaDoc: IDocSource, note: string | undefined): string {
+    // The note is generated as a single-line `/** text */`
+    const noteText = note?.replace(/^\/\*\*\s*|\s*\*\/$/g, '');
+    return renderJsDoc({
+        ...schemaDoc,
+        description: [schemaDoc.description, noteText].filter(Boolean).join('\n\n')
+    }).trimEnd();
+}
 
 export default function(options: SwaggerSchema): Rule {
   const typesRule: Rule = async (host: Tree, context: SchematicContext) => {
@@ -53,39 +69,11 @@ export default function(options: SwaggerSchema): Rule {
       const schemas = swagger.components?.schemas ?? {};
       const typeKeys = Object.keys(schemas);
       const parsedSchemas = typeKeys.map(schemaKey => {
-        const schema = schemas[schemaKey];
-        
-        // Skip $ref schemas
-        if ('$ref' in schema) {
-            return;
-        }
-        
-        const typedSchema = schema as TSchemaByType;
-
-        // Skip primitive-wrapper schemas (e.g. a strongly-typed GUID/int/Stream:
-        // { type: 'string', format: 'uuid' }). They are inlined at every reference
-        // to their primitive (string/number/Blob), so a standalone file would be an
-        // unused, empty interface.
-        if (isPrimitiveWrapper(typedSchema)) {
+        const schemaType = getGeneratedSchemaKind(schemas[schemaKey], { name: schemaKey, typeMapping: openApiSchematicsConfig.typeMapping });
+        if (!schemaType) {
             return;
         }
 
-        // Handle composition schemas (allOf, oneOf, anyOf, not) as type-aliases.
-        // 'not' has no TypeScript equivalent and is emitted as `unknown` with an
-        // explanatory comment (see transformCompositionSchema) rather than skipped,
-        // so a $ref pointing at it does not dangle.
-        if (isComposition(typedSchema)) {
-            return {
-                name: schemaKey,
-                type: 'type-alias' as const,
-                data: schemas[schemaKey]
-            } as TSwaggerSchematicsSchema;
-        }
-        
-        // Check if it's an enum (integer or string with enum values)
-        const isEnum = 'enum' in typedSchema && Array.isArray(typedSchema.enum);
-        const schemaType = isEnum ? 'enum' : 'interface';
-        
         return {
             name: schemaKey,
             type: schemaType,
@@ -101,12 +89,10 @@ export default function(options: SwaggerSchema): Rule {
       const generatedFiles = new Set<string>();
       parsedSchemas.forEach(schemaData => {
           let itemSource;
+          // The schema's own description / deprecated flag, as JSDoc above the declaration
+          const typeDoc = renderJsDoc(schemaData.data as IDocSource);
           if (schemaData.type === 'enum') {
               const parsed = parseName(`${openApiSchematicsConfig.path}/enums`, schemaData.name);
-              const enumValuesList = schemaData.data.enum;
-              const enumNamesList = schemaData.data['x-enum-varnames'];
-              // Sibling of x-enum-varnames: per-member documentation, positional against `enum`.
-              const enumDescriptionsList = schemaData.data['x-enum-descriptions'];
               itemSource = apply(enumTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,
@@ -114,16 +100,8 @@ export default function(options: SwaggerSchema): Rule {
                       ...enums,
                       name: parsed.name,
                       path: parsed.path,
-                      enums: enumValuesList.reduce((parsedEnumValues, currentValue, currentIndex) => {
-                          // Fall back to the value per index - x-enum-varnames may be
-                          // shorter than enum in malformed specs
-                          const rawName = enumNamesList?.[currentIndex] ?? currentValue;
-                          // Undocumented members legitimately carry an empty string in the
-                          // positional array, so treat empty as absent rather than emitting `/**  */`.
-                          const description = enumDescriptionsList?.[currentIndex] || undefined;
-                          parsedEnumValues.push([enums.toEnumMemberName(rawName, currentIndex), currentValue, description]);
-                          return parsedEnumValues;
-                      }, [] as Array<[string | number, string | number, string | undefined]>),
+                      typeDoc,
+                      enums: enums.buildEnumMembers(schemaData.data as Parameters<typeof enums.buildEnumMembers>[0]),
                       indentSize
                   }),
                   move(parsed.path),
@@ -140,8 +118,8 @@ export default function(options: SwaggerSchema): Rule {
                       legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
                   }
               );
-              // Filter out self-references
-              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`);
+              // Filter out self-references: a recursive composition refers to its own alias, T<Name>
+              const importRefs = compositionRefs.filter(refItem => refItem.importSymbol !== `T${strings.classify(parsed.name)}`);
               itemSource = apply(typeAliasTemplates, [
                   applyTemplates({
                       ...openApiSchematicsConfig,
@@ -152,7 +130,7 @@ export default function(options: SwaggerSchema): Rule {
                       optionsPath: openApiSchematicsConfig.path,
                       sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                       typeExpression,
-                      leadingComment: leadingComment ?? '',
+                      leadingComment: typeAliasComment(schemaData.data as IDocSource, leadingComment),
                       importRefs,
                       indentSize
                   }),
@@ -162,12 +140,21 @@ export default function(options: SwaggerSchema): Rule {
           } else {
             const parsed = parseName(`${openApiSchematicsConfig.path}/interfaces`, schemaData.name);
             const schemaProperties = schemaData.data.properties
-            const {propertiesContent, refs, aggregatable} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
+            const {propertiesContent, refs, aggregatable, docs: propertyDocs} = transformProperties(!!schemaProperties ? schemaProperties : {}, swagger, {
                 typeMapping: openApiSchematicsConfig.typeMapping,
                 legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
             }, (schemaData.data as { required?: string[] }).required ?? []);
             //   const importsContent = transformRefsToImport(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`), `${openApiSchematicsConfig.path}` as string, `${parsed.path}/${dasherize(parsed.name)}`);
-            const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${parsed.name}`));
+            // More properties allowed (`additionalProperties`, e.g. .NET [JsonExtensionData]): an index signature
+            const indexSignature = transformIndexSignature(schemaData.data as TSchemaByType, propertiesContent, swagger, {
+                typeMapping: openApiSchematicsConfig.typeMapping,
+                legacyOptionalProperties: openApiSchematicsConfig.legacyOptionalProperties
+            });
+            if (indexSignature && propertiesContent.length > 0) {
+                propertiesContent.push(['[key: string]', indexSignature[0]]);
+                refs.push(...indexSignature[1]);
+            }
+            const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${strings.classify(parsed.name)}`));
             itemSource = apply(interfaceTemplates, [
                 applyTemplates({
                     ...openApiSchematicsConfig,
@@ -179,6 +166,8 @@ export default function(options: SwaggerSchema): Rule {
                     sourcePath: `${parsed.path}/${dasherize(parsed.name)}`,
                     propertiesContent,
                     aggregatable,
+                    propertyDocs,
+                    typeDoc,
                     importRefs,
                     indentSize
                 }),

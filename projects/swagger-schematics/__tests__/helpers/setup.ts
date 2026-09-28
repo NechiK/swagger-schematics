@@ -45,11 +45,17 @@ export interface SchematicOptions {
   path: string;
   framework: string;
   baseApiPath?: string;
+  apiServiceTemplatePath?: string;
+  baseApiTemplatePath?: string;
   apiPathKey?: string;
   scopeEndpointsWithTags?: boolean;
   eslintFix?: boolean;
   legacyOptionalProperties?: boolean;
   removeStaleFiles?: boolean;
+  rtkCacheTags?: boolean;
+  includeApis?: string[];
+  excludeApis?: string[];
+  excludeDeprecated?: boolean;
 }
 
 export const ANGULAR_SCHEMATIC_OPTIONS: SchematicOptions = loadJsonFixture('angular-options.fixture.json');

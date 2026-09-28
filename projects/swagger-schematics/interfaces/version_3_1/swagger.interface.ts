@@ -36,6 +36,8 @@ export interface ISchemaBase {
     example?: unknown;
     /** OpenAPI 3.1 (JSON Schema): examples replaces the schema-level example keyword */
     examples?: unknown[];
+    /** OpenAPI 3.1 (JSON Schema): the only allowed value; a string, number, boolean or null renders as a literal type */
+    const?: unknown;
     required?: string[];
     minLength?: number;
     maxLength?: number;
@@ -114,6 +116,8 @@ export interface ISchemaObject extends ISchemaBase {
 export interface ISchemaArray extends ISchemaBase {
     type: 'array';
     items: TSchema;
+    /** OpenAPI 3.1 (JSON Schema 2020-12) tuple: the schema of each position; `items` then describes the rest */
+    prefixItems?: TSchema[];
     minItems?: number;
     maxItems?: number;
     uniqueItems?: boolean;

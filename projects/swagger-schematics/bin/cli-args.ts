@@ -2,11 +2,13 @@ export type TCliCommand = 'types' | 'api' | 'all';
 
 export interface IParsedCliArgs {
     command?: TCliCommand;
-    /** Options passed through to the schematic (camelCase keys) */
-    options: Record<string, string | boolean>;
+    /** Options passed through to the schematic (camelCase keys); array options are split on commas */
+    options: Record<string, string | boolean | string[]>;
     /** Positional arguments after the command (first one is the schema source) */
     positionals: string[];
     dryRun: boolean;
+    /** `--change-report <file>`: write the API change summary as markdown (CLI-only, not passed to the schematics) */
+    changeReport?: string;
     help: boolean;
     version: boolean;
     /** Set when the first non-flag argument is not a known command */
@@ -27,6 +29,18 @@ const BOOLEAN_OPTIONS: ReadonlySet<string> = new Set(
     [typesSchema, apiSchema].flatMap(schema =>
         Object.entries((schema as { properties?: Record<string, { type?: string }> }).properties ?? {})
             .filter(([, definition]) => definition.type === 'boolean')
+            .map(([name]) => name)
+    )
+);
+
+/**
+ * Option names the schematic schemas declare as arrays: on the command line
+ * they are written comma-separated (`--exclude-apis=Admin,Internal*`).
+ */
+const ARRAY_OPTIONS: ReadonlySet<string> = new Set(
+    [typesSchema, apiSchema].flatMap(schema =>
+        Object.entries((schema as { properties?: Record<string, { type?: string }> }).properties ?? {})
+            .filter(([, definition]) => definition.type === 'array')
             .map(([name]) => name)
     )
 );
@@ -112,6 +126,22 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
         parsed.positionals.push(token);
     }
 
+    ARRAY_OPTIONS.forEach(name => {
+        const value = parsed.options[name];
+        if (typeof value === 'string') {
+            parsed.options[name] = value.split(',').map(item => item.trim()).filter(Boolean);
+        }
+    });
+
+    if ('changeReport' in parsed.options) {
+        const changeReport = parsed.options.changeReport;
+        delete parsed.options.changeReport;
+        if (typeof changeReport !== 'string') {
+            throw new Error('--change-report needs a file path, e.g. --change-report=api-changes.md');
+        }
+        parsed.changeReport = changeReport;
+    }
+
     return parsed;
 }
 
@@ -131,6 +161,9 @@ Options:
   --<option>=<value>  Any schematic option (see README), e.g. --path=/src/app/core,
                       --framework=angular, --eslint-fix. Kebab-case is accepted
   --dry-run           Report generated files without writing them
+  --change-report=<file>
+                      With 'all': write the API change summary as markdown,
+                      e.g. for a pull request description (see schemaSnapshotPath)
   -h, --help          Show this help
   -v, --version       Show the package version
 

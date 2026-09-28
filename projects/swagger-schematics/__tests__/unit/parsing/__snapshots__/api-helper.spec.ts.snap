@@ -12,6 +12,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "id: number",
         "apiMethodRequestType": "{ id: number }",
         "apiMethodType": "get",
+        "apiPath": "/api/Claim/{id}",
         "apiUrl": "\${id}",
         "apiUrlFormatted": "\`/\${id}\`",
         "bodyFormatted": "",
@@ -21,7 +22,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "GET",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
@@ -29,6 +32,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -69,12 +75,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "id: number, body: IClaimDetailDTO",
         "apiMethodRequestType": "{ id: number; body: IClaimDetailDTO }",
         "apiMethodType": "put",
+        "apiPath": "/api/Claim/{id}",
         "apiUrl": "\${id}",
         "apiUrlFormatted": "\`/\${id}\`",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: IClaimDetailDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -94,7 +103,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "PUT",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -102,6 +113,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -141,6 +155,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "claimId: number",
         "apiMethodRequestType": "{ claimId: number }",
         "apiMethodType": "get",
+        "apiPath": "/api/Claim/{claimId}/serviceActions",
         "apiUrl": "\${claimId}/serviceActions",
         "apiUrlFormatted": "\`/\${claimId}/serviceActions\`",
         "bodyFormatted": "",
@@ -150,7 +165,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "GET",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
@@ -158,6 +175,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "claimId: number",
             "interpolationSymbol": "\${claimId}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "claimId",
             "objectSymbol": "claimId",
             "originalParam": {
               "description": undefined,
@@ -199,12 +219,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "{ width, height }: { width?: number; height?: number }, body: FormData",
         "apiMethodRequestType": "{ width?: number; height?: number; body: FormData }",
         "apiMethodType": "post",
+        "apiPath": "/api/Claim",
         "apiUrl": "",
         "apiUrlFormatted": "'/'",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: FormData",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -242,7 +265,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": true,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "POST",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -251,6 +276,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "width?: number",
             "interpolationSymbol": "\${width}",
+            "isNullable": false,
+            "isOptional": true,
+            "objectEntry": "width",
             "objectSymbol": "width",
             "originalParam": {
               "description": "Desired width of image for viewer",
@@ -268,6 +296,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "height?: number",
             "interpolationSymbol": "\${height}",
+            "isNullable": false,
+            "isOptional": true,
+            "objectEntry": "height",
             "objectSymbol": "height",
             "originalParam": {
               "description": "Desired height of image for viewer",
@@ -283,7 +314,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "typeSymbol": "number",
           },
         ],
-        "queryParamsFormatted": "params: omitBy({ width, height }, isNil)",
+        "queryParamsFormatted": "params: { ...(width != null ? { width } : {}), ...(height != null ? { height } : {}) }",
         "requestMethod": "post",
         "response": {
           "description": "Success",
@@ -301,12 +332,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "id: number, body: ICreateNoteDTO",
         "apiMethodRequestType": "{ id: number; body: ICreateNoteDTO }",
         "apiMethodType": "post",
+        "apiPath": "/api/Claim/{id}/note",
         "apiUrl": "\${id}/note",
         "apiUrlFormatted": "\`/\${id}/note\`",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: ICreateNoteDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -326,7 +360,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "POST",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -334,6 +370,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -373,12 +412,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "body: number",
         "apiMethodRequestType": "{ body: number }",
         "apiMethodType": "put",
+        "apiPath": "/api/Claim/status",
         "apiUrl": "status",
         "apiUrlFormatted": "'/status'",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: number",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -399,7 +441,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "PUT",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -422,12 +466,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "body: ICompanySearchDTO",
         "apiMethodRequestType": "{ body: ICompanySearchDTO }",
         "apiMethodType": "post",
+        "apiPath": "/api/Claim/all",
         "apiUrl": "all",
         "apiUrlFormatted": "'/all'",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: ICompanySearchDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -447,7 +494,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "POST",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -477,12 +526,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "body: ICompanySearchDTO",
         "apiMethodRequestType": "{ body: ICompanySearchDTO }",
         "apiMethodType": "post",
+        "apiPath": "/api/Claim/ids",
         "apiUrl": "ids",
         "apiUrlFormatted": "'/ids'",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: ICompanySearchDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -502,7 +554,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "POST",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -536,6 +590,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "id: number",
         "apiMethodRequestType": "{ id: number }",
         "apiMethodType": "put",
+        "apiPath": "/api/Claim/{id}/reactivate",
         "apiUrl": "\${id}/reactivate",
         "apiUrlFormatted": "\`/\${id}/reactivate\`",
         "bodyFormatted": "{}",
@@ -545,7 +600,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "PUT",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -553,6 +610,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -585,12 +645,15 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "body: number[]",
         "apiMethodRequestType": "{ body: number[] }",
         "apiMethodType": "delete",
+        "apiPath": "/api/Claim/deletemany",
         "apiUrl": "deletemany",
         "apiUrlFormatted": "'/deletemany'",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: number[]",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -614,7 +677,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "DELETE",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -644,6 +709,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "serviceActionId: number",
         "apiMethodRequestType": "{ serviceActionId: number }",
         "apiMethodType": "get",
+        "apiPath": "/api/Claim/serviceactions",
         "apiUrl": "serviceactions",
         "apiUrlFormatted": "'/serviceactions'",
         "bodyFormatted": "",
@@ -653,7 +719,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "GET",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
@@ -661,6 +729,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "serviceActionId: number",
             "interpolationSymbol": "\${serviceActionId}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "serviceActionId",
             "objectSymbol": "serviceActionId",
             "originalParam": {
               "description": undefined,
@@ -704,6 +775,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "serviceActionId: number",
         "apiMethodRequestType": "{ serviceActionId: number }",
         "apiMethodType": "get",
+        "apiPath": "/api/Claim/serviceactions/{serviceActionId}",
         "apiUrl": "serviceactions/\${serviceActionId}",
         "apiUrlFormatted": "\`/serviceactions/\${serviceActionId}\`",
         "bodyFormatted": "",
@@ -713,7 +785,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "GET",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
@@ -721,6 +795,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "serviceActionId: number",
             "interpolationSymbol": "\${serviceActionId}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "serviceActionId",
             "objectSymbol": "serviceActionId",
             "originalParam": {
               "description": undefined,
@@ -765,6 +842,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "{ id, status }: { id: string; status: TClaimStatuses }",
         "apiMethodRequestType": "{ id: string; status: TClaimStatuses }",
         "apiMethodType": "get",
+        "apiPath": "/api/Claim/bystatus",
         "apiUrl": "bystatus",
         "apiUrlFormatted": "'/bystatus'",
         "bodyFormatted": "",
@@ -774,7 +852,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "GET",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
@@ -783,6 +863,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: string",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -798,6 +881,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "status: TClaimStatuses",
             "interpolationSymbol": "\${status}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "status",
             "objectSymbol": "status",
             "originalParam": {
               "description": "",
@@ -833,17 +919,21 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
       {
         "apiMethodName": "updateClaimNoteById",
         "apiMethodParamNames": [
+          "id",
           "body",
         ],
-        "apiMethodParams": "body: ICreateNoteDTO",
-        "apiMethodRequestType": "{ body: ICreateNoteDTO }",
+        "apiMethodParams": "id: string, body: ICreateNoteDTO",
+        "apiMethodRequestType": "{ id: string; body: ICreateNoteDTO }",
         "apiMethodType": "put",
-        "apiUrl": "note/\${body.id}",
-        "apiUrlFormatted": "\`/note/\${body.id}\`",
+        "apiPath": "/api/Claim/note/{id}",
+        "apiUrl": "note/\${id}",
+        "apiUrlFormatted": "\`/note/\${id}\`",
         "bodyFormatted": "body",
         "bodyParam": {
           "functionSymbol": "body: ICreateNoteDTO",
           "interpolationSymbol": "\${body}",
+          "isNullable": false,
+          "isOptional": false,
           "objectSymbol": "body",
           "originalParam": {
             "content": {
@@ -863,11 +953,31 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "PUT",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
-        "pathParams": [],
+        "pathParams": [
+          {
+            "functionSymbol": "id: string",
+            "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
+            "objectSymbol": "id",
+            "originalParam": {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+              },
+            },
+            "typeSymbol": "string",
+          },
+        ],
         "queryParams": [],
         "queryParamsFormatted": "",
         "requestMethod": "put",
@@ -886,6 +996,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "id: number",
         "apiMethodRequestType": "{ id: number }",
         "apiMethodType": "delete",
+        "apiPath": "/api/Claim/single/{id}",
         "apiUrl": "single/\${id}",
         "apiUrlFormatted": "\`/single/\${id}\`",
         "bodyFormatted": "",
@@ -895,7 +1006,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": false,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "DELETE",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -903,6 +1016,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "id: number",
             "interpolationSymbol": "\${id}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "id",
             "objectSymbol": "id",
             "originalParam": {
               "description": undefined,
@@ -936,6 +1052,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "{ status, force }: { status: string; force?: boolean }",
         "apiMethodRequestType": "{ status: string; force?: boolean }",
         "apiMethodType": "delete",
+        "apiPath": "/api/Claim/by-filter",
         "apiUrl": "by-filter",
         "apiUrlFormatted": "'/by-filter'",
         "bodyFormatted": "",
@@ -945,7 +1062,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": true,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "DELETE",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": false,
         "operationId": undefined,
@@ -954,6 +1073,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "status: string",
             "interpolationSymbol": "\${status}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "status",
             "objectSymbol": "status",
             "originalParam": {
               "description": undefined,
@@ -969,6 +1091,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "force?: boolean",
             "interpolationSymbol": "\${force}",
+            "isNullable": false,
+            "isOptional": true,
+            "objectEntry": "force",
             "objectSymbol": "force",
             "originalParam": {
               "description": undefined,
@@ -982,7 +1107,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "typeSymbol": "boolean",
           },
         ],
-        "queryParamsFormatted": "params: omitBy({ status, force }, isNil)",
+        "queryParamsFormatted": "params: { status, ...(force != null ? { force } : {}) }",
         "requestMethod": "delete",
         "response": {
           "content": {
@@ -1008,6 +1133,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "apiMethodParams": "{ name, status, priority }: { name: string; status?: string | null; priority?: number | null }",
         "apiMethodRequestType": "{ name: string; status?: string | null; priority?: number | null }",
         "apiMethodType": "get",
+        "apiPath": "/api/Claim/search",
         "apiUrl": "search",
         "apiUrlFormatted": "'/search'",
         "bodyFormatted": "",
@@ -1017,7 +1143,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "description": undefined,
         "hasOmittableQueryParams": true,
         "headerParams": [],
+        "headerParamsFormatted": "",
         "httpMethod": "GET",
+        "isApiMethodRequestOptional": false,
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
@@ -1026,6 +1154,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "name: string",
             "interpolationSymbol": "\${name}",
+            "isNullable": false,
+            "isOptional": false,
+            "objectEntry": "name",
             "objectSymbol": "name",
             "originalParam": {
               "description": undefined,
@@ -1041,6 +1172,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "status?: string | null",
             "interpolationSymbol": "\${status}",
+            "isNullable": true,
+            "isOptional": true,
+            "objectEntry": "status",
             "objectSymbol": "status",
             "originalParam": {
               "description": undefined,
@@ -1057,6 +1191,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
           {
             "functionSymbol": "priority?: number | null",
             "interpolationSymbol": "\${priority}",
+            "isNullable": true,
+            "isOptional": true,
+            "objectEntry": "priority",
             "objectSymbol": "priority",
             "originalParam": {
               "description": undefined,
@@ -1072,7 +1209,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
             "typeSymbol": "number | null",
           },
         ],
-        "queryParamsFormatted": "params: omitBy({ name, status, priority }, isNil)",
+        "queryParamsFormatted": "params: { name, ...(status != null ? { status } : {}), ...(priority != null ? { priority } : {}) }",
         "requestMethod": "get",
         "response": {
           "content": {

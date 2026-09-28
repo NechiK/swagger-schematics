@@ -12,7 +12,7 @@ const SCHEMA = {
   info: { title: 'Calls', version: 'v1' },
   paths: {
     '/api/Probe': {
-      trace: { tags: ['Probe'], operationId: 'Trace', responses: ok },
+      trace: { tags: ['Probe'], operationId: 'Trace', requestBody: json({ type: 'string' }), responses: ok },
       get: {
         tags: ['Probe'],
         operationId: 'Search',
@@ -42,12 +42,25 @@ describe('Angular HttpClient calls', () => {
     expect(buildAngularHttpCall(byName('trace'))).toEqual({ method: 'request', args: ["'TRACE'", "this.getUrl('/')"] });
   });
 
-  it('sends the body of a GET or OPTIONS operation that declares one through request()', () => {
-    expect(buildAngularHttpCall(byName('search'))).toEqual({
-      method: 'request',
-      args: ["'GET'", "this.getUrl('/')", '{ body: body, params: { ...(page != null ? { page } : {}) } }']
-    });
+  it('sends the body of an OPTIONS operation that declares one through request()', () => {
     expect(buildAngularHttpCall(byName('check'))).toEqual({ method: 'request', args: ["'OPTIONS'", "this.getUrl('/')", '{ body: body }'] });
+  });
+
+  it("leaves out a GET, HEAD or TRACE body, which a browser can't send, with a warning", () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const items = transformSwaggerSchema(SCHEMA).Probe.apiList;
+      const search = items.find(item => item.apiMethodName === 'search')!;
+
+      expect(search.bodyParam).toBeNull();
+      expect(buildAngularHttpCall(search)).toEqual({ method: 'get', args: ["this.getUrl('/')", '{ params: { ...(page != null ? { page } : {}) } }'] });
+      // TRACE still goes through request(), since HttpClient has no trace(), but without the body
+      expect(items.find(item => item.apiMethodName === 'trace')!.bodyParam).toBeNull();
+      expect(warn).toHaveBeenCalledWith("Request body of GET /api/Probe is left out: a browser can't send a body with GET. The generated method will not take it.");
+      expect(warn).toHaveBeenCalledWith("Request body of TRACE /api/Probe is left out: a browser can't send a body with TRACE. The generated method will not take it.");
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('keeps the shorthand methods otherwise, including DELETE with a body', () => {
@@ -67,9 +80,8 @@ describe('Angular HttpClient calls', () => {
       "      this.getUrl('/')",
       '    );'
     ].join('\n'));
-    expect(service).toContain('return this.httpClient.request<string>(\n      \'GET\',');
     expect(service).toContain('list({ page }: { page?: number } = {}): Observable<string> {');
-    // A body follows, so a default wouldn't let callers leave the object out
-    expect(service).toContain('search({ page }: { page?: number }, body: Record<string, string>): Observable<string> {');
+    // The GET body is left out, so no body follows the query object and it can default
+    expect(service).toContain('search({ page }: { page?: number } = {}): Observable<string> {');
   });
 });

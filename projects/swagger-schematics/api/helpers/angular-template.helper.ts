@@ -52,10 +52,11 @@ const BODY_METHODS = ['post', 'put', 'patch'];
 /**
  * The whole Angular HttpClient call: the method to call and every argument, URL included.
  *
- * HttpClient has no `trace()`, and its `get()`, `head()` and `options()` take no body, so a
- * TRACE operation, or a GET, HEAD or OPTIONS operation that declares a request body, goes
- * through `request(method, url, { body, params, headers })` instead of dropping the body.
- * Everything else uses the shorthand method (`get`, `post`, ...).
+ * HttpClient has no `trace()`, and its `options()` takes no body, so a TRACE operation, or an
+ * OPTIONS operation that declares a request body, goes through `request(method, url, { body,
+ * params, headers })` instead of dropping the body. GET, HEAD and TRACE bodies are left out
+ * when parsing (see transformSwaggerSchema). Everything else uses the shorthand method (`get`,
+ * `post`, ...).
  */
 export function buildAngularHttpCall(item: IParsedApiItem): { method: string; args: string[] } {
     const url = `this.getUrl(${item.apiUrlFormatted})`;

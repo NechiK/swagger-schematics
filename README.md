@@ -395,7 +395,7 @@ The following variables are available in API service templates:
 | `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
 | `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |
-| `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and GET, HEAD or OPTIONS with a request body go through `request(method, url, { body, ... })` |
+| `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and OPTIONS with a request body go through `request(method, url, { ... })`; a GET, HEAD or TRACE request body is left out, since a browser can't send it |
 
 ### IParsedApiItem Properties
 

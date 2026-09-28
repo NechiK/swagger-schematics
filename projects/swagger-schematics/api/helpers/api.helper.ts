@@ -293,6 +293,9 @@ function withUndeclaredPathParams(operation: TOperation, segments: string[]): {
     return { operation: { ...operation, parameters }, undeclaredPathParams, caseMismatches };
 }
 
+/** Methods whose declared request body the generated code leaves out (see transformSwaggerSchema). */
+const BODYLESS_METHODS = ['get', 'head', 'trace'];
+
 export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: TTransformSwaggerSchemaOptions): IParsedApiSchema => {
     const apiPathPrefix = normalizeApiPathPrefix(options?.apiPathKey || '/api/');
 
@@ -377,7 +380,16 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 apiParsedSchema[apiPrefix].importRefs.push(...responseTypeImportRefs);
             }
 
-            const [bodyParam, bodyImportRefs] = transformRequestBody(operation, swaggerSchema, options);
+            // A browser can't send a GET or HEAD body (fetch throws, XHR drops it), and a TRACE request
+            // must not have one (RFC 9110); OpenAPI 3.0 says to ignore it there, 3.1 to avoid it
+            const bodyNotSent = BODYLESS_METHODS.includes(operationKey) && !!(operation as { requestBody?: unknown }).requestBody;
+            if (bodyNotSent && !options?.silent) {
+                console.warn(`Request body of ${operationKey.toUpperCase()} ${apiPathKey} is left out: ` +
+                    `a browser can't send a body with ${operationKey.toUpperCase()}. The generated method will not take it.`);
+            }
+            const [bodyParam, bodyImportRefs] = bodyNotSent
+                ? [null, []]
+                : transformRequestBody(operation, swaggerSchema, options);
             if (bodyImportRefs.length > 0) {
                 apiParsedSchema[apiPrefix].importRefs.push(...bodyImportRefs);
             }

@@ -13,9 +13,34 @@ Supported OpenAPI versions:
 - **OpenAPI 3.0.x** - full support, including `nullable`, `format: binary`, and multipart uploads
 - **OpenAPI 3.1.x** - full support, including type arrays (`type: ["string", "null"]`), nullable `oneOf`/`anyOf` with a `{ "type": "null" }` member, `const` (literal types, e.g. `kind: 'dog'`), `prefixItems` tuples (`[number, number]`), `type: "null"`, `contentMediaType` binary content, and schema-less `application/octet-stream` responses
 - Newer 3.x versions are treated as 3.1 with a warning; **Swagger 2.0 is not supported** (a warning is logged and generation is attempted best-effort)
+- Known gaps (e.g. object query parameters, `oneOf` discriminators) are listed in the [roadmap](https://github.com/NechiK/swagger-schematics/blob/develop/ROADMAP.md)
+
+## Contents
+
+- [Getting started](#getting-started)
+- [What gets generated](#what-gets-generated)
+- [Configuration](#configuration)
+  - [Available options](#available-options)
+  - [Removed schemas and endpoints](#removed-schemas-and-endpoints)
+  - [API change summary](#api-change-summary)
+  - [Filtering APIs](#filtering-apis)
+  - [Angular: `provideApi()`](#angular-provideapi)
+  - [RTK cache tags](#rtk-cache-tags)
+  - [Documentation comments](#documentation-comments)
+- [OpenAPI Vendor Extensions](#openapi-vendor-extensions)
+- [Custom Templates](#custom-templates)
+- [Changelog and roadmap](#changelog-and-roadmap)
 
 
-## How to use?
+## Getting started
+
+### Requirements
+
+- Node.js `^20.19.0 || ^22.12.0 || >=24.0.0`, npm 10+
+- Angular output: Angular 15+ (the generated code uses `inject()` and `makeEnvironmentProviders`); checked against Angular 20 under `strict`
+- React output: Redux Toolkit 2.x (RTK Query)
+
+### Usage
 
 1. Install package
 
@@ -38,7 +63,7 @@ npx swagger-schematics types swaggerUrl --path=/src/app/core
 npx swagger-schematics api swaggerUrl --path=/src/app/core --framework=angular
 ```
 
-Useful flags: `--dry-run` (report files without writing), `--help`, `--version`.
+Useful flags: `--dry-run` (report files without writing), `--change-report=<file>` (see [API change summary](#api-change-summary)), `--help`, `--version`.
 Any schematic option can be passed as `--option=value` (kebab-case accepted, e.g. `--swagger-schema-url`).
 
 <details>
@@ -56,7 +81,7 @@ Note: the `schematics` binary comes from `@angular-devkit/schematics-cli` in you
 installed, or npx will fetch an unrelated npm package that happens to own that name.
 </details>
 
-3. Enjoy!
+3. Import the generated services and types from `path` (see [What gets generated](#what-gets-generated)). Commit them together with `.swagger-schematics-manifest.json`.
 
 ### Run via npm scripts (recommended)
 
@@ -76,7 +101,30 @@ npm always sets the working directory to the project root before running a scrip
 - discovery of the `openapi-schematics.json` config file
 - resolution of your project's ESLint for the `eslintFix` option
 
-Running `npx schematics` directly from a subdirectory shifts all of these at once (config silently not found, schema path not resolving, wrong lint setup). With `npm run openapi`, behavior is identical for every developer and in CI.
+Running `npx swagger-schematics` directly from a subdirectory shifts all of these at once (config silently not found, schema path not resolving, wrong lint setup). With `npm run openapi`, behavior is identical for every developer and in CI.
+
+
+## What gets generated
+
+Everything goes into `path`. For a schema with an `Orders` controller, an `OrderDto` object and an `OrderStatus` enum:
+
+```
+<path>/
+├── enums/
+│   └── order-status.enum.ts          # export enum TOrderStatus
+├── interfaces/
+│   ├── order-dto.interface.ts        # export interface IOrderDto
+│   └── any-id.type.ts                # export type TAnyId (allOf/oneOf/anyOf/not, arrays, tuples, records)
+├── orders-api.service.ts             # Angular: OrdersApiService
+├── orders.api.ts                     # React RTK: ordersApi slice
+├── api-tag.enum.ts                   # React RTK with rtkCacheTags: export enum TApiTag
+└── .swagger-schematics-manifest.json # files owned by the generator, commit it
+```
+
+Base files are generated once, and never overwritten, so you can edit them:
+
+- **Angular**: `_api-base.service.ts` and `_api-base-url.token.ts` in the `baseApiPath` directory (default: `path`). `_provide-api.ts` is generated next to them and regenerated on every run (see [`provideApi()`](#angular-provideapi))
+- **React RTK**: the base API file at `baseApiPath` (default: `th-common/store/api-base.ts`), which the slices extend with `injectEndpoints`
 
 
 ## Configuration
@@ -367,6 +415,15 @@ Note that this describes only *which* columns may be aggregated. Building the re
 
 You can provide your own EJS templates to fully customize the generated code. Use the `apiServiceTemplatePath` and `baseApiTemplatePath` options to specify paths to your custom templates.
 
+Both options point to a **directory**. Every file in it is rendered, and file names are templates too, so keep the built-in names:
+
+| Framework | `apiServiceTemplatePath` (one file per controller)   | `baseApiTemplatePath` (generated once)                         |
+|-----------|-------------------------------------------------------|----------------------------------------------------------------|
+| Angular   | `__name@dasherize__-api.service.ts.template`          | `_api-base.service.ts.template`, `_api-base-url.token.ts.template` |
+| React RTK | `__name@dasherize__.api.ts.template`                  | `api-base.ts.template`                                         |
+
+The easiest start is to copy the built-in templates from `node_modules/swagger-schematics/api/templates/<angular|react-rtk>/` (`api-service` or `api` for services, `base-api` for the base files) and edit them.
+
 ### Example configuration with custom templates
 
 ```json
@@ -390,12 +447,16 @@ The following variables are available in API service templates:
 | `apiList`                 | IParsedApiItem[]   | Array of parsed API operations                                                                      |
 | `importRefs`              | IImportRef[]       | Array of import references for types                                                                |
 | `transformRefsToImport`   | function           | Helper to generate import statements from refs                                                      |
+| `baseApiImportPath`       | string             | Import path of the base API file from this file (tsconfig alias when one matches, e.g. "@th-common/store/api-base", otherwise relative) |
+| `scopeEndpointsWithTags`  | boolean            | The `scopeEndpointsWithTags` option (defaults to `false`)                                           |
 | `cacheTag`                | string \| null     | RTK: the slice's `TApiTag` member (e.g., "Orders") when `rtkCacheTags` is on, otherwise `null`       |
 | `renderJsDoc`             | function           | `renderJsDoc(item, '  ')` renders the operation's `summary`, `description` and `@deprecated` as a JSDoc comment at the given indent (empty string when there is nothing to document) |
 | `classify`                | function           | Convert string to PascalCase (e.g., "claim-status" → "ClaimStatus")                                 |
 | `dasherize`               | function           | Convert string to kebab-case (e.g., "ClaimStatus" → "claim-status")                                 |
 | `camelize`                | function           | Convert string to camelCase (e.g., "claim-status" → "claimStatus")                                  |
-| `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and OPTIONS with a request body go through `request(method, url, { ... })`; a GET, HEAD or TRACE request body is left out, since a browser can't send it |
+| `buildHttpCall`           | function           | Angular: `buildHttpCall(item)` returns `{ method, args }`, the whole HttpClient call with the URL among the arguments. TRACE (HttpClient has no `trace()`) and OPTIONS with a request body go through `request(method, url, { ... })`; a GET, HEAD or TRACE request body is left out, since a browser can't send it. The URL is built with `this.getUrl(...)`, so the service must extend the generated `ApiBaseService` |
+
+Every configuration option (e.g. `framework`, `path`, `rtkCacheTags`) and every export of your [`templateHelpersPath`](#custom-template-helpers) file is available as a variable too.
 
 ### IParsedApiItem Properties
 
@@ -425,6 +486,9 @@ Each item in `apiList` has the following properties:
 | `headerParamsFormatted`  | string   | Header params formatted for HTTP options, under their exact names (e.g., "headers: { 'If-Match': String(ifMatch) }"); objects (and `oneOf`/`anyOf` of objects) are sent in OpenAPI `simple` style, arrays and tuples of objects and `application/json` content params as JSON (a `oneOf`/`anyOf` with an array of objects among its members decides at runtime: only an array holding an object is sent as JSON); empty when none |
 | `headerParams`           | array    | Parsed header params; `originalParam.name` is the header name, `objectSymbol` its variable (e.g., "ifMatch") |
 | `pathParams`             | array    | Parsed path params, one per `{placeholder}` in the path (a placeholder the operation doesn't declare gets a required `string` param); `originalParam.name` is the declared name, `objectSymbol` its variable |
+| `cookieParams`           | array    | Parsed cookie params. The built-in templates don't send them: browsers attach cookies themselves |
+| `hasOmittableQueryParams` | boolean | `true` when any query param can be absent (optional or nullable)                                     |
+| `isBinaryResponse`       | boolean  | `true` when the success response is binary (typed `Blob`): Angular adds `responseType: 'blob'`, RTK a `responseHandler` |
 | `deprecated`             | boolean  | Whether the operation is deprecated                                                                  |
 | `summary`                | string   | Operation summary from OpenAPI spec                                                                  |
 | `description`            | string   | Operation description from OpenAPI spec                                                              |
@@ -475,46 +539,58 @@ module.exports = {
 #### Using Helpers in Templates
 
 ```ejs
-import { Injectable } from "@angular/core";
-import { ApiResponse } from "./api-response";
-
-@Injectable({ providedIn: 'root' })
-export class <%= classify(name) %>ApiService {
-  private baseUrl = '<%= BASE_URL %>/<%= API_VERSION %>/<%= name %>';
-
-<% for (let item of apiList) { %>
-<%= buildJsDoc(item) %>
-  <%= formatEndpointName(item.apiMethodName) %>(): Observable<<%= wrapResponseType(item.responseTypeSymbol) %>> {
-    return this.http.<%= item.requestMethod %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
-  }
-<% } %>
-}
-```
-
-> **Note:** The helpers file must be a CommonJS module (using `module.exports`). ES modules with `export default` are also supported.
-
-### Example Custom Template (Angular)
-
-```ejs
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { Observable } from "rxjs";
+import { ApiResponse } from "./api-response";
 
 <%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
 
 @Injectable({ providedIn: 'root' })
 export class <%= classify(name) %>ApiService {
-  private baseUrl = '/api/<%= name %>';
-
-  constructor(private http: HttpClient) {}
-
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = '<%= BASE_URL %>/<%= API_VERSION %>/<%= name %>';
 <% for (let item of apiList) { %>
-  /**
-   * <%= item.summary || item.apiMethodName %>
-   */
-  <%= item.apiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
-    return this.http.<%= item.requestMethod %><<%= item.responseTypeSymbol %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
+<%= buildJsDoc(item) %>
+  <%= formatEndpointName(item.apiMethodName) %>(<%= item.apiMethodParams %>): Observable<<%= wrapResponseType(item.responseTypeSymbol) %>> {
+    return this.http.<%= item.requestMethod %><<%= wrapResponseType(item.responseTypeSymbol) %>>(`${this.baseUrl}/<%= item.apiUrl %>`);
   }
 <% } %>
 }
 ```
+
+This example only shows how helpers are called: it sends the path but no body, query or header params, so methods such as PUT and POST won't compile as they are. For real services, start from the example below, which uses `buildHttpCall`.
+
+> **Note:** The helpers file must be a CommonJS module (using `module.exports`). ES modules with `export default` are also supported.
+
+### Example Custom Template (Angular)
+
+A `__name@dasherize__-api.service.ts.template` that keeps the built-in request handling (body, query and header params, binary responses) and changes the method names:
+
+```ejs
+import { Injectable } from "@angular/core";
+import { Observable } from "rxjs";
+import { ApiBaseService } from "<%= baseApiImportPath %>";
+
+<%= transformRefsToImport(importRefs, path, `${path}/${dasherize(name)}-api.service`) %>
+
+@Injectable({ providedIn: 'root' })
+export class <%= classify(name) %>ApiService extends ApiBaseService {
+  readonly endpoint = '<%= name %>';
+<% for (let item of apiList) {
+  const call = buildHttpCall(item);
+  // Binary responses use the untyped overload: responseType 'blob' makes it Observable<Blob>
+  const responseGeneric = item.isBinaryResponse ? '' : `<${item.responseTypeSymbol}>`;
+%>
+<%= renderJsDoc(item, '  ') %>  <%= item.scopedApiMethodName %>(<%= item.apiMethodParams %>): Observable<<%= item.responseTypeSymbol %>> {
+    return this.httpClient.<%= call.method %><%= responseGeneric %>(<%= call.args.join(', ') %>);
+  }
+<% } %>}
+```
+
+
+## Changelog and roadmap
+
+- [CHANGELOG](https://github.com/NechiK/swagger-schematics/blob/develop/projects/swagger-schematics/CHANGELOG.md): what changed in each version, with upgrade notes for breaking changes
+- [ROADMAP](https://github.com/NechiK/swagger-schematics/blob/develop/ROADMAP.md): known issues and feature ideas
+- [MIT License](https://github.com/NechiK/swagger-schematics/blob/develop/LICENSE)

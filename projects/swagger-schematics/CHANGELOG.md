@@ -8,7 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-09-27
 
-A major release: regenerating can require changes at call sites and in custom templates. Each such change is marked ⚠️ **BREAKING** under ♻️ Changed, with what to do.
+A major release: regenerating can require changes at call sites and in custom templates. The list below says what to do; each item is described in full under ♻️ Changed, marked ⚠️ **BREAKING**.
+
+### ⚠️ Upgrading from 1.x
+- **Required nullable query/header params must be passed** - pass the value (`null` is fine and still leaves it out of the request), or set `legacyOptionalProperties: true` to keep the old rule
+- **Required header, path-level and `$ref` params are now in the method signature** - pass them at the call sites that stop compiling
+- **GET, HEAD and TRACE methods no longer take a request body** - drop the body argument; if the server needs it, the operation has to accept POST
+- **PUT/POST with an undeclared path placeholder** take it as its own argument (`update(id, body)` instead of reading `body.id`); better, declare the parameter in the OpenAPI document
+- **Array, tuple and record components are type aliases** - `ITags` from `tags.interface.ts` is now `TTags` from `tags.type.ts`; update the imports
+- **A schema mapped with `typeMapping` generates no file** - import the mapped type instead of the schema's own symbol (`string` instead of `IMoney`)
+- **Types are more precise** - nullability inside arrays, records, tuples and unions (`(string | null)[]`), OpenAPI 3.1 `const`, `prefixItems` and `type: "null"`, and index signatures on interfaces with `additionalProperties`. Handle `null` where the compiler asks for it; a class that `implements` such an interface needs the same index signature
+- **Custom templates**: replace `buildHttpCallArgs` with `buildHttpCall(item)`; use `objectSymbol` for a param's variable (`originalParam.name` is now the declared name, e.g. `page_size`); code that builds `IParsedParam` objects must set `isOptional` and `isNullable`
+- **Commit** `.swagger-schematics-manifest.json` (since 1.4.0) and, if you set `schemaSnapshotPath`, the schema snapshot with the generated code
 
 ### ✨ Added
 - **Filtering APIs** - `includeApis`, `excludeApis` (controller names, case-insensitive, `*` wildcard, PascalCase form accepted; comma-separated on the CLI) and `excludeDeprecated`. Every API is generated unless a filter is set:
@@ -30,7 +41,10 @@ A major release: regenerating can require changes at call sites and in custom te
   - Undocumented code renders exactly as before; existing output gains only comment lines
   - `renderJsDoc(source, indent)` is available to custom API templates, and `transformProperties()` also returns `docs`
 - **API change summary** - with the new `schemaSnapshotPath` option, every `swagger-schematics all` run compares the schema with the snapshot the previous run saved and prints what changed, in the names found in the generated code (`IUserDto.email`, `UsersApiService.getById()`, `usersApi.getById`); endpoint signatures show what callers pass (positional parameters for Angular, the request object for RTK):
-  - **Breaking**: a removed interface, enum, type, property, enum member or endpoint, a new required property (object literals of the interface must now set it), a changed property declaration (type, optionality, nullability), enum member value, type alias or endpoint signature, or an interface's index signature (`[key: string]: ...`) that appears, goes or changes type (not the order of its union, which follows the properties). **Added**: new interfaces, optional properties, enum members and endpoints, and new optional endpoint parameters that existing calls can leave out (an optional header, or an optional query param next to existing ones). Query and header params that only change order are no change, since calls pass them by name (path params are positional in Angular, so their order still counts). Angular's first query param stays breaking when a body or a headers object follows it, since it shifts their position, and so does a new optional param that takes an existing param's variable (`page_size` declared before `pageSize` gets `pageSize`, so existing calls fill the new one)
+  - **Breaking**: a removed interface, enum, type, property, enum member or endpoint, a new required property (object literals of the interface must now set it), a changed property declaration (type, optionality, nullability), enum member value, type alias or endpoint signature, or an interface's index signature (`[key: string]: ...`) that appears, goes or changes type (not the order of its union, which follows the properties)
+  - **Added**: new interfaces, optional properties, enum members and endpoints, and new optional endpoint parameters that existing calls can leave out (an optional header, or an optional query param next to existing ones)
+  - Query and header params that only change order are no change, since calls pass them by name (path params are positional in Angular, so their order still counts)
+  - Angular's first query param stays breaking when a body or a headers object follows it, since it shifts their position, and so does a new optional param that takes an existing param's variable (`page_size` declared before `pageSize` gets `pageSize`, so existing calls fill the new one)
   - Names, types and signatures come from the generator's own naming and type rendering, so they match the generated files
   - Parameters are matched by location and declared name; header names compare case-insensitively, as in HTTP, so re-casing one (`X-Tenant` -> `x-tenant`) isn't a change
   - The snapshot is the schema as fetched, in the document's own key order: the generated code depends on that order (the first `content` media type, the order of properties in an intersection), so an unchanged schema always reads back as no changes. Commit it with the generated code; the first run only creates it
@@ -59,7 +73,12 @@ A major release: regenerating can require changes at call sites and in custom te
 - **Boolean schemas don't crash** - JSON Schema allows `true` and `false` as schemas (`items: true`, `prefixItems: [true]`, a `true` property), which failed with `Cannot use 'in' operator to search for '$ref' in true`. `true` renders `unknown`, `false` `never` (`items: false` -> `never[]`). A boolean component (`"Anything": true`) generates no file and is inlined the same way at every reference. A response whose schema is a `false` component is typed `void`, like an inline `false`: no value matches it, and RTK rejects `never` as a query's result type
 - **Records without `type: object`** - `{ additionalProperties: { $ref: Item } }` with no `type` rendered `any`; it now renders `Record<string, IItem>` (as a component, see ♻️ Changed). `additionalProperties: false` only closes an object, so an untyped `{ properties, additionalProperties: false }` still renders `any`
 - **Enums compile with `null` and with names that collide** - a `null` value generated `null = null` (TS18033); it is left out, and references to a nullable enum are `TColor | null` (nullable through `nullable: true`, a `null` in `type`, or, with no `type`, the `null` value itself: `{ enum: ['red', null] }`). Values whose member names collide (`'a-b'` and `'a b'` are both `AB`, or repeated `x-enum-varnames`) get a numeric suffix (`AB_2`). A boolean enum (`{ type: boolean, enum: [true, false] }`, or `[true]` for a constant, with or without `type`) generated `true = true` (TS18033); it generates no enum now and is inlined as `boolean` at every reference, keeping its nullability. A `__proto__` value gets the member name `Proto`: `__proto__ = '__proto__'` compiled, but set the enum object's prototype, so the member was missing at runtime
-- **OpenAPI 3.1 nullable `oneOf`/`anyOf` counts as nullable** - `{ "oneOf": [{ "type": "null" }, { "$ref": "..." }] }` (and `anyOf`) already rendered `IDto | null`, but optionality checks didn't see it as nullable: with `legacyOptionalProperties` such properties and parameters were required, and a required query parameter of that shape was put in the Angular `params` as is instead of being left out when `null`. It is now nullable like `nullable: true` (3.0) and `type: [..., "null"]` (3.1), and so is a union with a nullable member (`oneOf: [{ type: ['string', 'null'] }, { type: integer }]`, which renders `string | number | null`), at any depth, and also when a `$ref` points to such a union: a required query or header param of type `TU` is left out when `null` instead of being sent as `null`. So is an `allOf` whose members all allow null (`allOf: [{ $ref: NColor }]`, the way NSwag and Swashbuckle wrap a reference), and a `$ref` that `typeMapping` maps to a nullable component. A member allows null however it renders it: `{ type: 'null' }`, `{ const: null }`, `default: null`, a nullable type, or a `$ref` (mapped or not) to a nullable component. Rendered types are unchanged, except for `typeMapping` (see ♻️ Changed)
+- **OpenAPI 3.1 nullable `oneOf`/`anyOf` counts as nullable** - `{ "oneOf": [{ "type": "null" }, { "$ref": "..." }] }` (and `anyOf`) already rendered `IDto | null`, but optionality checks didn't see it as nullable: with `legacyOptionalProperties` such properties and parameters were required, and a required query parameter of that shape was put in the Angular `params` as is instead of being left out when `null`. It is now nullable like `nullable: true` (3.0) and `type: [..., "null"]` (3.1). So are:
+  - a union with a nullable member (`oneOf: [{ type: ['string', 'null'] }, { type: integer }]`, which renders `string | number | null`), at any depth
+  - a `$ref` to such a union: a required query or header param of type `TU` is left out when `null` instead of being sent as `null`
+  - an `allOf` whose members all allow null (`allOf: [{ $ref: NColor }]`, the way NSwag and Swashbuckle wrap a reference)
+  - a `$ref` that `typeMapping` maps to a nullable component
+  - A member allows null however it renders it: `{ type: 'null' }`, `{ const: null }`, `default: null`, a nullable type, or a `$ref` (mapped or not) to a nullable component. Rendered types are unchanged, except for `typeMapping` (see ♻️ Changed)
 - **Angular PATCH requests send their body** - `HttpClient.patch()` takes `(url, body, options)` like POST and PUT, but PATCH was generated like GET: the options object (query params, headers) was passed as the body and the real body was never sent, and a PATCH without a body didn't compile (the body argument is required). PATCH now follows POST/PUT, and a body-less PATCH passes `{}`
 - **Path-level parameters are applied to every operation** - OpenAPI allows `parameters` on the path item, shared by all its operations, but only each operation's own `parameters` were read. A path-level `{id}` generated a method interpolating an undefined `${id}`, and path-level query and header parameters were dropped. They are now merged into each operation, and an operation's own parameter with the same name and location overrides the path-level one (header names compare case-insensitively, as in HTTP: `x-tenant` overrides `X-Tenant`)
 - **Every path placeholder is a real parameter** - OpenAPI requires each `{placeholder}` in a path to be declared as a path parameter. When a document left one out, GET, DELETE and the other methods interpolated a variable nothing declared (`${id}`, TS2304), and PUT and POST read it from the body instead (`${body.orderId}`), which didn't compile when the body has no such property and sent `undefined` when it was optional. Such a placeholder is now a required `string` parameter, logged as a warning naming the placeholder and the endpoint so the document can be fixed (see ♻️ Changed). A placeholder whose declared parameter differs only in case (`{ID}` declared as `id`) uses that parameter, with a warning too
@@ -76,7 +95,14 @@ A major release: regenerating can require changes at call sites and in custom te
   - RTK: added to the query argument and sent as `headers` in the query definition. When every field of the argument is optional (optional headers and query params only), it is typed `{ ... } | void` and defaults to `{}`, so `useOrdersListQuery()` keeps compiling; this also lets endpoints with only optional query params be called without an argument
   - Header names are sent exactly as declared; the variable is the name in camelCase (`X-Tenant-Id` -> `xTenantId`)
   - A header name with anything beyond letters, digits, `-` and `_` (valid in HTTP but not seen in real APIs, e.g. `X-Odd'Name`), one that becomes a reserved or strict-mode-illegal name (`delete`, `eval`, `arguments`), or one whose variable clashes with another parameter of the operation (query `xTenantId` next to header `X-Tenant-Id`, or `X-Foo` next to `x_foo`), is skipped with a warning naming the header, the endpoint and the reason, rather than renamed or failing the run
-  - Values are sent as strings in OpenAPI `simple` style: primitives and arrays as `String(value)` (`1,2`), objects (including a `oneOf`/`anyOf` of objects) as `role,admin,id,1` (`role=admin,id=1` with `explode: true`, unset properties left out), and `content: application/json` parameters as JSON. `simple` style doesn't define arrays of objects, so they (and tuples holding an object) are sent as JSON too. A `oneOf`/`anyOf` mixing objects and primitives picks the form at runtime, and so does one with an array of objects among its members (an array holding an object as JSON, a primitive array comma-separated). The schema's own `type: object` wins over `oneOf` members that only list `required` properties, and an `allOf` is an object only when a member is one (an `allOf` around a string enum `$ref`, as NSwag and Swashbuckle write it, is sent with `String()`); an `allOf` around an array of objects or a union is sent like the schema it wraps. A `$ref` that `typeMapping` maps to another component (`{ "Old": "Ctx" }`) is sent like that component, not with `String()`, which sent an object as `[object Object]`. An optional or nullable header is added only when it has a value (HttpClient throws on an `undefined` header value, and `null` would be sent as the string "null")
+  - Values are sent as strings in OpenAPI `simple` style:
+    - primitives and arrays as `String(value)` (`1,2`)
+    - objects (including a `oneOf`/`anyOf` of objects) as `role,admin,id,1` (`role=admin,id=1` with `explode: true`, unset properties left out)
+    - `content: application/json` parameters as JSON. `simple` style doesn't define arrays of objects, so they (and tuples holding an object) are sent as JSON too
+    - a `oneOf`/`anyOf` mixing objects and primitives picks the form at runtime, and so does one with an array of objects among its members (an array holding an object as JSON, a primitive array comma-separated)
+    - the schema's own `type: object` wins over `oneOf` members that only list `required` properties, and an `allOf` is an object only when a member is one (an `allOf` around a string enum `$ref`, as NSwag and Swashbuckle write it, is sent with `String()`); an `allOf` around an array of objects or a union is sent like the schema it wraps
+    - a `$ref` that `typeMapping` maps to another component (`{ "Old": "Ctx" }`) is sent like that component, not with `String()`, which sent an object as `[object Object]`
+    - an optional or nullable header is added only when it has a value (HttpClient throws on an `undefined` header value, and `null` would be sent as the string "null")
   - `Accept`, `Content-Type` and `Authorization` header parameters are ignored, as the OpenAPI spec requires. Cookie parameters stay out of the generated method: browsers attach cookies themselves and do not let scripts set the `Cookie` header
   - New template fields `headerParamsFormatted` and `isApiMethodRequestOptional` on each parsed API item, and `headerSerialization` on parsed header params; `transformParamsToApiMethodParams()`, `extractApiMethodParamNames()` and `buildApiMethodRequestType()` accept `headerParams`
 - **`swagger-schematics all` loads the schema once** - `types` and `api` each fetched the document, so every run made two requests (or two file reads), and a backend deploy landing between them could generate types and services from different versions of the API. The CLI now loads the schema once per run and gives each schematic its own copy of it
@@ -96,7 +122,12 @@ A major release: regenerating can require changes at call sites and in custom te
   - `{ type: array, items: { type: string } }` -> `export type TTags = string[]`; `{ type: array, prefixItems: [number, number], minItems: 2, items: false }` -> `TPosition = [number, number]`; `{ type: object, additionalProperties: { type: integer } }` -> `TCounts = { [key: string]: number }`. A record alias is an index signature rather than `Record<...>` so it can refer back to itself: the common `JsonValue`/`JsonObject` pair (`TJsonObject = { [key: string]: TJsonValue }`) would otherwise be a circular alias error. So is a record written inline as a member of a `oneOf`/`anyOf`/`allOf` alias (`TJsonValue = string | TJsonValue[] | { [key: string]: TJsonValue } | null`), which failed with TS2456 before
   - A nullable one (`type: ["array", "null"]`, `nullable: true`) is nullable where it is referenced, like an interface: `items?: TItems | null`
   - The old `x.interface.ts` is deleted as stale. Code that imported `ITags` should use `TTags`; a free-form `{ type: object }` without `additionalProperties` still generates an interface
-- ⚠️ **BREAKING**: **Nullability is kept inside arrays, tuples, records and unions** - `| null` was only added at the property or parameter level, so a nullable element lost it: `items: { type: ['string', 'null'] }` rendered `string[]`, `additionalProperties: { type: integer, nullable: true }` rendered `Record<string, number>`, and a nullable tuple position or union member dropped `null` too. They now render `(string | null)[]`, `Record<string, number | null>`, `[string | null]` and `string | number | null` (`null` once, at the end of a union). Code that read such elements as non-null stops compiling under `strictNullChecks` until it handles `null`; references to nullable components were already right (`(IDto | null)[]`). Query parameter arrays are the exception: HttpClient's `params` takes no null elements, so `List<int?>` (`items: { type: integer, nullable: true }`) stays `number[]`, whatever makes the elements nullable (the items' own schema, a `$ref` to a nullable component, or a nullable union member), and also when the param itself is nullable through a union member (`oneOf: [{ type: array, items: { type: ['integer', 'null'] } }, { type: 'null' }]`, pydantic's `Optional[List[Optional[int]]]`), which renders `number[] | null`; an element whose null only its component's alias shows (`items: { $ref: NullableId }` with `NullableId: { oneOf: [{ type: 'null' }, { type: string }] }`) renders `NonNullable<TNullableId>[]`; a `$ref` to an array component with nullable items is written out (`number[]`) instead of its alias
+- ⚠️ **BREAKING**: **Nullability is kept inside arrays, tuples, records and unions** - `| null` was only added at the property or parameter level, so a nullable element lost it: `items: { type: ['string', 'null'] }` rendered `string[]`, `additionalProperties: { type: integer, nullable: true }` rendered `Record<string, number>`, and a nullable tuple position or union member dropped `null` too. They now render `(string | null)[]`, `Record<string, number | null>`, `[string | null]` and `string | number | null` (`null` once, at the end of a union). Code that read such elements as non-null stops compiling under `strictNullChecks` until it handles `null`; references to nullable components were already right (`(IDto | null)[]`)
+  - Query parameter arrays are the exception: HttpClient's `params` takes no null elements, so `List<int?>` (`items: { type: integer, nullable: true }`) stays `number[]`:
+    - whatever makes the elements nullable (the items' own schema, a `$ref` to a nullable component, or a nullable union member)
+    - also when the param itself is nullable through a union member (`oneOf: [{ type: array, items: { type: ['integer', 'null'] } }, { type: 'null' }]`, pydantic's `Optional[List[Optional[int]]]`), which renders `number[] | null`
+    - an element whose null only its component's alias shows (`items: { $ref: NullableId }` with `NullableId: { oneOf: [{ type: 'null' }, { type: string }] }`) renders `NonNullable<TNullableId>[]`
+    - a `$ref` to an array component with nullable items is written out (`number[]`) instead of its alias
   - A component written as a nullable `oneOf`/`anyOf` and replaced with `typeMapping` keeps its `| null`: `{ "NullableId": "string" }` renders `string | null`, not `string`
 - ⚠️ **BREAKING**: **Generated methods take the parameters the spec declares** - header parameters, path-level parameters and `$ref` parameters were dropped before (see 🐛 Fixed). Operations declaring them now take them, so a call to an operation with a **required** one stops compiling until it passes the value. Optional headers keep existing calls compiling (Angular's headers object defaults to `{}`; an RTK argument with only optional fields can be left out)
 - ⚠️ **BREAKING**: **GET, HEAD and TRACE request bodies are left out** - a browser can't send a body with GET or HEAD (`fetch` throws `Request with GET/HEAD method cannot have body`, XHR drops it), and a TRACE request must not have one (RFC 9110); OpenAPI 3.0 says to ignore such a body, 3.1 to avoid it. Angular methods took a `body` argument that was never sent, and RTK sent it, so `fetchBaseQuery` threw. The generated method no longer takes it, and the run warns, naming the operation. Calls that pass the body must drop it; if the server needs it, the operation has to accept POST (or take the values as query parameters)
@@ -105,8 +136,10 @@ A major release: regenerating can require changes at call sites and in custom te
 - **Angular methods whose query params are all optional can be called without them** - the query object defaults to `{}` (`getItems({ page }: { page?: number } = {})`), like the headers object, so `getItems()` compiles. Not when a body or a required header follows it, since callers pass that anyway; the change summary counts such a query object as optional
 - The types schematic and the change summary share `getGeneratedSchemaKind()` (`types/utils/schema-kind.ts`) to decide what each component schema generates; generated output is unchanged
 
-
 ## [1.4.0] - 2026-09-26
+
+### ✨ Added
+- `removeStaleFiles` option (`types`, `api`; default `true`) - set `false` to keep files that are no longer in the schema; they are listed as warnings and stay tracked in the manifest, so a later run with the option on still cleans them up
 
 ### 🐛 Fixed
 - **Files for removed schemas and endpoints are deleted on regeneration** - when the back-end removed a DTO, an enum or a whole controller, the previously generated file stayed on disk. The app kept compiling against code the API no longer has, so the breaking change surfaced only at runtime. Each run now deletes the files the previous run generated that the current schema no longer produces:
@@ -117,18 +150,15 @@ A major release: regenerating can require changes at call sites and in custom te
   - Deletions go through the schematic tree, so `--dry-run` reports them as `DELETE` lines
 - **No empty service for an endpoint group without operations** - a path item with no operations (e.g. `"/api/Legacy": {}` or only path-level `parameters`) created a group that rendered as a service class with no methods. Such groups are now skipped with a warning, so a controller whose endpoints were all removed has its file deleted instead of emptied. A document without `paths` no longer throws
 
-### ✨ Added
-- `removeStaleFiles` option (`types`, `api`; default `true`) - set `false` to keep files that are no longer in the schema; they are listed as warnings and stay tracked in the manifest, so a later run with the option on still cleans them up
-
 ### ♻️ Changed
 - Generation now writes `.swagger-schematics-manifest.json` to `path`. Commit it with the generated code; without it the next run can't tell which files it generated
+
 ## [1.3.1] - 2026-09-26
 
 ### 🐛 Fixed
 - **An unsupported `framework` fails with a clear error** - a value from `openapi-schematics.json` that isn't `angular` or `react-rtk` (e.g. `"react"`) crashed with `TypeError: Cannot read properties of undefined (reading 'templates')`: the schema's `enum` only validates CLI options, and config-file values are merged in after that validation. It now fails with `Framework 'react' is not supported. Please set 'framework' to 'angular' or 'react-rtk'.`
 - **`swagger-schematics all` checks `framework` before generating anything** - `all` runs `types` before `api`, so a missing or unsupported `framework` used to fail only after the types were written, leaving generated types without their services. The CLI now validates it (from `--framework` or `openapi-schematics.json`) up front and writes nothing on failure
 - **README: `framework` is required for `api`** - the options table documented `angular` as the default and the CLI examples omitted `--framework`, but the api schematic has required it since React RTK support was added, so the documented commands failed with "Framework is not defined". The docs now match the behavior; there is intentionally no default, so a React project that forgets the option gets an error instead of Angular services
-
 
 ## [1.3.0] - 2026-09-07
 
@@ -140,11 +170,7 @@ A major release: regenerating can require changes at call sites and in custom te
   - A type that declares nothing renders **exactly** as before - no JSDoc, no union (snapshot-pinned), so the change is inert for documents that do not use the extension
   - `ISchemaBase` gains the optional `'x-aggregatable'?: string[]` field, and `transformProperties()` returns a third member, `aggregatable`, alongside `propertiesContent` and `refs`
 
-
 ## [1.2.1] - 2026-08-19
-
-### 🐛 Fixed
-- **Optional query parameters are omitted instead of serialized as the string `undefined`** - the guard deciding whether to wrap params in `omitBy(params, isNil)` tested whether a parameter was *nullable*, but the property that matters is whether its value can be **absent**. An optional parameter is usually not nullable — `required: false` with schema `{"type":"boolean"}` — so the guard returned `false`, nothing was stripped, and a caller who left the value out produced `?excludeInactive=undefined` in the URL (Angular's `HttpParams` stringifies `undefined`). Servers reject that during model binding, so the caller saw a **server error** for what was a serialization bug in generated code. Per the OpenAPI spec `required` defaults to `false` for query parameters, so an absent `required` is treated as optional; a required, non-nullable parameter still emits a plain `params: { ... }`
 
 ### ✨ Added
 - **`x-enum-descriptions` are emitted as JSDoc on generated enum members** - the generator already read `x-enum-varnames` to *name* members; it now reads the sibling extension for the *description*, so per-member documentation written on the server reaches the consumer's editor as hover text instead of stopping at the OpenAPI document:
@@ -152,10 +178,20 @@ A major release: regenerating can require changes at call sites and in custom te
   - Newlines are collapsed so a multi-line summary stays on one comment line
   - A literal `*/` inside a description is neutralized, so it cannot terminate the comment early and break the generated file
 
+### 🐛 Fixed
+- **Optional query parameters are omitted instead of serialized as the string `undefined`** - the guard deciding whether to wrap params in `omitBy(params, isNil)` tested whether a parameter was *nullable*, but the property that matters is whether its value can be **absent**. An optional parameter is usually not nullable — `required: false` with schema `{"type":"boolean"}` — so the guard returned `false`, nothing was stripped, and a caller who left the value out produced `?excludeInactive=undefined` in the URL (Angular's `HttpParams` stringifies `undefined`). Servers reject that during model binding, so the caller saw a **server error** for what was a serialization bug in generated code. Per the OpenAPI spec `required` defaults to `false` for query parameters, so an absent `required` is treated as optional; a required, non-nullable parameter still emits a plain `params: { ... }`
+
 ### ♻️ Changed
 - ⚠️ **BREAKING**: `IParsedApiItem.hasNullableQueryParams` is renamed to `hasOmittableQueryParams` - it now reports whether any query parameter's value can be absent (optional **or** nullable), not just whether one is nullable. Keeping the old name would leave a field that returns `true` for a non-nullable parameter, which is how the next reader is misled; its own doc comment already described the broader intent ("strip null/undefined values"). Template authors referencing `item.hasNullableQueryParams` must rename
 
 ## [1.2.0] - 2026-08-14
+
+### ✨ Added
+- **`swagger-schematics` CLI** - the package now ships its own binary, running the schematics directly through `NodeWorkflow` (no generic `schematics` command needed):
+  - `swagger-schematics types [source]`, `swagger-schematics api [source]`, and `swagger-schematics all [source]` (types then api - replaces the two-script setup)
+  - Any schematic option can be passed as `--option=value`; kebab-case accepted (`--swagger-schema-url`); `--dry-run`, `--help`, `--version` supported
+  - Reports created/updated files, exits 1 on failure with the full error report
+  - Avoids the `npx schematics` name-collision trap: the npm package literally named `schematics` is an unrelated abandoned library that npx downloads when `@angular-devkit/schematics-cli` isn't installed locally
 
 ### 🐛 Fixed
 - **Union types are parenthesized when composed** - an array of a union or nullable ref now generates `(IA | null)[]` instead of `IA | null[]`, and an allOf member that renders as a union generates `IBase & (IExtra | null)` instead of `IBase & IExtra | null`. Both previously compiled to silently wrong types
@@ -177,13 +213,6 @@ A major release: regenerating can require changes at call sites and in custom te
   - An `x-enum-varnames` array shorter than `enum` falls back to the value-derived name for the missing entries instead of emitting a member literally named `undefined`
   - Backslashes, newlines, and carriage returns in string enum values are escaped (previously only single quotes were)
 
-### ✨ Added
-- **`swagger-schematics` CLI** - the package now ships its own binary, running the schematics directly through `NodeWorkflow` (no generic `schematics` command needed):
-  - `swagger-schematics types [source]`, `swagger-schematics api [source]`, and `swagger-schematics all [source]` (types then api - replaces the two-script setup)
-  - Any schematic option can be passed as `--option=value`; kebab-case accepted (`--swagger-schema-url`); `--dry-run`, `--help`, `--version` supported
-  - Reports created/updated files, exits 1 on failure with the full error report
-  - Avoids the `npx schematics` name-collision trap: the npm package literally named `schematics` is an unrelated abandoned library that npx downloads when `@angular-devkit/schematics-cli` isn't installed locally
-
 ### ♻️ Changed
 - README recommends the new CLI; the `schematics swagger-schematics:*` invocation remains supported (documented as legacy)
 - ⚠️ **Published types tightened - the package is now `any`-free** (no runtime behavior change):
@@ -198,7 +227,6 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated @angular-devkit packages to 20.3.34 (latest v20 LTS patch) - pulls in the fixed ajv 8.18.0 and picomatch 4.0.4, clearing the last npm audit advisories; `npm audit` now reports 0 vulnerabilities
 - Updated dev dependencies: @types/node to 26.2.0, ts-jest to 29.4.12, eslint to 10.8.1, fs-extra to 11.4.0, @typescript-eslint/parser to 8.67.0
 - `npm audit fix` refreshed vulnerable transitive dev dependencies (@babel/core, brace-expansion, diff) in the lockfile
-
 
 ## [1.1.0] - 2026-08-13
 
@@ -229,7 +257,6 @@ A major release: regenerating can require changes at call sites and in custom te
 ### 🗑️ Removed
 - Dead `interfaces/version_3_0` folder (never imported)
 
-
 ## [1.0.2] - 2026-07-24
 
 ### ✨ Added
@@ -237,17 +264,15 @@ A major release: regenerating can require changes at call sites and in custom te
   - Useful for CI pipelines without network access to the API host - download the schema once, commit it, and point `swaggerSchemaUrl` at the file
   - Missing files, unreadable files, and invalid JSON fail with clear messages naming the resolved path
 
-
 ## [1.0.1] - 2026-07-23
+
+### ✨ Added
+- A `Fetching swagger schema from '<url>'` console line at the start of generation, so CI logs show how far generation got
 
 ### 🐛 Fixed
 - **Failures are no longer silent** - both schematics now print a full error report to the console (message and stack for the whole `cause` chain) before failing. Previously a crash in CI (e.g. Azure Pipelines) could abort generation with no output at all
 - **Network errors now show the real reason** - Node's `fetch` reports failures as a bare `fetch failed`, hiding the underlying cause (DNS resolution, proxy, TLS) in `error.cause`; the schema download now surfaces the whole chain, e.g. `Failed to fetch swagger schema from '<url>': fetch failed -> getaddrinfo ENOTFOUND host`
 - Invalid JSON in `openapi-schematics.json` or in the downloaded schema now fails with a clear message naming the file/URL instead of a bare `SyntaxError`
-
-### ✨ Added
-- A `Fetching swagger schema from '<url>'` console line at the start of generation, so CI logs show how far generation got
-
 
 ## [1.0.0] - 2026-07-22
 
@@ -270,16 +295,7 @@ A major release: regenerating can require changes at call sites and in custom te
 ### 📦 Dependencies
 - Added eslint 10.7.0 and @typescript-eslint/parser 8.65.0 (dev-only, for the eslintFix end-to-end tests)
 
-
 ## [1.0.0-beta.1] - 2026-07-20
-
-### 🐛 Fixed
-- **String enum generation** - enum members now get quoted string values:
-  - Previously `{ enum: ["Email", "PhoneCall"], type: "string" }` generated invalid TypeScript (`Email = Email`); now generates `Email = 'Email'`
-  - Works with `x-enum-varnames` when the member name differs from the value (`PhoneCall = 'phone-call'`)
-  - Single quotes inside values are escaped; integer enum values remain unquoted
-- **RTK endpoint URLs now include the controller segment** - `url` was previously generated without the controller path (e.g. `` url: `/${id}` ``); now the dasherized controller name is prefixed (e.g. `` url: `/claim/${id}` ``)
-- **`ApiBaseService.getUrl` strips a trailing `/api` segment from `apiBaseUrl`** (case-insensitive, with or without trailing slash) so a configured base URL like `https://host/api` no longer produces `/api/api/...` in request URLs
 
 ### ✨ Added
 - Jest configuration in `package.json` - the test suite now runs out of the box (`npm test`); previously the jest config was not committed
@@ -289,6 +305,14 @@ A major release: regenerating can require changes at call sites and in custom te
   - Base URLs with/without trailing slash, ending in `/api` (any case), and with extra path segments
   - A guard that the generated file compiles without TypeScript diagnostics
 - Changelog writing skill (`.agents/skills/changelog/SKILL.md`) to guide CHANGELOG.md updates
+
+### 🐛 Fixed
+- **String enum generation** - enum members now get quoted string values:
+  - Previously `{ enum: ["Email", "PhoneCall"], type: "string" }` generated invalid TypeScript (`Email = Email`); now generates `Email = 'Email'`
+  - Works with `x-enum-varnames` when the member name differs from the value (`PhoneCall = 'phone-call'`)
+  - Single quotes inside values are escaped; integer enum values remain unquoted
+- **RTK endpoint URLs now include the controller segment** - `url` was previously generated without the controller path (e.g. `` url: `/${id}` ``); now the dasherized controller name is prefixed (e.g. `` url: `/claim/${id}` ``)
+- **`ApiBaseService.getUrl` strips a trailing `/api` segment from `apiBaseUrl`** (case-insensitive, with or without trailing slash) so a configured base URL like `https://host/api` no longer produces `/api/api/...` in request URLs
 
 ### ♻️ Changed
 - **Swagger schema download now uses Node's built-in `fetch`** instead of `axios` - the schematic no longer has any third-party HTTP dependency; non-2xx responses throw an explicit error with the URL and status
@@ -315,7 +339,6 @@ A major release: regenerating can require changes at call sites and in custom te
 - Added json-schema-to-typescript 15.0.4 (dev)
 - typescript stays at 5.9.3 - ts-jest does not yet support TypeScript 6/7
 
-
 ## [1.0.0-alpha.31] - 2026-03-05
 
 ### ✨ Added
@@ -329,7 +352,6 @@ A major release: regenerating can require changes at call sites and in custom te
 ### ♻️ Changed
 - `isNullable()` now also treats schemas with `default: null` as nullable (previously only `nullable: true`), including when resolved through `$ref`
 - `formatQueryParams()` accepts a `hasNullable` flag to control `omitBy` wrapping
-
 
 ## [1.0.0-alpha.30] - 2026-01-27
 
@@ -366,7 +388,6 @@ A major release: regenerating can require changes at call sites and in custom te
 - Removed `MergeStrategy.AllowCreationConflict` from base API generation (no longer needed with proper filtering)
 - Added `ISwaggerSchematicsTypeAliasSchema` interface for type alias schemas
 
-
 ## [1.0.0-alpha.20] - 2026-01-27
 
 ### ✨ Added
@@ -399,6 +420,7 @@ A major release: regenerating can require changes at call sites and in custom te
 
 ### ♻️ Changed
 - ⚠️ **BREAKING**: `framework` config option is now required (no default value)
+- ⚠️ **BREAKING**: `baseApiServicesPath` is renamed to `baseApiPath`, and `apiCrudServiceTemplatePath` to `baseApiTemplatePath`
 - Renamed `crud-api` template folders to `base-api` for both Angular and RTK
 - Simplified Angular API service template using `buildAngularHttpCallArgs` helper
 - Enhanced Swagger schema transformation with new request type and parameter handling
@@ -424,8 +446,13 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated fs-extra to 11.3.3
 - Updated typescript to 5.9.3
 
-
 ## [1.0.0-alpha.14] - 2026-01-12
+
+### ✨ Added
+- New test fixtures and cases for DELETE operations:
+  - DELETE by ID (no body)
+  - DELETE with query params (verifies params as second arg)
+- `parseDeleteRequestName` function for proper DELETE method naming
 
 ### 🐛 Fixed
 - DELETE method query params are now correctly placed as second argument (options object) instead of third
@@ -435,16 +462,13 @@ A major release: regenerating can require changes at call sites and in custom te
 - Removed overly strict `"format": "path"` validation from schema.json files
 - Path normalization now properly handles relative paths for schematic execution
 
-### ✨ Added
-- New test fixtures and cases for DELETE operations:
-  - DELETE by ID (no body)
-  - DELETE with query params (verifies params as second arg)
-- `parseDeleteRequestName` function for proper DELETE method naming
-
 ### ♻️ Changed
 - Path segments are now properly capitalized in default method name generation
 
 ## [1.0.0-alpha.13] - 2026-01-09
+
+### ✨ Added
+- New test cases for enum parameter imports and multiple query parameters
 
 ### 🐛 Fixed
 - Enum types used in API parameters are now properly imported in generated services
@@ -454,9 +478,6 @@ A major release: regenerating can require changes at call sites and in custom te
 ### ♻️ Changed
 - Migrated test framework from Jasmine to Jest
 - Parameter schema interface now supports `$ref` types (aligned with OpenAPI spec)
-
-### ✨ Added
-- New test cases for enum parameter imports and multiple query parameters
 
 ## [1.0.0-alpha.12] - 2026-01-09
 
@@ -478,3 +499,21 @@ A major release: regenerating can require changes at call sites and in custom te
 ### 📦 Dependencies
 - Updated @angular-devkit packages to 19.2.15
 - Updated axios to 1.10.0
+
+
+[2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0
+[1.4.0]: https://github.com/NechiK/swagger-schematics/compare/v1.3.1...v1.4.0
+[1.3.1]: https://github.com/NechiK/swagger-schematics/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/NechiK/swagger-schematics/compare/v1.2.1...v1.3.0
+[1.2.1]: https://github.com/NechiK/swagger-schematics/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/NechiK/swagger-schematics/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/NechiK/swagger-schematics/compare/v1.0.2...v1.1.0
+[1.0.2]: https://github.com/NechiK/swagger-schematics/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0-beta.1...v1.0.0
+[1.0.0-beta.1]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0-alpha.31...v1.0.0-beta.1
+[1.0.0-alpha.31]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0-alpha.30...v1.0.0-alpha.31
+[1.0.0-alpha.30]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0-alpha.20...v1.0.0-alpha.30
+[1.0.0-alpha.20]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0-alpha.14...v1.0.0-alpha.20
+[1.0.0-alpha.14]: https://github.com/NechiK/swagger-schematics/compare/v1.0.0-alpha.13...v1.0.0-alpha.14
+[1.0.0-alpha.13]: https://github.com/NechiK/swagger-schematics/tree/v1.0.0-alpha.13

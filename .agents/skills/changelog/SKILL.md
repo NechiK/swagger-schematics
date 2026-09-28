@@ -13,7 +13,7 @@ Write and maintain CHANGELOG.md entries for `swagger-schematics` following the e
 
 Before writing anything, ask the user what to include. Offer these options:
 
-1. **All changes in the current branch** — run `git log main..HEAD --oneline` (or `git log master..HEAD --oneline` if main doesn't exist) and read the relevant modified files to understand impact
+1. **All changes in the current branch** — run `git log origin/develop..HEAD --oneline` (`develop` is the base branch) and read the relevant modified files to understand impact
 2. **Changes since last tag** — run `git log $(git describe --tags --abbrev=0)..HEAD --oneline`
 3. **Specific commits or files** — user tells you what to focus on
 4. **User describes the changes directly** — they'll just tell you what happened
@@ -32,16 +32,23 @@ After writing the changelog entry, produce a pull request message (see **PR Mess
 
 **Version header:**
 ```markdown
-## [1.0.0-alpha.XX] - YYYY-MM-DD
+## [X.Y.Z] - YYYY-MM-DD
 ```
 Always insert new versions at the **top** of the changelog (after the file header), above previous entries.
 
+**Version link:** add a link reference for the new version at the top of the list at the bottom of the file, comparing with the previous tag:
+```markdown
+[X.Y.Z]: https://github.com/NechiK/swagger-schematics/compare/vPREVIOUS...vX.Y.Z
+```
+
 **Section order** (only include sections that have content):
-1. `### ✨ Added`
-2. `### 🐛 Fixed`
-3. `### ♻️ Changed`
-4. `### 🗑️ Removed`
-5. `### 📦 Dependencies`
+1. `### ⚠️ Upgrading from N.x` (major versions only)
+2. `### ✨ Added`
+3. `### 🐛 Fixed`
+4. `### ♻️ Changed`
+5. `### ⚡ Performance`
+6. `### 🗑️ Removed`
+7. `### 📦 Dependencies`
 
 Each section uses its emoji prefix — never plain `### Added` etc.
 
@@ -49,6 +56,8 @@ Each section uses its emoji prefix — never plain `### Added` etc.
 ```markdown
 - ⚠️ **BREAKING**: description of the change
 ```
+
+**Major versions** start with `### ⚠️ Upgrading from N.x`: one line per breaking change saying what the user has to do (e.g. "`ITags` is now `TTags`; update the imports"). The full description stays under `### ♻️ Changed`.
 
 ## Writing Style
 
@@ -93,11 +102,11 @@ Before writing, check what actually changed:
 3. Check test changes — new tests often reveal what was fixed/added
 4. Ask the user if intent is unclear from the diff
 
-Group related changes under one bullet with sub-bullets rather than listing them separately.
+Group related changes under one bullet with sub-bullets rather than listing them separately. Keep each bullet to a few lines: when it grows longer, move the edge cases into sub-bullets.
 
 ## Version Numbering
 
-This project follows semver with pre-release labels: `1.0.0-alpha.XX`, `1.0.0-beta.XX`, `1.0.0-rc.XX`, or plain `1.0.0`. The user manages version bumping — do not change version numbers unless explicitly asked.
+This project follows semver: stable versions (`2.0.0`), with pre-release labels (`2.1.0-beta.1`) when needed. A `-beta.x` version is published under the `beta` dist-tag. The user manages version bumping — do not change version numbers unless explicitly asked.
 
 ## Dependency Updates
 

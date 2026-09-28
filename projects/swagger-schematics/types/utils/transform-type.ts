@@ -618,7 +618,7 @@ export function transformProperties(properties: ISchemaProperties, swagger: ISwa
         }
 
         const typeSymbol = withNullability(rawTypeSymbol, property, swagger);
-        const nullable = isNullable(property, swagger) || rendersNull(typeSymbol);
+        const nullable = isNullable(property, swagger, options) || rendersNull(typeSymbol);
         const isOptional = options?.legacyOptionalProperties
             ? nullable
             : !requiredProperties.includes(propertyKey);
@@ -1016,16 +1016,29 @@ function transformArraySymbol(arrayProperty: TSchema, swagger: ISwaggerSchema, o
 }
 
 /**
- * Whether a schema's rendered type includes null without showing it: a $ref, or a union member
- * that is one, to a component nullable only through a `oneOf`/`anyOf` member, whose alias
- * (`TNullableId = string | null`) carries the null. A `typeMapping` target shows its `| null`.
+ * Whether a schema's rendered type includes null without showing it: a $ref, or a composition
+ * member that is one, to a component nullable only through its members, whose alias
+ * (`TNullableId = string | null`) carries the null, also when `typeMapping` maps a component to
+ * it. A mapping to a TypeScript type shows its `| null`.
  */
-function hidesNull(schema: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions): boolean {
+function hidesNull(schema: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions, seen: Set<string> = new Set()): boolean {
     if (isRef(schema)) {
-        const { refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
-        const { refPropertySchema } = getRefTargetDefinition(schema.$ref, swagger);
-        return getMappedType(refPropertyKey, options?.typeMapping) === undefined
-            && typeof refPropertySchema === 'object' && refPropertySchema !== null
+        if (seen.has(schema.$ref)) {
+            return false;
+        }
+        seen.add(schema.$ref);
+        const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(schema.$ref, swagger);
+        const mappedValue = getMappedType(refPropertyKey, options?.typeMapping);
+        if (mappedValue !== undefined) {
+            // A TypeScript type shows its `| null`; a component it maps to may hide it in its alias
+            const mapped = getMappedComponent(mappedValue, swagger);
+            return !!mapped && hidesNull({ $ref: mapped.ref }, swagger, options, seen);
+        }
+        // Through a component that is only a $ref, to one that may be mapped
+        if (refPropertySchema && isRef(refPropertySchema)) {
+            return hidesNull(refPropertySchema, swagger, options, seen);
+        }
+        return typeof refPropertySchema === 'object' && refPropertySchema !== null
             && !isSchemaValueNullable(refPropertySchema)
             && hasNullMember(refPropertySchema, swagger);
     }
@@ -1034,8 +1047,9 @@ function hidesNull(schema: TSchema, swagger: ISwaggerSchema, options?: ITransfor
     }
     return [
         ...((schema as Partial<ISchemaOneOf>).oneOf ?? []),
-        ...((schema as Partial<ISchemaAnyOf>).anyOf ?? [])
-    ].some(member => hidesNull(member, swagger, options));
+        ...((schema as Partial<ISchemaAnyOf>).anyOf ?? []),
+        ...((schema as Partial<ISchemaAllOf>).allOf ?? [])
+    ].some(member => hidesNull(member, swagger, options, seen));
 }
 
 /**
@@ -1145,21 +1159,21 @@ function isMappedSchemaNullable(schema: TSchemaByType | undefined, swagger: ISwa
 }
 
 /**
- * Whether a oneOf/anyOf allows null through a member, at any depth: a { "type": "null" } member
- * (the OpenAPI 3.1 way of writing a nullable reference: { "oneOf": [{ "type": "null" }, { "$ref": "..." }] }),
- * a nullable member (`{ "type": ["string", "null"] }`), or a $ref to a nullable component.
+ * Whether a composition allows null through its members, at any depth, as it renders: a
+ * oneOf/anyOf with a member that allows null, or an allOf with a { "type": "null" } member or
+ * whose members all allow null and that has no properties of its own (`allOf: [{ $ref: NColor }]`,
+ * the way NSwag and Swashbuckle wrap a reference). A member allows null when it is
+ * { "type": "null" } (the OpenAPI 3.1 way of writing a nullable reference:
+ * { "oneOf": [{ "type": "null" }, { "$ref": "..." }] }), is nullable itself
+ * (`{ "type": ["string", "null"] }`), or is a $ref to a nullable component.
  */
 function hasNullMember(schema: TSchemaByType, swagger: ISwaggerSchema, seen: Set<string> = new Set()): boolean {
-    const members = [
-        ...((schema as Partial<ISchemaOneOf>).oneOf ?? []),
-        ...((schema as Partial<ISchemaAnyOf>).anyOf ?? [])
-    ];
-    return members.some(member => {
+    const memberAllowsNull = (member: TSchema): boolean => {
         if (isNullSchema(member)) {
             return true;
         }
         if (isRef(member)) {
-            // A recursive union (a JSON value that contains itself) is looked at once
+            // A recursive composition (a JSON value that contains itself) is looked at once
             if (seen.has(member.$ref)) {
                 return false;
             }
@@ -1168,16 +1182,45 @@ function hasNullMember(schema: TSchemaByType, swagger: ISwaggerSchema, seen: Set
         const target = isRef(member) ? getRefTargetDefinition(member.$ref, swagger).refPropertySchema : member;
         return typeof target === 'object' && target !== null
             && (isSchemaValueNullable(target as TSchemaByType) || hasNullMember(target as TSchemaByType, swagger, seen));
-    });
+    };
+    const unionMembers = [
+        ...((schema as Partial<ISchemaOneOf>).oneOf ?? []),
+        ...((schema as Partial<ISchemaAnyOf>).anyOf ?? [])
+    ];
+    if (unionMembers.some(memberAllowsNull)) {
+        return true;
+    }
+    const allOf = (schema as Partial<ISchemaAllOf>).allOf ?? [];
+    const ownProperties = (schema as { properties?: ISchemaProperties }).properties;
+    return allOf.some(isNullSchema)
+        || (allOf.length > 0 && !(ownProperties && Object.keys(ownProperties).length > 0) && allOf.every(memberAllowsNull));
 }
 
 /**
  * Check if a schema is nullable, resolving $ref if necessary.
  * A schema is considered nullable if it has `nullable: true` (3.0),
- * a type array containing "null" (3.1), a oneOf/anyOf with a member that allows null (3.1),
- * or `default: null`.
+ * a type array containing "null" (3.1), a composition whose members allow null (see
+ * hasNullMember), or `default: null`. With `typeMapping`, a mapped $ref is nullable as it
+ * renders (see parseRefToSymbol): when the component was, or when the component it maps to is.
  */
-export function isNullable(property: TSchema, swagger: ISwaggerSchema): boolean {
+export function isNullable(property: TSchema, swagger: ISwaggerSchema, options?: ITransformTypeOptions, seen: Set<string> = new Set()): boolean {
+    if (isRef(property) && options?.typeMapping) {
+        if (seen.has(property.$ref)) {
+            return false;
+        }
+        seen.add(property.$ref);
+        const { refPropertySchema, refPropertyKey } = getRefPropertyDefinition(property.$ref, swagger);
+        const mappedValue = getMappedType(refPropertyKey, options.typeMapping);
+        if (mappedValue !== undefined) {
+            const mapped = getMappedComponent(mappedValue, swagger);
+            return isMappedSchemaNullable(refPropertySchema, swagger)
+                || (!!mapped && isNullable({ $ref: mapped.ref }, swagger, options, seen));
+        }
+        // Through a component that is only a $ref, to one that may be mapped
+        if (refPropertySchema && isRef(refPropertySchema)) {
+            return isNullable(refPropertySchema, swagger, options, seen);
+        }
+    }
     const schema = isRef(property) ? getRefTargetDefinition(property.$ref, swagger).refPropertySchema : property;
     // A boolean schema (`true`) says nothing about null
     if (typeof schema !== 'object' || schema === null) {
@@ -1197,7 +1240,7 @@ export function withNullability(typeSymbol: string, property: TSchema, swagger: 
     if (typeSymbol.endsWith(' | null') || typeSymbol === 'null' || !isNullable(property, swagger)) {
         return typeSymbol;
     }
-    // Nullable only through a oneOf/anyOf member: the union renders the null itself, or is a
+    // Nullable only through its members: the composition renders the null itself, or is a
     // $ref to a component whose alias includes it
     const schema = isRef(property) ? getRefTargetDefinition(property.$ref, swagger).refPropertySchema : property;
     const nullableOnlyByMember = typeof schema === 'object' && schema !== null

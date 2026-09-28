@@ -345,7 +345,12 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
             [operationKey, declaredOperation]
         ): IParsedApiItem => {
-            const { operation, undeclaredPathParams, caseMismatches } = withUndeclaredPathParams(declaredOperation, segments);
+            const { operation: fullOperation, undeclaredPathParams, caseMismatches } = withUndeclaredPathParams(declaredOperation, segments);
+            // A browser can't send a GET or HEAD body (fetch throws, XHR drops it), and a TRACE request
+            // must not have one (RFC 9110); OpenAPI 3.0 says to ignore it there, 3.1 to avoid it. The
+            // operation is parsed without it, so no parameter gives up the `body` variable for it either
+            const bodyNotSent = BODYLESS_METHODS.includes(operationKey) && !!(fullOperation as { requestBody?: unknown }).requestBody;
+            const operation = bodyNotSent ? { ...fullOperation, requestBody: undefined } : fullOperation;
             if (!options?.silent) {
                 undeclaredPathParams.forEach(name => console.warn(`Path parameter '${name}' of ${operationKey.toUpperCase()} ${apiPathKey} ` +
                     "is not declared in the operation's parameters; the generated method takes it as a required string. " +
@@ -380,16 +385,11 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 apiParsedSchema[apiPrefix].importRefs.push(...responseTypeImportRefs);
             }
 
-            // A browser can't send a GET or HEAD body (fetch throws, XHR drops it), and a TRACE request
-            // must not have one (RFC 9110); OpenAPI 3.0 says to ignore it there, 3.1 to avoid it
-            const bodyNotSent = BODYLESS_METHODS.includes(operationKey) && !!(operation as { requestBody?: unknown }).requestBody;
             if (bodyNotSent && !options?.silent) {
                 console.warn(`Request body of ${operationKey.toUpperCase()} ${apiPathKey} is left out: ` +
                     `a browser can't send a body with ${operationKey.toUpperCase()}. The generated method will not take it.`);
             }
-            const [bodyParam, bodyImportRefs] = bodyNotSent
-                ? [null, []]
-                : transformRequestBody(operation, swaggerSchema, options);
+            const [bodyParam, bodyImportRefs] = transformRequestBody(operation, swaggerSchema, options);
             if (bodyImportRefs.length > 0) {
                 apiParsedSchema[apiPrefix].importRefs.push(...bodyImportRefs);
             }

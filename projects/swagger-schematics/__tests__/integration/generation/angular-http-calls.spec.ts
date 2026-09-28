@@ -63,6 +63,22 @@ describe('Angular HttpClient calls', () => {
     }
   });
 
+  it('lets params use the `body` variable a left-out body would have taken', () => {
+    const withParam = (location: string, name: string) => transformSwaggerSchema({
+      ...SCHEMA,
+      paths: { '/api/Probe': { get: {
+        tags: ['Probe'],
+        parameters: [{ name, in: location, schema: { type: 'string' } }],
+        requestBody: json({ type: 'string' }),
+        responses: ok
+      } } }
+    } as unknown as ISwaggerSchema, { silent: true }).Probe.apiList[0];
+
+    expect(withParam('query', 'body').apiMethodParams).toBe('{ body }: { body?: string } = {}');
+    // Not skipped as a clash with the body
+    expect(withParam('header', 'Body').headerParamsFormatted).toBe("headers: { ...(body != null ? { 'Body': String(body) } : {}) }");
+  });
+
   it('keeps the shorthand methods otherwise, including DELETE with a body', () => {
     expect(buildAngularHttpCall(byName('exists'))).toEqual({ method: 'head', args: ["this.getUrl('/')"] });
     expect(buildAngularHttpCall(byName('remove'))).toEqual({ method: 'delete', args: ["this.getUrl('/')", '{ body: body }'] });

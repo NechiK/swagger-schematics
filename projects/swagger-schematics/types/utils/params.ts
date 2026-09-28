@@ -741,7 +741,7 @@ function resolveParamType(param: TParam, swagger: ISwaggerSchema, options?: ITra
         ? transformQueryParamType(schema, swagger, options)
         : transformTypeWithAllImports(schema, swagger, options);
     const typeSymbol = withNullability(rawTypeSymbol, schema, swagger);
-    const isParamNullable = isNullable(schema, swagger) || rendersNull(typeSymbol);
+    const isParamNullable = isNullable(schema, swagger, options) || rendersNull(typeSymbol);
     return { typeSymbol, isParamNullable, importRefs };
 }
 

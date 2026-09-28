@@ -425,6 +425,40 @@ describe('nullability the schema checks and the rendered type agree on', () => {
     );
   });
 
+  it('leaves out a required param mapped by typeMapping to a nullable component when it is null', () => {
+    const schemas = {
+      LegacyId: { type: 'object', properties: { a: { type: 'string' } } },
+      NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] }
+    };
+    const params = [
+      { name: 'one', in: 'query', required: true, schema: { $ref: '#/components/schemas/LegacyId' } },
+      { name: 'ids', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/LegacyId' } } }
+    ];
+    const item = transformSwaggerSchema({
+      openapi: '3.1.0', info: { title: 'T', version: '1' },
+      paths: { '/api/Things': { get: { tags: ['Things'], parameters: params, responses: { '204': { description: 'ok' } } } } },
+      components: { schemas }
+    } as unknown as ISwaggerSchema, { silent: true, typeMapping: { LegacyId: 'NullableId' } }).Things.apiList[0];
+
+    expect(item.apiMethodParams).toBe('{ one, ids }: { one: TNullableId; ids?: NonNullable<TNullableId>[] }');
+    expect(item.queryParamsFormatted).toBe('params: { ...(one != null ? { one } : {}), ...(ids != null ? { ids } : {}) }');
+  });
+
+  it('leaves out a required param whose allOf wraps a nullable $ref when it is null', () => {
+    const item = parse([
+      { name: 'color', in: 'query', required: true, schema: { allOf: [{ $ref: '#/components/schemas/NColor' }] } },
+      { name: 'id', in: 'query', required: true, schema: { allOf: [{ $ref: '#/components/schemas/NullableId' }] } },
+      { name: 'dto', in: 'query', required: true, schema: { allOf: [{ $ref: '#/components/schemas/NColor' }, { $ref: '#/components/schemas/Plain' }] } }
+    ], {
+      NColor: { type: ['string', 'null'], enum: ['a', 'b', null] },
+      NullableId: { oneOf: [{ type: 'null' }, { type: 'string' }] },
+      Plain: { type: 'string', enum: ['a'] }
+    });
+
+    // An intersection with a member that can't be null can't be null either
+    expect(item.queryParamsFormatted).toBe('params: { ...(color != null ? { color } : {}), ...(id != null ? { id } : {}), dto }');
+  });
+
   it('leaves null out of the elements of a query array that is itself nullable through a union member', () => {
     // pydantic's Optional[List[Optional[int]]]; the `type: ['array', 'null']` form is covered above
     const item = parse([

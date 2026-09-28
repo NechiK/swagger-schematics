@@ -136,7 +136,7 @@ describe('swagger-schematics CLI', () => {
     const output = runCli('all', true);
 
     expect(output).toContain('EXIT:1');
-    expect(output).toContain(message);
+    expect(output).toContain(`[swagger-schematics] failed:\nError: ${message}`);
     expect(output).not.toContain('CREATE');
     expect(fs.existsSync(path.join(projectDir, 'src'))).toBe(false);
   }, 120000);
@@ -163,9 +163,19 @@ describe('swagger-schematics CLI', () => {
 
     expect(output).toContain('EXIT:1');
     expect(output).toContain(`apiServiceTemplatePath: template directory '${path.join(fs.realpathSync(projectDir), 'templates/typo')}' not found`);
+    expect(output).not.toContain('Error: Error:');
     expect(output).not.toContain('DELETE');
     expect(output).not.toContain('UPDATE');
     expect(fs.readFileSync(servicePath, 'utf8')).toBe(before);
+  }, 120000);
+
+  it('should report a failure inside a schematic once', () => {
+    const output = runCli('api --api-service-template-path=./templates/typo', true);
+
+    expect(output).toContain('EXIT:1');
+    expect(countOccurrences(output, 'template directory')).toBe(1);
+    expect(output).toContain("[swagger-schematics] 'api' schematic failed:\nError: apiServiceTemplatePath:");
+    expect(output).not.toContain('Error: Error:');
   }, 120000);
 
   it('should accept the framework from a CLI flag for the all command', () => {

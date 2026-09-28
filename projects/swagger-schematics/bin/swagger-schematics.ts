@@ -3,7 +3,7 @@ import * as path from 'path';
 import { createConsoleLogger } from '@angular-devkit/core/node';
 import { NodeWorkflow } from '@angular-devkit/schematics/tools';
 import { parseCliArgs, helpText, TCliCommand } from './cli-args';
-import { logSchematicError } from '../helpers/error-logging.helper';
+import { logCliError } from '../helpers/error-logging.helper';
 import { enableSwaggerSchemaCache } from '../helpers/swagger-schema.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { resolveFramework } from '../interfaces/swagger-schematics/framework';
@@ -133,8 +133,8 @@ async function main(): Promise<void> {
 }
 
 main().catch(error => {
-    // Schematic-level failures are already reported in detail by the
-    // error-logging wrapper; this catches CLI/workflow-level errors too.
-    logSchematicError('cli', error);
+    // Schematic failures are already reported in full by the error-logging
+    // wrapper; this reports CLI and workflow-level errors, once.
+    logCliError(error);
     process.exit(1);
 });

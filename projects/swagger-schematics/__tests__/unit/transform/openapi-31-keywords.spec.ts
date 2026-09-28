@@ -459,6 +459,45 @@ describe('nullability the schema checks and the rendered type agree on', () => {
     expect(item.queryParamsFormatted).toBe('params: { ...(color != null ? { color } : {}), ...(id != null ? { id } : {}), dto }');
   });
 
+  it('counts union members that allow null through const: null or default: null', () => {
+    const item = parse([
+      { name: 'c', in: 'query', required: true, schema: { $ref: '#/components/schemas/C' } },
+      { name: 'X-C', in: 'header', required: true, schema: { $ref: '#/components/schemas/C' } },
+      { name: 'arr', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/C2' } } },
+      { name: 'c3', in: 'query', required: true, schema: { $ref: '#/components/schemas/C3' } }
+    ], {
+      C: { oneOf: [{ type: 'string' }, { const: null }] },
+      Name: { type: 'string', default: null },
+      C2: { oneOf: [{ $ref: '#/components/schemas/Name' }, { type: 'integer' }] },
+      C3: { oneOf: [{ type: 'string', default: null }, { type: 'integer' }] }
+    });
+
+    expect(item.apiMethodParams).toBe('{ c, arr, c3 }: { c: TC; arr?: NonNullable<TC2>[]; c3: TC3 }, { xC }: { xC: TC }');
+    expect(item.queryParamsFormatted).toBe('params: { ...(c != null ? { c } : {}), ...(arr != null ? { arr } : {}), ...(c3 != null ? { c3 } : {}) }');
+    expect(item.headerParamsFormatted).toBe("headers: { ...(xC != null ? { 'X-C': String(xC) } : {}) }");
+  });
+
+  it('counts a union member that typeMapping maps to a nullable component, and a nullable $ref an allOf repeats', () => {
+    const params = [
+      { name: 'c', in: 'query', required: true, schema: { $ref: '#/components/schemas/C' } },
+      { name: 'cs', in: 'query', schema: { type: 'array', items: { $ref: '#/components/schemas/C' } } },
+      { name: 'n', in: 'query', required: true, schema: { allOf: [{ $ref: '#/components/schemas/N' }, { $ref: '#/components/schemas/N' }] } }
+    ];
+    const item = transformSwaggerSchema({
+      openapi: '3.1.0', info: { title: 'T', version: '1' },
+      paths: { '/api/Things': { get: { tags: ['Things'], parameters: params, responses: { '204': { description: 'ok' } } } } },
+      components: { schemas: {
+        A: { type: 'string' },
+        B: { oneOf: [{ type: 'null' }, { type: 'string' }] },
+        C: { oneOf: [{ $ref: '#/components/schemas/A' }, { type: 'integer' }] },
+        N: { type: ['string', 'null'] }
+      } }
+    } as unknown as ISwaggerSchema, { silent: true, typeMapping: { A: 'B' } }).Things.apiList[0];
+
+    expect(item.apiMethodParams).toBe('{ c, cs, n }: { c: TC; cs?: NonNullable<TC>[]; n: (string | null) & (string | null) }');
+    expect(item.queryParamsFormatted).toBe('params: { ...(c != null ? { c } : {}), ...(cs != null ? { cs } : {}), ...(n != null ? { n } : {}) }');
+  });
+
   it('leaves null out of the elements of a query array that is itself nullable through a union member', () => {
     // pydantic's Optional[List[Optional[int]]]; the `type: ['array', 'null']` form is covered above
     const item = parse([

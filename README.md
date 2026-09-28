@@ -207,8 +207,8 @@ A mapped schema generates no file of its own, since nothing references it by its
 | `baseApiPath`            | string  | api        | Location of the base API file. For Angular: the `_api-base.service.ts` file path or its directory (both accepted); defaults to `path`. For RTK: the base api file path; defaults to `th-common/store/api-base.ts`. Supports tsconfig path alias resolution for imports |
 | `project`                | string  | types      | Generate in a specific Angular CLI workspace project                                                                                                             |
 | `apiPathKey`             | string  | api        | Path prefix that selects which API paths are generated; stripped before grouping and method naming. Defaults to `/api/`                                          |
-| `apiServiceTemplatePath` | string  | api        | Custom template path for API service generation                                                                                                                  |
-| `baseApiTemplatePath`    | string  | api        | Custom template path for base API generation                                                                                                                     |
+| `apiServiceTemplatePath` | string  | api        | Directory of custom API service templates, relative to the project root (see [Custom Templates](#custom-templates))                                             |
+| `baseApiTemplatePath`    | string  | api        | Directory of custom base API templates, relative to the project root (see [Custom Templates](#custom-templates))                                                |
 | `framework`              | string  | api        | Target framework: `"angular"` or `"react-rtk"`. **Required** for `api` (no default) - set it in `openapi-schematics.json` or pass `--framework`                |
 | `scopeEndpointsWithTags` | boolean | api        | Prefix endpoint names with tag name (e.g., `claimGetById` instead of `getById`). Recommended for multi-controller APIs                                           |
 | `typeMapping`            | object  | api, types | Map custom backend types to primitives or other schemas. Preserves `nullable` from original type (e.g., `{ "Guid": "string", "NullableOfStatus": "Status" }`). A mapped schema generates no file of its own   |
@@ -415,7 +415,7 @@ Note that this describes only *which* columns may be aggregated. Building the re
 
 You can provide your own EJS templates to fully customize the generated code. Use the `apiServiceTemplatePath` and `baseApiTemplatePath` options to specify paths to your custom templates.
 
-Both options point to a **directory**. Every file in it is rendered, and file names are templates too, so keep the built-in names:
+Both options point to a **directory**, absolute or relative to the project root (like `swaggerSchemaUrl`). A directory that doesn't exist or holds no `.template` file fails the run, so a wrong path never generates, or deletes, anything. Every file in it is rendered, and file names are templates too, so keep the built-in names:
 
 | Framework | `apiServiceTemplatePath` (one file per controller)   | `baseApiTemplatePath` (generated once)                         |
 |-----------|-------------------------------------------------------|----------------------------------------------------------------|

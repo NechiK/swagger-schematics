@@ -1,4 +1,5 @@
 import '@helpers/matchers';
+import * as path from 'path';
 import { UnitTestTree } from '@angular-devkit/schematics/testing';
 import { resetFetchMocks, runFullSchematics, runApiSchematic, setupSwaggerMock, ANGULAR_SCHEMATIC_OPTIONS, RTK_SCHEMATIC_OPTIONS } from '@helpers/setup';
 import { V1_PREFIX_SWAGGER_SCHEMA } from '@fixtures/swagger/v1-prefix-schema.fixture';
@@ -52,8 +53,7 @@ describe('provideApi (Angular)', () => {
   });
 
   describe('when the API_BASE_URL token goes away (a custom base template without it)', () => {
-    // Relative to the api schematic, like any baseApiTemplatePath
-    const CUSTOM_BASE = '../__tests__/__fixtures__/templates/angular-base-without-token';
+    const CUSTOM_BASE = path.join(__dirname, '../../__fixtures__/templates/angular-base-without-token');
     const TOKEN = `${OPTIONS.path}/_api-base-url.token.ts`;
 
     it('removes the provider generated earlier, which would import the missing token', async () => {

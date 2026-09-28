@@ -7,6 +7,7 @@ import { logSchematicError } from '../helpers/error-logging.helper';
 import { enableSwaggerSchemaCache } from '../helpers/swagger-schema.helper';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { resolveFramework } from '../interfaces/swagger-schematics/framework';
+import { resolveTemplateDir } from '../api/helpers/template-path.helper';
 import { SwaggerApiSchema } from '../api/schema';
 import { runChangeSummaryAfterGeneration } from '../helpers/api-changes/change-summary';
 import { IFileCounts } from '../helpers/api-changes/format';
@@ -95,12 +96,19 @@ async function main(): Promise<void> {
     let config: SwaggerApiSchema | null = null;
     if (args.command === 'all') {
         // `all` runs types before api: validate what api needs up front, so a
-        // missing or unsupported framework fails before any types are written.
+        // missing or unsupported framework, or a wrong template path, fails
+        // before any types are written.
         config = getOpenapiSchematicsConfig({
             ...args.options,
             swaggerSchemaUrl: args.options.swaggerSchemaUrl ?? args.positionals[0]
         } as SwaggerApiSchema);
         resolveFramework(config.framework);
+        if (config.apiServiceTemplatePath) {
+            resolveTemplateDir('apiServiceTemplatePath', config.apiServiceTemplatePath);
+        }
+        if (config.baseApiTemplatePath) {
+            resolveTemplateDir('baseApiTemplatePath', config.baseApiTemplatePath);
+        }
     } else if (args.changeReport || args.options.schemaSnapshotPath) {
         console.warn('[swagger-schematics] The API change summary runs with the all command only; ' +
             'no snapshot or change report is written for a single schematic.');

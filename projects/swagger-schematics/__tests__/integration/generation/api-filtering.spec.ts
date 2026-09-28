@@ -1,6 +1,6 @@
 import '@helpers/matchers';
 import { resetFetchMocks, runFullSchematics, runApiSchematic, setupSwaggerMock, schematicRunner, ANGULAR_SCHEMATIC_OPTIONS } from '@helpers/setup';
-import { findUnmatchedIncludePatterns, matchesApiName, transformSwaggerSchema } from '@lib/api/helpers/api.helper';
+import { findUnmatchedIncludePatterns, isEmptyApiOutputIntended, matchesApiName, transformSwaggerSchema } from '@lib/api/helpers/api.helper';
 import { buildApiModel } from '@lib/helpers/api-changes/api-model';
 import { ISwaggerSchema } from '../../../interfaces/version_3_1/swagger.interface';
 
@@ -115,6 +115,16 @@ describe('API filtering', () => {
   it('lists the includeApis entries that match no API', () => {
     expect(findUnmatchedIncludePatterns(SCHEMA, ['orders', 'Oders', 'Replacement*', 'Nope*'])).toEqual(['Oders', 'Nope*']);
     expect(findUnmatchedIncludePatterns(SCHEMA, undefined)).toEqual([]);
+  });
+
+  it('treats no generated services as intended only when the filters left no API to render', () => {
+    // Filters excluded every API: their services go
+    expect(isEmptyApiOutputIntended(SCHEMA, 0, [])).toBe(true);
+    // APIs were left to render but the templates produced nothing: keep the services
+    expect(isEmptyApiOutputIntended(SCHEMA, 2, [])).toBe(false);
+    // A likely typo in includeApis, or a document without operations: keep them
+    expect(isEmptyApiOutputIntended(SCHEMA, 0, ['Oders'])).toBe(false);
+    expect(isEmptyApiOutputIntended({ ...SCHEMA, paths: {} }, 0, [])).toBe(false);
   });
 
   it('keeps filtered APIs out of the change summary model', () => {

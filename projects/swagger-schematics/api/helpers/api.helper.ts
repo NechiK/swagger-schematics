@@ -195,6 +195,21 @@ export function documentDeclaresOperations(swaggerSchema: ISwaggerSchema, apiPat
 }
 
 /**
+ * Whether an api run that generated no services meant to, so the stale-files rule may delete
+ * the services of the previous run: the document declares operations, the API filters left
+ * none of them to render, and no `includeApis` entry is a likely typo. When some APIs were
+ * left to render and still no file came out, the templates are at fault, not the options.
+ */
+export function isEmptyApiOutputIntended(
+    swaggerSchema: ISwaggerSchema,
+    renderedApiCount: number,
+    unmatchedIncludes: string[],
+    apiPathKey?: string
+): boolean {
+    return renderedApiCount === 0 && !unmatchedIncludes.length && documentDeclaresOperations(swaggerSchema, apiPathKey);
+}
+
+/**
  * The `includeApis` entries that match no API in the document (before filtering), e.g. a
  * misspelled controller name. When the include filter then leaves nothing to generate,
  * that is more likely a typo than a choice, so the stale-files safety net keeps the services.

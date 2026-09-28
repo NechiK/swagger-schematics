@@ -141,6 +141,33 @@ describe('swagger-schematics CLI', () => {
     expect(fs.existsSync(path.join(projectDir, 'src'))).toBe(false);
   }, 120000);
 
+  it('should read a relative apiServiceTemplatePath from the project root', () => {
+    const templateDir = path.join(projectDir, 'templates/api-service');
+    fs.mkdirSync(templateDir, { recursive: true });
+    fs.writeFileSync(path.join(templateDir, '__name@dasherize__-api.service.ts.template'),
+      'export class <%= classify(name) %>CustomApiService {}\n');
+
+    const output = runCli('all --api-service-template-path=./templates/api-service');
+
+    expect(output).toContain('CREATE src/app/core/widget-api.service.ts');
+    const serviceContent = fs.readFileSync(path.join(projectDir, 'src/app/core/widget-api.service.ts'), 'utf8');
+    expect(serviceContent).toBe('export class WidgetCustomApiService {}\n');
+  }, 120000);
+
+  it('should fail on a missing template directory before writing anything, keeping the existing services', () => {
+    runCli('all');
+    const servicePath = path.join(projectDir, 'src/app/core/widget-api.service.ts');
+    const before = fs.readFileSync(servicePath, 'utf8');
+
+    const output = runCli('all --api-service-template-path=./templates/typo', true);
+
+    expect(output).toContain('EXIT:1');
+    expect(output).toContain(`apiServiceTemplatePath: template directory '${path.join(fs.realpathSync(projectDir), 'templates/typo')}' not found`);
+    expect(output).not.toContain('DELETE');
+    expect(output).not.toContain('UPDATE');
+    expect(fs.readFileSync(servicePath, 'utf8')).toBe(before);
+  }, 120000);
+
   it('should accept the framework from a CLI flag for the all command', () => {
     fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
       swaggerSchemaUrl: './schema.json',

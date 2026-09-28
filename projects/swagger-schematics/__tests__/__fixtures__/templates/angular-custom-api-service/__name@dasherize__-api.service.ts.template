@@ -1,0 +1,4 @@
+// Custom template
+export class <%= classify(name) %>ApiService {
+  readonly operations = <%= apiList.length %>;
+}

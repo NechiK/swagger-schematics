@@ -122,7 +122,7 @@ function findProbableLeftovers(tree: Tree, patterns: IOwnedFilePattern[], genera
  * Safety nets:
  * - only files listed in the manifest are candidates, so hand-written files are never touched;
  * - a run that generated nothing at all (an empty or broken schema) removes nothing, unless
- *   `emptyIsIntended` says the options chose that (e.g. API filters that exclude every API);
+ *   `emptyIsIntended` says the options chose that (API filters that left no API to render);
  * - on the first run there is no manifest, so nothing is removed - probable
  *   leftovers from earlier versions are listed for manual cleanup instead.
  */
@@ -155,7 +155,7 @@ export function createStaleFilesRule(options: IStaleFilesOptions): Rule {
                 .filter(entry => tree.exists(join(outputDir, entry)));
 
             if (stale.length && !current.length && !options.emptyIsIntended) {
-                context.logger.warn(`${options.section}: the schema produced no files, so the ${stale.length} ` +
+                context.logger.warn(`${options.section}: no files were generated, so the ${stale.length} ` +
                     `previously generated file(s) were kept. ${options.emptyHint ?? 'Check that the schema source is correct.'}`);
                 next = previousEntries;
             } else if (stale.length && options.remove) {

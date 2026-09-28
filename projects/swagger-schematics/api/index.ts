@@ -17,7 +17,7 @@ import { parseName } from '@schematics/angular/utility/parse-name';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
 import { SwaggerApiSchema } from './schema';
-import { buildCacheTags, documentDeclaresOperations, findUnmatchedIncludePatterns, transformSwaggerSchema } from './helpers/api.helper';
+import { buildCacheTags, findUnmatchedIncludePatterns, isEmptyApiOutputIntended, transformSwaggerSchema } from './helpers/api.helper';
 import { transformRefsToImport } from '../types/helpers/template.helper';
 import { renderJsDoc } from '../types/utils/js-doc';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
@@ -29,6 +29,7 @@ import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
 import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
+import { resolveTemplateDir, templateDirSource } from './helpers/template-path.helper';
 import * as path from 'path';
 
 import { existsSync } from 'fs';
@@ -100,6 +101,15 @@ export default function(options: SwaggerApiSchema) {
         const framework = resolveFramework(config.framework);
         const frameworkConfig = FRAMEWORK_CONFIGS[framework];
 
+        // Select templates based on framework. Custom template paths are checked before the
+        // schema is loaded, so a wrong one fails fast.
+        const apiServiceTemplates = config.apiServiceTemplatePath
+            ? templateDirSource(resolveTemplateDir('apiServiceTemplatePath', config.apiServiceTemplatePath))
+            : url(frameworkConfig.templates.apiService);
+        const baseApiTemplates = config.baseApiTemplatePath
+            ? templateDirSource(resolveTemplateDir('baseApiTemplatePath', config.baseApiTemplatePath))
+            : url(frameworkConfig.templates.baseApi);
+
         const swagger: ISwaggerSchema = await fetchSwaggerSchema(config.swaggerSchemaUrl as string);
 
         const versionInfo = detectOpenApiVersion(swagger);
@@ -115,10 +125,6 @@ export default function(options: SwaggerApiSchema) {
             excludeApis: config.excludeApis,
             excludeDeprecated: config.excludeDeprecated
         });
-
-        // Select templates based on framework
-        const apiServiceTemplates = url(config.apiServiceTemplatePath || frameworkConfig.templates.apiService);
-        const baseApiTemplates = url(config.baseApiTemplatePath || frameworkConfig.templates.baseApi);
 
         // Loop-invariant: the base API location, file extension, and custom
         // helpers depend only on the config, so resolve (and require) them once
@@ -203,16 +209,19 @@ export default function(options: SwaggerApiSchema) {
         // An includeApis entry matching nothing is likely a typo; if the filters then leave nothing
         // to generate, keep the services rather than deleting all of them
         const unmatchedIncludes = findUnmatchedIncludePatterns(swagger, config.includeApis, config.apiPathKey);
+        const renderedApiCount = Object.keys(parsedApiSchemas).length;
         const staleFilesRule = createStaleFilesRule({
             section: 'api',
             outputPath: config.path,
             generatedFiles,
             remove: config.removeStaleFiles !== false,
             // Filters that exclude every API are a choice, not a broken schema: their services go
-            emptyIsIntended: documentDeclaresOperations(swagger, config.apiPathKey) && !unmatchedIncludes.length,
-            emptyHint: unmatchedIncludes.length
-                ? `includeApis entries ${unmatchedIncludes.map(pattern => `'${pattern}'`).join(', ')} match no API: check them for typos.`
-                : undefined,
+            emptyIsIntended: isEmptyApiOutputIntended(swagger, renderedApiCount, unmatchedIncludes, config.apiPathKey),
+            emptyHint: renderedApiCount
+                ? `The templates rendered no files for ${renderedApiCount} API(s): check apiServiceTemplatePath.`
+                : unmatchedIncludes.length
+                    ? `includeApis entries ${unmatchedIncludes.map(pattern => `'${pattern}'`).join(', ')} match no API: check them for typos.`
+                    : undefined,
             ownedFilePatterns: [{ dir: config.path, suffixes: [apiFileExt], exclude: [baseApiPath] }]
         });
         return chain([...rules, eslintFixRule, staleFilesRule]);

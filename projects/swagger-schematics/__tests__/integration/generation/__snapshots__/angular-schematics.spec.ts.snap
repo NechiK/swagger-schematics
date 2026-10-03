@@ -98,7 +98,7 @@ export class ClaimApiService extends ApiBaseService {
   }
 
   /** Get service actions */
-  getClaimServiceactions(serviceActionId: number): Observable<number[]> {
+  getClaimServiceactions(): Observable<number[]> {
     return this.httpClient.get<number[]>(
       this.getUrl('/serviceactions')
     );

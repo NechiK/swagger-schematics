@@ -151,8 +151,8 @@ export const claimApi = baseApi.injectEndpoints({
       }),
     }),
     /** Get service actions */
-    claimGetClaimServiceactions: builder.query<number[], { serviceActionId: number }>({
-      query: ({ serviceActionId }) => ({
+    claimGetClaimServiceactions: builder.query<number[], void>({
+      query: () => ({
         url: '/claim/serviceactions',
         method: 'GET',
       }),

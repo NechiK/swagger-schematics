@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.0] - 2026-10-03
+
+### ✨ Added
+- **Angular 15 and 22 checked in CI** - the generated Angular output for every test fixture is compiled with `tsc` against Angular 15 (the lowest supported version, TypeScript 4.8) and Angular 22 (TypeScript 6.0), with the `ng new` strict settings plus `noUnusedLocals`, `noUnusedParameters` and `exactOptionalPropertyTypes`. Angular 22 needed no changes; the README's requirements now name both versions
+
+### 🐛 Fixed
+- **A path parameter with no placeholder in the path is left out** - a document that declares a path parameter its path doesn't use (`GET /api/Claim/serviceactions` with a `serviceActionId` path parameter) generated a required argument that was never sent: `getClaimServiceactions(serviceActionId)` in Angular, `{ serviceActionId: number }` in RTK, and an unused parameter that fails to compile under `noUnusedParameters`. Such a parameter is now left out of the generated method, with a warning naming the parameter and the endpoint so the document can be fixed. This is the counterpart of 2.0.0's undeclared placeholders, which become a required `string` parameter
+  - A call that passes the argument stops compiling (TS2554 in Angular, an excess property in RTK); drop the argument, since the value was never sent
+  - A placeholder matched only by case (`{ID}` declared as `id`) still uses that parameter
+
 ## [2.0.0] - 2026-09-28
 
 A major release: regenerating can require changes at call sites and in custom templates. The list below says what to do; each item is described in full under ♻️ Changed, marked ⚠️ **BREAKING**.
@@ -508,6 +518,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[2.1.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/NechiK/swagger-schematics/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/NechiK/swagger-schematics/compare/v1.3.0...v1.3.1

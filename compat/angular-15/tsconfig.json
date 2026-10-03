@@ -19,6 +19,7 @@
     "lib": ["ES2022", "dom"],
     "types": [],
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true
   },
   "include": ["generated/**/*.ts"]

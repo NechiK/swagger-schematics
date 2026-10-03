@@ -16,6 +16,7 @@
     "module": "preserve",
     "types": [],
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true
   },
   "include": ["generated/**/*.ts"]

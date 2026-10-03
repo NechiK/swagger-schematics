@@ -13,8 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         # Mirrors "engines" in projects/swagger-schematics/package.json:
-        # ^20.19.0 || ^22.12.0 || >=24.0.0
-        node-version: [20.19.0, 22.12.0, 24.x]
+        # ^22.22.3 || ^24.15.0 || >=26.0.0
+        node-version: [22.22.3, 24.15.0, 26.x]
 
     steps:
       - name: Checkout repository

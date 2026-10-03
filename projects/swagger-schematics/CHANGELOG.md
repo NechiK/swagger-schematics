@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.0.0] - 2026-10-03
+
+A major release: it drops Node.js 20, which reached end of life in April 2026. The generated code is unchanged and still supports Angular 15+.
+
+### ⚠️ Upgrading from 2.x
+- **Run the CLI on Node.js 22.22.3+, 24.15.0+ or 26+** - Node.js 20 is no longer supported. Every Angular version from 15 on runs on Node.js 22, so only the Node.js version used to generate changes, not the app
+
+### ♻️ Changed
+- ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
+
 ## [2.1.0] - 2026-10-03
 
 ### ✨ Added
@@ -518,6 +528,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.1.0...v3.0.0
 [2.1.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/NechiK/swagger-schematics/compare/v1.3.1...v1.4.0

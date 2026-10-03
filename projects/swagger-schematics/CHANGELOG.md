@@ -8,15 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.0.0] - 2026-10-03
 
-A major release: it drops Node.js 20, which reached end of life in April 2026. The generated code is unchanged and still supports Angular 15+.
+A major release: it drops Node.js 20, which reached end of life in April 2026, and leaves out path parameters the path doesn't use. Angular 15+ is still supported, now checked in CI against Angular 15 and 22.
 
 ### ⚠️ Upgrading from 2.x
 - **Run the CLI on Node.js 22.22.3+, 24.15.0+ or 26+** - Node.js 20 is no longer supported. Every Angular version from 15 on runs on Node.js 22, so only the Node.js version used to generate changes, not the app
-
-### ♻️ Changed
-- ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
-
-## [2.1.0] - 2026-10-03
+- **A path parameter with no placeholder in the path is no longer an argument** - drop it at the call sites that stop compiling; its value was never sent (see 🐛 Fixed)
 
 ### ✨ Added
 - **Angular 15 and 22 checked in CI** - the generated Angular output for every test fixture is compiled with `tsc` against Angular 15 (the lowest supported version, TypeScript 4.8) and Angular 22 (TypeScript 6.0), with the `ng new` strict settings plus `noUnusedLocals`, `noUnusedParameters` and `exactOptionalPropertyTypes`. Angular 22 needed no changes; the README's requirements now name both versions
@@ -25,6 +21,9 @@ A major release: it drops Node.js 20, which reached end of life in April 2026. T
 - **A path parameter with no placeholder in the path is left out** - a document that declares a path parameter its path doesn't use (`GET /api/Claim/serviceactions` with a `serviceActionId` path parameter) generated a required argument that was never sent: `getClaimServiceactions(serviceActionId)` in Angular, `{ serviceActionId: number }` in RTK, and an unused parameter that fails to compile under `noUnusedParameters`. Such a parameter is now left out of the generated method, with a warning naming the parameter and the endpoint so the document can be fixed. This is the counterpart of 2.0.0's undeclared placeholders, which become a required `string` parameter
   - A call that passes the argument stops compiling (TS2554 in Angular, an excess property in RTK); drop the argument, since the value was never sent
   - A placeholder matched only by case (`{ID}` declared as `id`) still uses that parameter
+
+### ♻️ Changed
+- ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
 
 ## [2.0.0] - 2026-09-28
 
@@ -528,8 +527,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
-[3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.1.0...v3.0.0
-[2.1.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v2.1.0
+[3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/NechiK/swagger-schematics/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/NechiK/swagger-schematics/compare/v1.3.0...v1.3.1

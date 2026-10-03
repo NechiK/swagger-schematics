@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.0.0] - 2026-10-03
 
-A major release: it drops Node.js 20, which reached end of life in April 2026, and leaves out path parameters the path doesn't use. Angular 15+ is still supported, now checked in CI against Angular 15 and 22.
+A major release: it drops Node.js 20, which reached end of life in April 2026, moves to the Angular 22 devkit, and leaves out path parameters the path doesn't use. Angular 15+ is still supported, now checked in CI against Angular 15 and 22.
 
 ### ⚠️ Upgrading from 2.x
 - **Run the CLI on Node.js 22.22.3+, 24.15.0+ or 26+** - Node.js 20 is no longer supported. Every Angular version from 15 on runs on Node.js 22, so only the Node.js version used to generate changes, not the app
@@ -24,9 +24,10 @@ A major release: it drops Node.js 20, which reached end of life in April 2026, a
 
 ### ♻️ Changed
 - ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
-- Tests run on Vitest 5 instead of Jest 30. Integration tests now run on the TypeScript sources inside Vitest, so no build is needed and they count towards coverage; `npm run test:types` type-checks the tests in CI, as ts-jest did
+- Tests run on Vitest 5 instead of Jest 30, which can't load the Angular 22 devkit (it `require()`s ES-module-only dependencies). Integration tests now run on the TypeScript sources inside Vitest, so no build is needed and they count towards coverage; `npm run test:types` type-checks the tests in CI, as ts-jest did
 
 ### 📦 Dependencies
+- Updated `@angular-devkit/core`, `@angular-devkit/schematics`, `@angular-devkit/schematics-cli` and `@schematics/angular` from 20.3.34 to 22.2.1. The generated code is unchanged
 - Replaced jest 30.4.2, ts-jest 29.4.12 and @types/jest 30.0.0 with vitest 5.0.3, @vitest/coverage-v8 5.0.3 and vite 8.3.2 (development only)
 
 ## [2.0.0] - 2026-09-28

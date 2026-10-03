@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Angular custom baseApiPath accepts a file-path value 1`] = `
+exports[`Angular custom baseApiPath > accepts a file-path value 1`] = `
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "../core/base/_api-base.service";
 import { Observable } from "rxjs";

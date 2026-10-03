@@ -126,7 +126,7 @@ describe('path-level parameters', () => {
       }),
       components: { schemas: {}, parameters: { Loop: { $ref: '#/components/parameters/Loop' } } }
     } as unknown as ISwaggerSchema;
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       transformSwaggerSchema(schema);
       const messages = warn.mock.calls.map(call => String(call[0]));
@@ -194,7 +194,7 @@ describe('undeclared path parameters', () => {
     '/api/Orders/{ID}/notes': { get: { tags: ['Orders'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }], responses: ok } }
   });
   const parse = () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       return { apiList: transformSwaggerSchema(schema).Orders.apiList, warnings: warn.mock.calls.map(call => String(call[0])) };
     } finally {
@@ -247,7 +247,7 @@ describe('path parameters without a placeholder', () => {
     }
   });
   const parse = () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       return { apiList: transformSwaggerSchema(schema).Orders.apiList, warnings: warn.mock.calls.map(call => String(call[0])) };
     } finally {

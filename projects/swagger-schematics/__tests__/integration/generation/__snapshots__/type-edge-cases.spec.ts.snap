@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Type generation edge cases allOf with a nullable ref member is parenthesized 1`] = `
+exports[`Type generation edge cases > allOf with a nullable ref member is parenthesized 1`] = `
 "import { IModelA } from './model-a.interface';
 import { INullableExtra } from './nullable-extra.interface';
 
@@ -8,7 +8,7 @@ export type TIntersectNullableDto = IModelA & (INullableExtra | null);
 "
 `;
 
-exports[`Type generation edge cases allOf with own properties renders the inline literal 1`] = `
+exports[`Type generation edge cases > allOf with own properties renders the inline literal 1`] = `
 "import { IModelA } from './model-a.interface';
 import { IModelB } from './model-b.interface';
 
@@ -16,7 +16,7 @@ export type TDerivedDto = IModelA & { extra?: string; other?: IModelB };
 "
 `;
 
-exports[`Type generation edge cases arrays of unions and nullable refs are parenthesized 1`] = `
+exports[`Type generation edge cases > arrays of unions and nullable refs are parenthesized 1`] = `
 "import { IModelA } from './model-a.interface';
 import { IModelB } from './model-b.interface';
 import { INullableExtra } from './nullable-extra.interface';
@@ -28,7 +28,7 @@ export interface IMixedListDto {
 "
 `;
 
-exports[`Type generation edge cases enum without varnames sanitizes string values 1`] = `
+exports[`Type generation edge cases > enum without varnames sanitizes string values 1`] = `
 "export enum TStatusWithoutNames {
   InProgress = 'in progress',
   NotStarted = 'not-started',
@@ -37,7 +37,7 @@ exports[`Type generation edge cases enum without varnames sanitizes string value
 "
 `;
 
-exports[`Type generation edge cases generates the expected files 1`] = `
+exports[`Type generation edge cases > generates the expected files 1`] = `
 [
   "/.editorconfig",
   "/test-output/.swagger-schematics-manifest.json",
@@ -56,7 +56,7 @@ exports[`Type generation edge cases generates the expected files 1`] = `
 ]
 `;
 
-exports[`Type generation edge cases nullable Record keeps its outer | null 1`] = `
+exports[`Type generation edge cases > nullable Record keeps its outer | null 1`] = `
 "
 
 export interface INullableMapDto {
@@ -65,7 +65,7 @@ export interface INullableMapDto {
 "
 `;
 
-exports[`Type generation edge cases numeric enum without varnames prefixes members 1`] = `
+exports[`Type generation edge cases > numeric enum without varnames prefixes members 1`] = `
 "export enum TNumericCodes {
   _1 = 1,
   _2 = 2,
@@ -74,7 +74,7 @@ exports[`Type generation edge cases numeric enum without varnames prefixes membe
 "
 `;
 
-exports[`Type generation edge cases quotes and backslashes are escaped 1`] = `
+exports[`Type generation edge cases > quotes and backslashes are escaped 1`] = `
 "export enum TTrickyValues {
   Apostrophe = 'it\\'s',
   Backslash = 'back\\\\slash'
@@ -82,7 +82,7 @@ exports[`Type generation edge cases quotes and backslashes are escaped 1`] = `
 "
 `;
 
-exports[`Type generation edge cases short x-enum-varnames falls back per index 1`] = `
+exports[`Type generation edge cases > short x-enum-varnames falls back per index 1`] = `
 "export enum TPartialNames {
   One = 1,
   Two = 2,

@@ -5,7 +5,7 @@ describe('schematic error logging', () => {
   it('should print a full error report to the console when the schema fetch fails', async () => {
     // No mock registered for the URL -> the fetch mock answers 404
     resetFetchMocks();
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(runTypesSchematic(ANGULAR_SCHEMATIC_OPTIONS)).rejects.toThrow('404');
 

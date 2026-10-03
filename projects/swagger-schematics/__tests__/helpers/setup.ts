@@ -1,8 +1,11 @@
-import { Tree } from '@angular-devkit/schematics';
+import { RuleFactory, Tree } from '@angular-devkit/schematics';
+import { NodeModulesTestEngineHost } from '@angular-devkit/schematics/tools';
 import { SchematicTestRunner, UnitTestTree } from '@angular-devkit/schematics/testing';
 import * as path from 'path';
 import { ISwaggerSchema } from '../../interfaces/version_3_1/swagger.interface';
 import { loadFixture, loadJsonFixture } from '../__fixtures__';
+import apiFactory from '../../api';
+import typesFactory from '../../types';
 
 // ============================================================================
 // Fetch Mock Setup
@@ -37,6 +40,24 @@ export const resetFetchMocks = (): void => {
 // ============================================================================
 
 const collectionPath = path.join(__dirname, '../../collection.json');
+
+// The runner would load the schematics (`./types`, `./api` in collection.json) with
+// Node's own require(), which Vitest doesn't see: TypeScript sources don't load
+// that way, and code run outside Vitest's module graph doesn't count towards
+// coverage. Hand it the factories Vitest already loaded instead, through the
+// engine host's hook for resolving a factory reference.
+const FACTORIES: Record<string, RuleFactory<object>> = {
+  [path.join(__dirname, '../../types')]: typesFactory,
+  [path.join(__dirname, '../../api')]: apiFactory,
+};
+const engineHost = NodeModulesTestEngineHost.prototype as unknown as {
+  _resolveReferenceString(refString: string, parentPath: string, ...rest: unknown[]): { ref: unknown; path: string } | null;
+};
+const resolveReferenceString = engineHost._resolveReferenceString;
+engineHost._resolveReferenceString = function (refString, parentPath, ...rest) {
+  const factory = FACTORIES[path.resolve(parentPath, refString)];
+  return factory ? { ref: factory, path: parentPath } : resolveReferenceString.call(this, refString, parentPath, ...rest);
+};
 
 export const schematicRunner = new SchematicTestRunner('swagger-schematics', collectionPath);
 

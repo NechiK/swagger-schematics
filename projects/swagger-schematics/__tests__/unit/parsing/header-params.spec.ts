@@ -34,7 +34,7 @@ describe('header parameters', () => {
   });
 
   it('skips unsupported header names with a warning naming the header and the endpoint', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       const parsed = transformSwaggerSchema(HEADER_PARAMS_SWAGGER_SCHEMA).Orders.apiList
         .find(item => item.httpMethod === 'GET' && item.apiPath === '/api/Orders')!;
@@ -47,7 +47,7 @@ describe('header parameters', () => {
   });
 
   it('does not warn in silent mode', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       transformSwaggerSchema(HEADER_PARAMS_SWAGGER_SCHEMA, { silent: true });
       expect(warn).not.toHaveBeenCalled();
@@ -361,7 +361,7 @@ describe('header parameters', () => {
       ({ openapi: '3.0.1', info: { title: 'T', version: '1' }, components: { schemas: {} }, paths: { '/api/Things/{id}': { post: { tags: ['Things'], parameters, responses: { '204': { description: 'ok' } }, ...extra } } } }) as unknown as ISwaggerSchema;
 
     const parse = (schema: ISwaggerSchema) => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       try {
         return { item: transformSwaggerSchema(schema).Things.apiList[0], warnings: warn.mock.calls.map(call => String(call[0])) };
       } finally {

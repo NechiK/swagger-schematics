@@ -1,4 +1,4 @@
-import { transformType, parseRefToSymbol, isNullable, ITransformTypeOptions } from '@lib/types/utils/transform-type';
+import { transformType, transformTypeWithAllImports, parseRefToSymbol, isNullable, ITransformTypeOptions } from '@lib/types/utils/transform-type';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 import { IRef } from '@lib/interfaces/version_3_1/ref.interface';
 
@@ -67,7 +67,6 @@ describe('Transform Type', () => {
     });
 
     it('should collect all imports from composition schemas', () => {
-      const { transformTypeWithAllImports } = require('@lib/types/utils/transform-type');
       const swagger = createSwaggerSchema({
         PartA: { type: 'object', properties: { a: { type: 'string' } } },
         PartB: { type: 'object', properties: { b: { type: 'string' } } }

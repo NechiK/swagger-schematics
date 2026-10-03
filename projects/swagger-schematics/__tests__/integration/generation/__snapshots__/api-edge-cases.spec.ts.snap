@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`API generation edge cases (Angular) response edge cases render consistently in the service 1`] = `
+exports[`API generation edge cases (Angular) > response edge cases render consistently in the service 1`] = `
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";

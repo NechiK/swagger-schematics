@@ -43,7 +43,7 @@ describe('error logging', () => {
 
   describe('logSchematicError', () => {
     it('should print the full report to console.error', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       logSchematicError('types', chainedError());
 
@@ -55,7 +55,7 @@ describe('error logging', () => {
 
   describe('logCliError', () => {
     it('should print a CLI failure', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       logCliError(new Error("Framework 'react' is not supported."));
 
@@ -65,7 +65,7 @@ describe('error logging', () => {
     });
 
     it('should not print a schematic failure a second time', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = chainedError();
 
       logSchematicError('api', error);
@@ -78,7 +78,7 @@ describe('error logging', () => {
 
   describe('wrapRuleWithErrorLogging', () => {
     it('should log and rethrow rule failures', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const failingRule = async () => {
         throw chainedError();
       };
@@ -104,21 +104,21 @@ describe('error logging', () => {
     });
 
     it('should surface the network cause chain in the error message', async () => {
-      globalThis.fetch = jest.fn().mockRejectedValue(chainedError()) as any;
+      globalThis.fetch = vi.fn().mockRejectedValue(chainedError()) as any;
 
       await expect(fetchSwaggerSchema('https://swagger.internal.host/swagger.json'))
         .rejects.toThrow("Failed to fetch swagger schema from 'https://swagger.internal.host/swagger.json': fetch failed -> getaddrinfo ENOTFOUND swagger.internal.host");
     });
 
     it('should report non-2xx responses with the URL and status', async () => {
-      globalThis.fetch = jest.fn().mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' }) as any;
+      globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' }) as any;
 
       await expect(fetchSwaggerSchema('https://host/swagger.json'))
         .rejects.toThrow("Failed to load swagger schema from 'https://host/swagger.json': 502 Bad Gateway");
     });
 
     it('should report JSON parse failures with the URL', async () => {
-      globalThis.fetch = jest.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.reject(new SyntaxError('Unexpected token < in JSON'))

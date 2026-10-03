@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`JSDoc in generated code Angular: documents service methods with summary, description and @deprecated 1`] = `
+exports[`JSDoc in generated code > Angular: documents service methods with summary, description and @deprecated 1`] = `
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
@@ -49,7 +49,7 @@ export class OrdersApiService extends ApiBaseService {
 "
 `;
 
-exports[`JSDoc in generated code RTK: documents endpoints 1`] = `
+exports[`JSDoc in generated code > RTK: documents endpoints 1`] = `
 "
 import { api as baseApi } from '@th-common/store/api-base';
 import { IOrderDto } from './interfaces/order-dto.interface';
@@ -90,7 +90,7 @@ export const ordersApi = baseApi.injectEndpoints({
 });"
 `;
 
-exports[`JSDoc in generated code documents interfaces and their properties, merging @aggregatable into the same comment 1`] = `
+exports[`JSDoc in generated code > documents interfaces and their properties, merging @aggregatable into the same comment 1`] = `
 "
 
 /** An order placed by a customer */

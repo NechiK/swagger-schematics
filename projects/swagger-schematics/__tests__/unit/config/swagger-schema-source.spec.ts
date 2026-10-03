@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -8,7 +9,7 @@ describe('fetchSwaggerSchema source handling', () => {
   const SCHEMA = { openapi: '3.0.1', info: { title: 'T', version: 'v1' }, paths: {}, components: { schemas: {} } };
   let tmpDir: string;
   let schemaFile: string;
-  let consoleInfoSpy: jest.SpyInstance;
+  let consoleInfoSpy: MockInstance;
 
   beforeAll(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'swagger-schematics-'));
@@ -21,7 +22,7 @@ describe('fetchSwaggerSchema source handling', () => {
   });
 
   beforeEach(() => {
-    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -60,7 +61,7 @@ describe('fetchSwaggerSchema source handling', () => {
 
   it('should still fetch http(s) URLs over the network', async () => {
     const originalFetch = globalThis.fetch;
-    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(SCHEMA) });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(SCHEMA) });
     globalThis.fetch = fetchMock as any;
 
     try {

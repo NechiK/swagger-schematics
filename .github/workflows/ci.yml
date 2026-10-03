@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Type-check tests
+        run: npm run test:types --prefix projects/swagger-schematics
+
       - name: Test
         run: npm run test:coverage --prefix projects/swagger-schematics
 

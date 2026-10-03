@@ -13,7 +13,7 @@ const METHODS = ['log', 'info', 'warn', 'error'] as const;
 if (!process.env.SHOW_SCHEMATIC_LOGS) {
   for (const method of METHODS) {
     const original = console[method].bind(console);
-    jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+    vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
       if (typeof args[0] === 'string' && args[0].includes(PREFIX)) {
         return;
       }

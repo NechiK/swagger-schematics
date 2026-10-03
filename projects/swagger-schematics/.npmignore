@@ -9,7 +9,9 @@ package-lock.json
 karma.conf.js
 tests
 __tests__
-jest.global-setup.js
+vitest.global-setup.js
+vitest.config.mts
+vitest.compat.config.mts
 coverage
 
 # Packed tarballs (never ship a build artifact inside the package)

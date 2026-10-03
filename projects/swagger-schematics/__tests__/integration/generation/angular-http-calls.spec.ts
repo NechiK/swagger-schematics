@@ -47,7 +47,7 @@ describe('Angular HttpClient calls', () => {
   });
 
   it("leaves out a GET, HEAD or TRACE body, which a browser can't send, with a warning", () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const items = transformSwaggerSchema(SCHEMA).Probe.apiList;
       const search = items.find(item => item.apiMethodName === 'search')!;

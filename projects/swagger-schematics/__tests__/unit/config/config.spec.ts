@@ -1,21 +1,24 @@
-jest.mock('fs', () => ({
-  ...jest.requireActual('fs'),
-  existsSync: jest.fn(),
-  readFileSync: jest.fn()
+import type { Mock } from 'vitest';
+vi.mock('fs', async importOriginal => ({
+  ...await importOriginal<typeof import('fs')>(),
+  existsSync: vi.fn(),
+  readFileSync: vi.fn()
 }));
 
 import * as fs from 'fs';
 import { getOpenapiSchematicsConfig } from '@lib/helpers/config';
 import { SwaggerApiSchema } from '@lib/api/schema';
+import typesSchema from '@lib/types/schema.json';
+import apiSchema from '@lib/api/schema.json';
 
 describe('getOpenapiSchematicsConfig', () => {
   const mockConfigFile = (content: Record<string, unknown> | null) => {
-    (fs.existsSync as jest.Mock).mockReturnValue(content !== null);
-    (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(content ?? {}));
+    (fs.existsSync as Mock).mockReturnValue(content !== null);
+    (fs.readFileSync as Mock).mockReturnValue(JSON.stringify(content ?? {}));
   };
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('lets a config-file boolean win when the option is not passed', () => {
@@ -49,8 +52,8 @@ describe('schematic schemas', () => {
   // DEFAULT_CONFIG in helpers/config.ts, which runs AFTER the config file
   // is read.
   it.each([
-    ['types/schema.json', require('@lib/types/schema.json')],
-    ['api/schema.json', require('@lib/api/schema.json')]
+    ['types/schema.json', typesSchema],
+    ['api/schema.json', apiSchema]
   ])('%s declares no defaults for boolean options', (_name, schema: { properties: Record<string, { type?: string; default?: unknown }> }) => {
     for (const [key, definition] of Object.entries(schema.properties)) {
       if (definition.type === 'boolean') {

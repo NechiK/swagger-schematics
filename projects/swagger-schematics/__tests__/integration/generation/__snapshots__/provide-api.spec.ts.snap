@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`provideApi (Angular) generates provideApi next to the base files, building on API_BASE_URL 1`] = `
+exports[`provideApi (Angular) > generates provideApi next to the base files, building on API_BASE_URL 1`] = `
 "import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 
 import { API_BASE_URL } from './_api-base-url.token';

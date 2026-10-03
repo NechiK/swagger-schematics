@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import '@helpers/matchers';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -10,11 +11,11 @@ const SERVICE = `${OPTIONS.path}/widget-api.service.ts`;
 const FIXTURES = path.join(__dirname, '../../__fixtures__');
 
 describe('Custom template paths', () => {
-  let cwd: jest.SpyInstance;
+  let cwd: MockInstance;
 
   beforeEach(() => {
     // The project root: relative template paths resolve from here
-    cwd = jest.spyOn(process, 'cwd').mockReturnValue(FIXTURES);
+    cwd = vi.spyOn(process, 'cwd').mockReturnValue(FIXTURES);
   });
 
   afterEach(() => {

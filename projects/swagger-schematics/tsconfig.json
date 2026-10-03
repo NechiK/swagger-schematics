@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "types": [
-      "jest",
+      "vitest/globals",
       "node"
     ],
     "paths": {

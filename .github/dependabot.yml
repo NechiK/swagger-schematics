@@ -21,6 +21,15 @@ updates:
           - "@schematics/angular"
         update-types:
           - major
+      # vitest and @vitest/coverage-v8 are pinned to the same version, and
+      # vite is vitest's peer dependency: a major moves them together.
+      vitest-major:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "vite"
+        update-types:
+          - major
 
   # The compat projects pin one Angular major each; a new major gets its own
   # compat/angular-<version> project instead of a bump here. TypeScript stays

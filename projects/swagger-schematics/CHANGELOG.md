@@ -24,6 +24,10 @@ A major release: it drops Node.js 20, which reached end of life in April 2026, a
 
 ### ♻️ Changed
 - ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
+- Tests run on Vitest 5 instead of Jest 30. Integration tests now run on the TypeScript sources inside Vitest, so no build is needed and they count towards coverage; `npm run test:types` type-checks the tests in CI, as ts-jest did
+
+### 📦 Dependencies
+- Replaced jest 30.4.2, ts-jest 29.4.12 and @types/jest 30.0.0 with vitest 5.0.3, @vitest/coverage-v8 5.0.3 and vite 8.3.2 (development only)
 
 ## [2.0.0] - 2026-09-28
 

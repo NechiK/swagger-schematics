@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`x-aggregatable in generated interfaces renders a type that declares nothing exactly as before — no JSDoc, no union 1`] = `
+exports[`x-aggregatable in generated interfaces > renders a type that declares nothing exactly as before — no JSDoc, no union 1`] = `
 "
 
 export interface IPlainDto {

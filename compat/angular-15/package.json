@@ -1,0 +1,17 @@
+{
+  "name": "swagger-schematics-compat-angular-15",
+  "private": true,
+  "description": "Type-checks the generated Angular output against Angular 15, the lowest supported version",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@angular/common": "15.2.10",
+    "@angular/core": "15.2.10",
+    "rxjs": "7.8.2",
+    "zone.js": "0.13.3"
+  },
+  "devDependencies": {
+    "typescript": "4.8.4"
+  }
+}

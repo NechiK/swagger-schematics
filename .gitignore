@@ -60,6 +60,9 @@ Thumbs.db
 projects/swagger-schematics/README.md
 projects/swagger-schematics/LICENSE
 
+# Output the compat type-check generates (npm run compat:generate)
+/compat/*/generated/
+
 # Local generator experiments (swagger-schematics ... --path=/demo-output)
 /demo-output/
 /openapi-schematics.json

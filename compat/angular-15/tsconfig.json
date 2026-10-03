@@ -1,0 +1,25 @@
+{
+  // The compiler options `ng new` writes for Angular 15, plus the stricter
+  // flags at the end that some projects turn on, so generated code compiles there too.
+  "compilerOptions": {
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "useDefineForClassFields": false,
+    "lib": ["ES2022", "dom"],
+    "types": [],
+    "noUnusedLocals": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["generated/**/*.ts"]
+}

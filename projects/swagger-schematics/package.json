@@ -15,6 +15,7 @@
     "test:coverage": "jest --coverage",
     "test:unit": "jest __tests__/unit",
     "test:integration": "jest __tests__/integration",
+    "compat:generate": "jest --testMatch \"**/__tests__/compat/*.compat.ts\" --coverage=false",
     "test:update-snapshots": "jest --updateSnapshot"
   },
   "schematics": "./collection.json",

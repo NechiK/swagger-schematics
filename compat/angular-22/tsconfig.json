@@ -1,0 +1,22 @@
+{
+  // The compiler options `ng new` writes for Angular 22, plus the stricter
+  // flags at the end that some projects turn on, so generated code compiles there too.
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve",
+    "types": [],
+    "noUnusedLocals": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["generated/**/*.ts"]
+}

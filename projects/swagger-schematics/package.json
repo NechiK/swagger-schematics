@@ -51,7 +51,8 @@
     "@angular-devkit/core": "22.2.1",
     "@angular-devkit/schematics": "22.2.1",
     "@angular-devkit/schematics-cli": "22.2.1",
-    "editorconfig": "3.0.2"
+    "editorconfig": "3.0.2",
+    "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
     "@types/json-schema": "7.0.15",

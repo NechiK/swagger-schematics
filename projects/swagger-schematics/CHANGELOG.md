@@ -18,6 +18,7 @@ A major release: it drops Node.js 20, which reached end of life in April 2026, m
 - **Angular 15 and 22 checked in CI** - the generated Angular output for every test fixture is compiled with `tsc` against Angular 15 (the lowest supported version, TypeScript 4.8) and Angular 22 (TypeScript 6.0), with the `ng new` strict settings plus `noUnusedLocals`, `noUnusedParameters` and `exactOptionalPropertyTypes`. Angular 22 needed no changes; the README's requirements now name both versions
 
 ### 🐛 Fixed
+- **RTK base API imports use `tsconfig` path aliases on TypeScript 7** - `tsconfig.json` was read with the project's own TypeScript, whose JavaScript API TypeScript 7 no longer has (`parseConfigFileTextToJson is not a function`). Generation warned and fell back to a relative import of the base API (`../store/api-base` instead of `@/store/api-base`). It is now read with `jsonc-parser`, as TypeScript reads it: comments, trailing commas and a BOM are accepted, and an empty file is an empty config
 - **A path parameter with no placeholder in the path is left out** - a document that declares a path parameter its path doesn't use (`GET /api/Claim/serviceactions` with a `serviceActionId` path parameter) generated a required argument that was never sent: `getClaimServiceactions(serviceActionId)` in Angular, `{ serviceActionId: number }` in RTK, and an unused parameter that fails to compile under `noUnusedParameters`. Such a parameter is now left out of the generated method, with a warning naming the parameter and the endpoint so the document can be fixed. This is the counterpart of 2.0.0's undeclared placeholders, which become a required `string` parameter
   - A call that passes the argument stops compiling (TS2554 in Angular, an excess property in RTK); drop the argument, since the value was never sent
   - A placeholder matched only by case (`{ID}` declared as `id`) still uses that parameter
@@ -29,6 +30,7 @@ A major release: it drops Node.js 20, which reached end of life in April 2026, m
 ### 📦 Dependencies
 - Updated `@angular-devkit/core`, `@angular-devkit/schematics` and `@angular-devkit/schematics-cli` from 20.3.34 to 22.2.1. The generated code is unchanged
 - Removed `@schematics/angular`. From 22 on it depends on TypeScript and oxc-parser, which would have grown the install from 32 MB to 52 MB for the two path helpers it was used for (`parseName`, `buildRelativePath`); those are now part of the package, unchanged. The package now adds 23 MB to a project
+- Added `jsonc-parser` 3.3.1 (already installed by the devkit) to read `tsconfig.json`, which no longer needs the project's TypeScript (see 🐛 Fixed)
 - Replaced jest 30.4.2, ts-jest 29.4.12 and @types/jest 30.0.0 with vitest 5.0.3, @vitest/coverage-v8 5.0.3 and vite 8.3.2 (development only)
 
 ## [2.0.0] - 2026-09-28

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { readFileSync } from 'fs';
-import { parseConfigFileTextToJson } from 'typescript';
+import { parse, ParseError, printParseErrorCode } from 'jsonc-parser';
 import { Tree } from '@angular-devkit/schematics';
 
 export interface TsConfigResult {
@@ -32,24 +32,27 @@ interface IParsedTsConfig {
 }
 
 /**
- * Parse tsconfig JSON content with error handling
+ * Parse tsconfig JSON content with error handling. A tsconfig is JSON with comments
+ * and trailing commas, read here with jsonc-parser rather than TypeScript, whose
+ * JavaScript API TypeScript 7 no longer has. Like TypeScript, an empty file is `{}`.
  */
 function parseTsConfig(filePath: string, content: string): IParsedTsConfig {
-  const result = parseConfigFileTextToJson(filePath, content);
-  
-  if (result.error) {
-    const errorMessage = result.error.messageText;
-    const message = typeof errorMessage === 'string' 
-      ? errorMessage 
-      : errorMessage.messageText;
-    throw new Error(`Invalid tsconfig at '${filePath}': ${message}`);
+  const text = content.replace(/^\uFEFF/, '');
+  if (!text.trim()) {
+    return {};
   }
-  
-  if (!result.config) {
-    throw new Error(`Failed to parse tsconfig at '${filePath}': No configuration found`);
+  const errors: ParseError[] = [];
+  const config: unknown = parse(text, errors, { allowTrailingComma: true });
+
+  if (errors.length) {
+    const [{ error, offset }] = errors;
+    throw new Error(`Invalid tsconfig at '${filePath}': ${printParseErrorCode(error)} at offset ${offset}`);
   }
-  
-  return result.config;
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new Error(`Invalid tsconfig at '${filePath}': The root value of a 'tsconfig.json' file must be an object.`);
+  }
+
+  return config as IParsedTsConfig;
 }
 
 /**

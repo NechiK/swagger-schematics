@@ -22,7 +22,7 @@ describe('eslintFix', () => {
 
     beforeAll(() => {
       const runnerPath = path.join(__dirname, '../../helpers/eslint-fix-e2e.runner.ts');
-      const stdout = execSync(`npx ts-node --transpile-only "${runnerPath}"`, {
+      const stdout = execSync(`npx ts-node --transpile-only --prefer-ts-exts "${runnerPath}"`, {
         cwd: path.join(__dirname, '../../..'),
         encoding: 'utf8',
         timeout: 60000

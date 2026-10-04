@@ -11,14 +11,12 @@ updates:
         update-types:
           - minor
           - patch
-      # The @angular-devkit/* + @schematics/angular packages version in
-      # lockstep - a tree mixing majors breaks the schematics runtime, so
-      # the Angular major migration must arrive as ONE atomic PR, never
-      # as per-package bumps.
+      # The @angular-devkit/* packages version in lockstep - a tree mixing
+      # majors breaks the schematics runtime, so the Angular major migration
+      # must arrive as ONE atomic PR, never as per-package bumps.
       angular-major:
         patterns:
           - "@angular-devkit/*"
-          - "@schematics/angular"
         update-types:
           - major
       # vitest and @vitest/coverage-v8 are pinned to the same version, and

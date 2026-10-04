@@ -55,7 +55,7 @@ describe('swagger-schematics CLI', () => {
   const runCli = (cliArgs: string, expectFailure = false): string => {
     try {
       // 2>&1: warnings (stderr) are part of what a user sees, so assert on them too
-      return execSync(`"${tsNodeBin}" --transpile-only "${binSource}" ${cliArgs} 2>&1`, {
+      return execSync(`"${tsNodeBin}" --transpile-only --prefer-ts-exts "${binSource}" ${cliArgs} 2>&1`, {
         cwd: projectDir,
         encoding: 'utf8',
         timeout: 120000,

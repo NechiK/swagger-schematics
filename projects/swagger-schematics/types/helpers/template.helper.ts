@@ -1,4 +1,4 @@
-import { buildRelativePath } from "@schematics/angular/utility/find-module";
+import { buildRelativePath } from "../../helpers/schematic-path.helper";
 import { IImportRef, ITransformTypeOptions, transformType, getCompositionImports } from "../utils/transform-type";
 import { ISwaggerSchema, TSchemaByType } from "../../interfaces/version_3_1/swagger.interface";
 import { isAllOf, isOneOf, isAnyOf, isNot, isCollectionSchema, transformTypeWithAllImports, fromPropertyKey, toIndexSignature } from "../utils/transform-type";

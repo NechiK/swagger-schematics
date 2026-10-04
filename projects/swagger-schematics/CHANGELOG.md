@@ -27,7 +27,8 @@ A major release: it drops Node.js 20, which reached end of life in April 2026, m
 - Tests run on Vitest 5 instead of Jest 30, which can't load the Angular 22 devkit (it `require()`s ES-module-only dependencies). Integration tests now run on the TypeScript sources inside Vitest, so no build is needed and they count towards coverage; `npm run test:types` type-checks the tests in CI, as ts-jest did
 
 ### 📦 Dependencies
-- Updated `@angular-devkit/core`, `@angular-devkit/schematics`, `@angular-devkit/schematics-cli` and `@schematics/angular` from 20.3.34 to 22.2.1. The generated code is unchanged
+- Updated `@angular-devkit/core`, `@angular-devkit/schematics` and `@angular-devkit/schematics-cli` from 20.3.34 to 22.2.1. The generated code is unchanged
+- Removed `@schematics/angular`. From 22 on it depends on TypeScript and oxc-parser, which would have grown the install from 32 MB to 52 MB for the two path helpers it was used for (`parseName`, `buildRelativePath`); those are now part of the package, unchanged. The package now adds 23 MB to a project
 - Replaced jest 30.4.2, ts-jest 29.4.12 and @types/jest 30.0.0 with vitest 5.0.3, @vitest/coverage-v8 5.0.3 and vite 8.3.2 (development only)
 
 ## [2.0.0] - 2026-09-28

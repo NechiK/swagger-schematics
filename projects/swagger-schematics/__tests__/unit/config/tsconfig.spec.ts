@@ -57,8 +57,9 @@ describe('loadTsConfig', () => {
       expect(loadTsConfig('tsconfig.json', tree).paths).toEqual({ '@/*': ['src/*'] });
     });
 
-    it('reads an empty file as an empty config', () => {
+    it('reads an empty or comments-only file as an empty config', () => {
       expect(loadTsConfig('tsconfig.json', treeWithText('  \n')).paths).toEqual({});
+      expect(loadTsConfig('tsconfig.json', treeWithText('// no options yet\n/* block */')).paths).toEqual({});
     });
 
     it('rejects invalid JSON and a root value that is not an object', () => {

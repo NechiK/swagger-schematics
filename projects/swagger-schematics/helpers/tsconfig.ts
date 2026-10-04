@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { readFileSync } from 'fs';
-import { parse, ParseError, printParseErrorCode } from 'jsonc-parser';
+import { parse, ParseError, printParseErrorCode, stripComments } from 'jsonc-parser';
 import { Tree } from '@angular-devkit/schematics';
 
 export interface TsConfigResult {
@@ -34,11 +34,12 @@ interface IParsedTsConfig {
 /**
  * Parse tsconfig JSON content with error handling. A tsconfig is JSON with comments
  * and trailing commas, read here with jsonc-parser rather than TypeScript, whose
- * JavaScript API TypeScript 7 no longer has. Like TypeScript, an empty file is `{}`.
+ * JavaScript API TypeScript 7 no longer has. Like TypeScript, a file with nothing but
+ * whitespace and comments is `{}`.
  */
 function parseTsConfig(filePath: string, content: string): IParsedTsConfig {
   const text = content.replace(/^\uFEFF/, '');
-  if (!text.trim()) {
+  if (!stripComments(text).trim()) {
     return {};
   }
   const errors: ParseError[] = [];

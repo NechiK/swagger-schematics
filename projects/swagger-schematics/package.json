@@ -6,14 +6,15 @@
     "swagger-schematics": "bin/swagger-schematics.js"
   },
   "scripts": {
-    "prebuild": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
+    "schema-types": "json2ts -i api/schema.json -o api/schema.d.ts --no-additionalProperties && json2ts -i types/schema.json -o types/schema.d.ts --no-additionalProperties",
+    "prebuild": "npm run schema-types",
     "prepack": "npm run build && node -e \"require('fs').copyFileSync('../../README.md', 'README.md'); require('fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
     "build": "tsc -p tsconfig.schematics.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:types": "tsc --noEmit -p tsconfig.spec.json",
+    "test:types": "npm run schema-types && tsc --noEmit -p tsconfig.spec.json",
     "test:unit": "vitest run __tests__/unit",
     "test:integration": "vitest run __tests__/integration",
     "compat:generate": "vitest run --config vitest.compat.config.mts",

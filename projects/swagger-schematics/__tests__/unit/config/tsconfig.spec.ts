@@ -65,6 +65,12 @@ describe('loadTsConfig', () => {
     it('rejects invalid JSON and a root value that is not an object', () => {
       expect(() => loadTsConfig('tsconfig.json', treeWithText('{ "compilerOptions": {'))).toThrow("Invalid tsconfig at 'tsconfig.json': CloseBraceExpected");
       expect(() => loadTsConfig('tsconfig.json', treeWithText('[1]'))).toThrow('must be an object');
+      expect(() => loadTsConfig('tsconfig.json', treeWithText(','))).toThrow('ValueExpected at offset 0');
+    });
+
+    it('rejects an unterminated comment, as TypeScript does', () => {
+      expect(() => loadTsConfig('tsconfig.json', treeWithText('/* broken'))).toThrow('UnexpectedEndOfComment');
+      expect(() => loadTsConfig('tsconfig.json', treeWithText('// fine\n/* broken'))).toThrow('UnexpectedEndOfComment');
     });
   });
 });

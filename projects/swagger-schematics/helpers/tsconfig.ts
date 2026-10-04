@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { readFileSync } from 'fs';
-import { parse, ParseError, printParseErrorCode, stripComments } from 'jsonc-parser';
+import { parse, ParseError, ParseErrorCode, printParseErrorCode } from 'jsonc-parser';
 import { Tree } from '@angular-devkit/schematics';
 
 export interface TsConfigResult {
@@ -35,16 +35,20 @@ interface IParsedTsConfig {
  * Parse tsconfig JSON content with error handling. A tsconfig is JSON with comments
  * and trailing commas, read here with jsonc-parser rather than TypeScript, whose
  * JavaScript API TypeScript 7 no longer has. Like TypeScript, a file with nothing but
- * whitespace and comments is `{}`.
+ * whitespace and complete comments is `{}`; an unterminated comment is an error.
  */
 function parseTsConfig(filePath: string, content: string): IParsedTsConfig {
   const text = content.replace(/^\uFEFF/, '');
-  if (!stripComments(text).trim()) {
+  const parseErrors: ParseError[] = [];
+  const config: unknown = parse(text, parseErrors, { allowTrailingComma: true });
+
+  // With no value at all, the parser's only complaint is the missing value at the end
+  const isEmpty = (error: ParseError) =>
+    config === undefined && error.error === ParseErrorCode.ValueExpected && error.offset === text.length;
+  const errors = parseErrors.filter(error => !isEmpty(error));
+  if (config === undefined && !errors.length) {
     return {};
   }
-  const errors: ParseError[] = [];
-  const config: unknown = parse(text, errors, { allowTrailingComma: true });
-
   if (errors.length) {
     const [{ error, offset }] = errors;
     throw new Error(`Invalid tsconfig at '${filePath}': ${printParseErrorCode(error)} at offset ${offset}`);

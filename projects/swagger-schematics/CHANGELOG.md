@@ -6,12 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [3.0.0] - 2026-10-03
+## [3.0.0] - 2026-10-05
 
 A major release: it drops Node.js 20, which reached end of life in April 2026, moves to the Angular 22 devkit, and leaves out path parameters the path doesn't use. Angular 15+ is still supported, now checked in CI against Angular 15 and 22.
 
 ### ⚠️ Upgrading from 2.x
-- **Run the CLI on Node.js 22.22.3+, 24.15.0+ or 26+** - Node.js 20 is no longer supported. Every Angular version from 15 on runs on Node.js 22, so only the Node.js version used to generate changes, not the app
+- **Run the CLI on Node.js 22.22.3+, 24.15.0+ or 26+** - Node.js 20 is no longer supported. This is only the Node.js that runs the generator; the generated code still targets Angular 15+. Angular 15 to 17 don't officially support Node.js 22, so a project on those versions can keep its own Node.js for the app and run the generator with Node.js 22+
 - **A path parameter with no placeholder in the path is no longer an argument** - drop it at the call sites that stop compiling; its value was never sent (see 🐛 Fixed)
 
 ### ✨ Added
@@ -24,6 +24,7 @@ A major release: it drops Node.js 20, which reached end of life in April 2026, m
   - A placeholder matched only by case (`{ID}` declared as `id`) still uses that parameter
 
 ### ♻️ Changed
+- ⚠️ **BREAKING**: **A path parameter with no placeholder in the path is no longer a method argument** - `getClaimServiceactions(serviceActionId)` for `GET /api/Claim/serviceactions` is now `getClaimServiceactions()` (see 🐛 Fixed): drop the argument at the call sites that stop compiling; its value was never sent
 - ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
 - Tests run on Vitest 5 instead of Jest 30, which can't load the Angular 22 devkit (it `require()`s ES-module-only dependencies). Integration tests now run on the TypeScript sources inside Vitest, so no build is needed and they count towards coverage; `npm run test:types` type-checks the tests in CI, as ts-jest did
 

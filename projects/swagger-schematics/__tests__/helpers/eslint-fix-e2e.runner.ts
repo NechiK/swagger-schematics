@@ -1,11 +1,9 @@
 /**
- * Executed as a child process by the eslintFix end-to-end test (not by jest).
- *
- * Jest's VM sandbox blocks the native dynamic import() that ESLint v9+ uses to
- * load flat configs, so the real-ESLint path can only be exercised outside
- * jest. This runner applies the actual eslint-fix rule to a real Tree using
- * the ESLint + eslint.config.mjs installed in this package, then prints the
- * result as JSON for the test to assert on.
+ * Executed as a child process by the eslintFix end-to-end test (not by the test
+ * runner), so the real-ESLint path runs as a CLI run would. This runner applies
+ * the actual eslint-fix rule to a real Tree using the ESLint + eslint.config.mjs
+ * installed in this package, then prints the result as JSON for the test to
+ * assert on.
  */
 import { Tree } from '@angular-devkit/schematics';
 import { createEslintFixRule } from '../../helpers/eslint-fix.helper';

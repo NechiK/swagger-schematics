@@ -49,7 +49,7 @@ describe('API filtering', () => {
   });
 
   it('skips deprecated operations, and an API left without any quietly', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       const parsed = transformSwaggerSchema(SCHEMA, { excludeDeprecated: true });
 
@@ -62,7 +62,7 @@ describe('API filtering', () => {
   });
 
   it('warns about a filter entry that matches no API', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       transformSwaggerSchema(SCHEMA, { includeApis: ['Orders', 'Ordrs'], excludeApis: ['Nope*'] });
 

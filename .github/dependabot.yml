@@ -11,16 +11,42 @@ updates:
         update-types:
           - minor
           - patch
-      # The @angular-devkit/* + @schematics/angular packages version in
-      # lockstep - a tree mixing majors breaks the schematics runtime, so
-      # the Angular major migration must arrive as ONE atomic PR, never
-      # as per-package bumps.
+      # The @angular-devkit/* packages version in lockstep - a tree mixing
+      # majors breaks the schematics runtime, so the Angular major migration
+      # must arrive as ONE atomic PR, never as per-package bumps.
       angular-major:
         patterns:
           - "@angular-devkit/*"
-          - "@schematics/angular"
         update-types:
           - major
+      # vitest and @vitest/coverage-v8 are pinned to the same version, and
+      # vite is vitest's peer dependency: a major moves them together.
+      vitest-major:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "vite"
+        update-types:
+          - major
+
+  # The compat projects pin one Angular major each; a new major gets its own
+  # compat/angular-<version> project instead of a bump here. TypeScript stays
+  # on the minor that Angular major supports.
+  - package-ecosystem: npm
+    directories:
+      - /compat/angular-15
+      - /compat/angular-22
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-minor"]
+    groups:
+      compat:
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /

@@ -126,7 +126,7 @@ describe('path-level parameters', () => {
       }),
       components: { schemas: {}, parameters: { Loop: { $ref: '#/components/parameters/Loop' } } }
     } as unknown as ISwaggerSchema;
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       transformSwaggerSchema(schema);
       const messages = warn.mock.calls.map(call => String(call[0]));
@@ -194,7 +194,7 @@ describe('undeclared path parameters', () => {
     '/api/Orders/{ID}/notes': { get: { tags: ['Orders'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }], responses: ok } }
   });
   const parse = () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       return { apiList: transformSwaggerSchema(schema).Orders.apiList, warnings: warn.mock.calls.map(call => String(call[0])) };
     } finally {
@@ -229,5 +229,47 @@ describe('undeclared path parameters', () => {
     expect(warnings).toContainEqual(expect.stringContaining("Path parameter 'orderId' of GET /api/Orders/{orderId}/lines is not declared"));
     expect(warnings).toContainEqual(expect.stringContaining("Path parameter '{ID}' of GET /api/Orders/{ID}/notes is declared as 'id'"));
     expect(transformSwaggerSchema(schema, { silent: true }).Orders.apiList).toHaveLength(3);
+  });
+});
+
+/**
+ * A path parameter must match a `{placeholder}` in the path. One that doesn't is an argument
+ * the generated method would take and never send, so it is left out.
+ */
+describe('path parameters without a placeholder', () => {
+  const idParam = { name: 'id', in: 'path', required: true, schema: { type: 'integer' } };
+  const schema = schemaWithPaths({
+    '/api/Orders/summary': { get: { tags: ['Orders'], parameters: [idParam], responses: ok } },
+    '/api/Orders/{ID}/lines': {
+      // Path-level, and a placeholder that matches it only by case
+      parameters: [idParam, { name: 'lineId', in: 'path', required: true, schema: { type: 'integer' } }],
+      get: { tags: ['Orders'], parameters: [{ name: 'page', in: 'query', schema: { type: 'integer' } }], responses: ok }
+    }
+  });
+  const parse = () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      return { apiList: transformSwaggerSchema(schema).Orders.apiList, warnings: warn.mock.calls.map(call => String(call[0])) };
+    } finally {
+      warn.mockRestore();
+    }
+  };
+
+  it('are left out of the generated method', () => {
+    const [summary, lines] = parse().apiList;
+
+    // Was `id: number`, never interpolated into the URL
+    expect(summary.apiMethodParams).toBe('');
+    expect(summary.apiUrl).toBe('summary');
+    expect(lines.apiMethodParams).toBe('id: number, { page }: { page?: number } = {}');
+    expect(lines.apiUrl).toBe('${id}/lines');
+  });
+
+  it('are reported, so the document can be fixed', () => {
+    const { warnings } = parse();
+
+    expect(warnings).toContainEqual(expect.stringContaining("Path parameter 'id' of GET /api/Orders/summary has no '{id}' placeholder"));
+    expect(warnings).toContainEqual(expect.stringContaining("Path parameter 'lineId' of GET /api/Orders/{ID}/lines has no '{lineId}' placeholder"));
+    expect(warnings.filter(warning => warning.includes('has no'))).toHaveLength(2);
   });
 });

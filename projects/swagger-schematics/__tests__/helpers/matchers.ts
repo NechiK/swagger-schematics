@@ -1,26 +1,24 @@
 import { IParsedSchemaItem } from '../../api/helpers/api.helper';
 
 // ============================================================================
-// Type declarations for custom matchers (must be before extend)
+// Type declarations for custom matchers
 // ============================================================================
 
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toHaveUniqueItems(): R;
-      toContainImport(importStatement: string): R;
-      toHaveNoDuplicateImports(): R;
-      toHaveUniqueApiMethods(): R;
-    }
+declare module 'vitest' {
+  // Same type parameters as Vitest's own declaration, which this merges into
+  interface Matchers<R extends void | Promise<void> = void | Promise<void>, T = unknown> {
+    toHaveUniqueItems(): R;
+    toContainImport(importStatement: string): R;
+    toHaveNoDuplicateImports(): R;
+    toHaveUniqueApiMethods(): R;
   }
 }
 
 // ============================================================================
-// Custom Jest Matchers Implementation
+// Custom Matchers Implementation
 // ============================================================================
 
-// Use type assertion to bypass Jasmine type conflict
-(expect as any).extend({
+expect.extend({
   /**
    * Checks if an array has all unique items
    */

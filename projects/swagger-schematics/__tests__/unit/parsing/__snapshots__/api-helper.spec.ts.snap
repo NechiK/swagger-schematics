@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`API Helper - transformSwaggerSchema Full parsed schema structure should match snapshot 1`] = `
+exports[`API Helper - transformSwaggerSchema > Full parsed schema structure > should match snapshot 1`] = `
 {
   "Claim": {
     "apiList": [
@@ -703,11 +703,9 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
       },
       {
         "apiMethodName": "getClaimServiceactions",
-        "apiMethodParamNames": [
-          "serviceActionId",
-        ],
-        "apiMethodParams": "serviceActionId: number",
-        "apiMethodRequestType": "{ serviceActionId: number }",
+        "apiMethodParamNames": [],
+        "apiMethodParams": "",
+        "apiMethodRequestType": "void",
         "apiMethodType": "get",
         "apiPath": "/api/Claim/serviceactions",
         "apiUrl": "serviceactions",
@@ -725,27 +723,7 @@ exports[`API Helper - transformSwaggerSchema Full parsed schema structure should
         "isBinaryResponse": false,
         "isQuery": true,
         "operationId": undefined,
-        "pathParams": [
-          {
-            "functionSymbol": "serviceActionId: number",
-            "interpolationSymbol": "\${serviceActionId}",
-            "isNullable": false,
-            "isOptional": false,
-            "objectEntry": "serviceActionId",
-            "objectSymbol": "serviceActionId",
-            "originalParam": {
-              "description": undefined,
-              "in": "path",
-              "name": "serviceActionId",
-              "required": true,
-              "schema": {
-                "format": "int32",
-                "type": "integer",
-              },
-            },
-            "typeSymbol": "number",
-          },
-        ],
+        "pathParams": [],
         "queryParams": [],
         "queryParamsFormatted": "",
         "requestMethod": "get",

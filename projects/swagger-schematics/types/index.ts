@@ -7,7 +7,7 @@ import {
     url
 } from '@angular-devkit/schematics';
 import {strings} from '@angular-devkit/core';
-import {parseName} from '@schematics/angular/utility/parse-name';
+import {parseName} from '../helpers/schematic-path.helper';
 import {enums, templateHelpers} from "./utils";
 import {TSchemaByType, ISwaggerSchema} from "../interfaces/version_3_1/swagger.interface";
 import { getGeneratedSchemaKind } from "./utils/schema-kind";

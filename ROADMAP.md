@@ -106,6 +106,10 @@ Sizes: **S** is a day or less, **M** a few days, **L** a week or more.
 - **What:** headers (e.g. a bearer token from an environment variable) for fetching `swaggerSchemaUrl`.
 - **Status:** parked; not needed so far.
 
+### Runtime tests for the Angular services (M, tests)
+- **What:** call the generated services through a real `HttpClient` with `provideHttpClientTesting()` and `HttpTestingController`, and check the URL, query params, headers and body of each request. Latest Angular only, in the `compat/angular-22` project next to the type check.
+- **Why:** the compat type check proves the output compiles, not that it sends the right request. It would catch the two High issues above (`filter=[object Object]`, unencoded path params) and guard their fixes.
+
 ### Publish workflow: one run at a time (S, CI)
 - **What:** a `concurrency` group in `.github/workflows/npm-publish.yml`, so a second run for the same merge waits and then skips the already-published version instead of failing.
 - **Why:** the merge of #34 started the workflow twice and the second run failed trying to republish 1.3.1.

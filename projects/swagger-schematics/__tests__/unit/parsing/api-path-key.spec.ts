@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { transformSwaggerSchema } from '@lib/api/helpers/api.helper';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
@@ -23,10 +24,10 @@ describe('apiPathKey option', () => {
     }
   };
 
-  let warnSpy: jest.SpyInstance;
+  let warnSpy: MockInstance;
 
   beforeEach(() => {
-    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

@@ -13,7 +13,7 @@ import {
 } from '@angular-devkit/schematics';
 import { strings } from '@angular-devkit/core';
 import { createRequire } from 'module';
-import { parseName } from '@schematics/angular/utility/parse-name';
+import { parseName } from '../helpers/schematic-path.helper';
 import { ISwaggerSchema } from '../interfaces/version_3_1/swagger.interface';
 import { fetchSwaggerSchema } from '../helpers/swagger-schema.helper';
 import { SwaggerApiSchema } from './schema';

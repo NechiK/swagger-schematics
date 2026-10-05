@@ -151,10 +151,10 @@ describe('diffApiModels', () => {
 
   describe('new endpoint parameters', () => {
     const ok = { '204': { description: 'ok' } };
-    const schemaWith = (parameters: unknown[], requestBody?: unknown) => ({
+    const schemaWith = (parameters: unknown[], requestBody?: unknown, path = '/api/Orders/{id}') => ({
       openapi: '3.0.1',
       info: { title: 'T', version: '1' },
-      paths: { '/api/Orders/{id}': { put: { tags: ['Orders'], parameters, requestBody, responses: ok } } },
+      paths: { [path]: { put: { tags: ['Orders'], parameters, requestBody, responses: ok } } },
       components: { schemas: {} }
     }) as unknown as ISwaggerSchema;
     const id = { name: 'id', in: 'path', required: true, schema: { type: 'integer' } };
@@ -204,7 +204,7 @@ describe('diffApiModels', () => {
       const twoIds = (first: string, second: string) => schemaWith([
         { name: first, in: 'path', required: true, schema: { type: 'integer' } },
         { name: second, in: 'path', required: true, schema: { type: 'integer' } }
-      ]);
+      ], undefined, '/api/Orders/{id}/{sub}');
       expect(severityOf('angular', twoIds('id', 'sub'), twoIds('sub', 'id'))).toEqual(['breaking: Endpoint changed']);
     });
 

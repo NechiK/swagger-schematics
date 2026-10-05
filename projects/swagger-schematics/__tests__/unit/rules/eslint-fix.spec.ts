@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Tree } from '@angular-devkit/schematics';
 import { createEslintFixRule, TESLintModuleLoader } from '@lib/helpers/eslint-fix.helper';
 import { SwaggerApiSchema } from '@lib/api/schema';
@@ -7,7 +8,7 @@ describe('createEslintFixRule', () => {
   const FILE_PATH = '/src/app/api/claim-api.service.ts';
   const GENERATED_CONTENT = 'import { Injectable } from "@angular/core";\n';
 
-  let logger: { info: jest.Mock; warn: jest.Mock };
+  let logger: { info: Mock; warn: Mock };
   let context: any;
 
   const createTreeWithFile = (): Tree => {
@@ -17,13 +18,13 @@ describe('createEslintFixRule', () => {
   };
 
   const createESLintStub = (overrides: Partial<{
-    isPathIgnored: jest.Mock;
-    lintText: jest.Mock;
+    isPathIgnored: Mock;
+    lintText: Mock;
     constructorError: Error;
   }> = {}): TESLintModuleLoader => {
     const instance = {
-      isPathIgnored: overrides.isPathIgnored ?? jest.fn().mockResolvedValue(false),
-      lintText: overrides.lintText ?? jest.fn().mockResolvedValue([{ output: undefined, fatalErrorCount: 0, messages: [] }])
+      isPathIgnored: overrides.isPathIgnored ?? vi.fn().mockResolvedValue(false),
+      lintText: overrides.lintText ?? vi.fn().mockResolvedValue([{ output: undefined, fatalErrorCount: 0, messages: [] }])
     };
     class ESLintMock {
       isPathIgnored = instance.isPathIgnored;
@@ -46,12 +47,12 @@ describe('createEslintFixRule', () => {
   };
 
   beforeEach(() => {
-    logger = { info: jest.fn(), warn: jest.fn() };
+    logger = { info: vi.fn(), warn: vi.fn() };
     context = { logger };
   });
 
   it('should do nothing when eslintFix is disabled', async () => {
-    const loader = jest.fn();
+    const loader = vi.fn();
     await runRule({ eslintFix: false }, loader as any);
     expect(loader).not.toHaveBeenCalled();
   });
@@ -59,7 +60,7 @@ describe('createEslintFixRule', () => {
   it('should apply the fixed output to the tree', async () => {
     const fixed = "import { Injectable } from '@angular/core';\n";
     const loader = createESLintStub({
-      lintText: jest.fn().mockResolvedValue([{ output: fixed, fatalErrorCount: 0, messages: [] }])
+      lintText: vi.fn().mockResolvedValue([{ output: fixed, fatalErrorCount: 0, messages: [] }])
     });
 
     const tree = await runRule(CONFIG_ENABLED, loader);
@@ -91,7 +92,7 @@ describe('createEslintFixRule', () => {
 
   it('should keep content and warn when linting a file throws', async () => {
     const loader = createESLintStub({
-      lintText: jest.fn().mockRejectedValue(new Error('rule crashed'))
+      lintText: vi.fn().mockRejectedValue(new Error('rule crashed'))
     });
 
     const tree = await runRule(CONFIG_ENABLED, loader);
@@ -102,7 +103,7 @@ describe('createEslintFixRule', () => {
 
   it('should keep content and warn on fatal lint errors (parse errors)', async () => {
     const loader = createESLintStub({
-      lintText: jest.fn().mockResolvedValue([{
+      lintText: vi.fn().mockResolvedValue([{
         output: undefined,
         fatalErrorCount: 1,
         messages: [{ fatal: true, message: 'Parsing error: unexpected token' }]
@@ -116,9 +117,9 @@ describe('createEslintFixRule', () => {
   });
 
   it('should skip files ignored by the project eslint config', async () => {
-    const lintText = jest.fn();
+    const lintText = vi.fn();
     const loader = createESLintStub({
-      isPathIgnored: jest.fn().mockResolvedValue(true),
+      isPathIgnored: vi.fn().mockResolvedValue(true),
       lintText
     });
 
@@ -129,7 +130,7 @@ describe('createEslintFixRule', () => {
   });
 
   it('should only lint ts files', async () => {
-    const lintText = jest.fn().mockResolvedValue([{ output: undefined, fatalErrorCount: 0, messages: [] }]);
+    const lintText = vi.fn().mockResolvedValue([{ output: undefined, fatalErrorCount: 0, messages: [] }]);
     const loader = createESLintStub({ lintText });
 
     const tree = createTreeWithFile();

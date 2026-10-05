@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.0.0] - 2026-10-05
+
+A major release: it drops Node.js 20, which reached end of life in April 2026, moves to the Angular 22 devkit, and leaves out path parameters the path doesn't use. Angular 15+ is still supported, now checked in CI against Angular 15 and 22.
+
+### ⚠️ Upgrading from 2.x
+- **Run the CLI on Node.js 22.22.3+, 24.15.0+ or 26+** - Node.js 20 is no longer supported. This is only the Node.js that runs the generator; the generated code still targets Angular 15+. Angular 15 to 17 don't officially support Node.js 22, so a project on those versions can keep its own Node.js for the app and run the generator with Node.js 22+
+- **A path parameter with no placeholder in the path is no longer an argument** - drop it at the call sites that stop compiling; its value was never sent (see 🐛 Fixed)
+
+### ✨ Added
+- **Angular 15 and 22 checked in CI** - the generated Angular output for every test fixture is compiled with `tsc` against Angular 15 (the lowest supported version, TypeScript 4.8) and Angular 22 (TypeScript 6.0), with the `ng new` strict settings plus `noUnusedLocals`, `noUnusedParameters` and `exactOptionalPropertyTypes`. Angular 22 needed no changes; the README's requirements now name both versions
+
+### 🐛 Fixed
+- **RTK base API imports use `tsconfig` path aliases on TypeScript 7** - `tsconfig.json` was read with the project's own TypeScript, whose JavaScript API TypeScript 7 no longer has (`parseConfigFileTextToJson is not a function`). Generation warned and fell back to a relative import of the base API (`../store/api-base` instead of `@/store/api-base`). It is now read with `jsonc-parser`, as TypeScript reads it: comments, trailing commas and a BOM are accepted, and a file with only whitespace and comments is an empty config
+- **A path parameter with no placeholder in the path is left out** - a document that declares a path parameter its path doesn't use (`GET /api/Claim/serviceactions` with a `serviceActionId` path parameter) generated a required argument that was never sent: `getClaimServiceactions(serviceActionId)` in Angular, `{ serviceActionId: number }` in RTK, and an unused parameter that fails to compile under `noUnusedParameters`. Such a parameter is now left out of the generated method, with a warning naming the parameter and the endpoint so the document can be fixed. This is the counterpart of 2.0.0's undeclared placeholders, which become a required `string` parameter
+  - A call that passes the argument stops compiling (TS2554 in Angular, an excess property in RTK); drop the argument, since the value was never sent
+  - A placeholder matched only by case (`{ID}` declared as `id`) still uses that parameter
+
+### ♻️ Changed
+- ⚠️ **BREAKING**: **A path parameter with no placeholder in the path is no longer a method argument** - `getClaimServiceactions(serviceActionId)` for `GET /api/Claim/serviceactions` is now `getClaimServiceactions()` (see 🐛 Fixed): drop the argument at the call sites that stop compiling; its value was never sent
+- ⚠️ **BREAKING**: **Node.js 20 is no longer supported** - `engines` is now `^22.22.3 || ^24.15.0 || >=26.0.0`, the same range as Angular 22, so the move to the Angular 22 devkit won't raise it again. CI tests on 22.22.3, 24.15.0 and 26.x
+- Tests run on Vitest 5 instead of Jest 30, which can't load the Angular 22 devkit (it `require()`s ES-module-only dependencies). Integration tests now run on the TypeScript sources inside Vitest, so no build is needed and they count towards coverage; `npm run test:types` type-checks the tests in CI, as ts-jest did
+
+### 📦 Dependencies
+- Updated `@angular-devkit/core`, `@angular-devkit/schematics` and `@angular-devkit/schematics-cli` from 20.3.34 to 22.2.1. The generated code is unchanged
+- Removed `@schematics/angular`. From 22 on it depends on TypeScript and oxc-parser, which would have grown the install from 32 MB to 52 MB for the two path helpers it was used for (`parseName`, `buildRelativePath`); those are now part of the package, unchanged. The package now adds 23 MB to a project
+- Added `jsonc-parser` 3.3.1 (already installed by the devkit) to read `tsconfig.json`, which no longer needs the project's TypeScript (see 🐛 Fixed)
+- Replaced jest 30.4.2, ts-jest 29.4.12 and @types/jest 30.0.0 with vitest 5.0.3, @vitest/coverage-v8 5.0.3 and vite 8.3.2 (development only)
+
 ## [2.0.0] - 2026-09-28
 
 A major release: regenerating can require changes at call sites and in custom templates. The list below says what to do; each item is described in full under ♻️ Changed, marked ⚠️ **BREAKING**.
@@ -508,6 +536,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/NechiK/swagger-schematics/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/NechiK/swagger-schematics/compare/v1.3.0...v1.3.1

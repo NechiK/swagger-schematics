@@ -281,15 +281,18 @@ function findPathParam<T extends { in: string; name: string }>(params: T[], plac
 }
 
 /**
- * The operation with a required `string` path parameter for each `{placeholder}` in the path
- * that it declares none for, and those names; also the placeholders matched to a parameter
- * whose name differs only in case. OpenAPI requires every placeholder to be declared, but a
- * document that leaves one out still needs a value for it, and the generated method would
- * otherwise interpolate an undeclared variable.
+ * The operation with its path parameters matched to the `{placeholder}`s in the path: a required
+ * `string` parameter added for each placeholder it declares none for, and each declared path
+ * parameter no placeholder uses left out; with those names, and the placeholders matched to a
+ * parameter whose name differs only in case. OpenAPI requires every placeholder to be declared,
+ * but a document that leaves one out still needs a value for it, and the generated method would
+ * otherwise interpolate an undeclared variable. A path parameter must match a placeholder too;
+ * one that doesn't would be an argument the generated method never sends.
  */
-function withUndeclaredPathParams(operation: TOperation, segments: string[]): {
+function withPathParamsMatchingPath(operation: TOperation, segments: string[]): {
     operation: TOperation;
     undeclaredPathParams: string[];
+    unusedPathParams: string[];
     caseMismatches: Array<[string, string]>;
 } {
     const params = (operation.parameters ?? []) as TParam[];
@@ -298,14 +301,17 @@ function withUndeclaredPathParams(operation: TOperation, segments: string[]): {
     const caseMismatches = placeholders
         .map(name => [name, findPathParam(params, name)?.name] as [string, string | undefined])
         .filter((pair): pair is [string, string] => pair[1] !== undefined && pair[1] !== pair[0]);
-    if (!undeclaredPathParams.length) {
-        return { operation, undeclaredPathParams, caseMismatches };
+    const usedParams = new Set(placeholders.map(name => findPathParam(params, name)));
+    const unusedParams = params.filter(param => param.in === 'path' && !usedParams.has(param));
+    const unusedPathParams = unusedParams.map(param => param.name);
+    if (!undeclaredPathParams.length && !unusedParams.length) {
+        return { operation, undeclaredPathParams, unusedPathParams, caseMismatches };
     }
     const parameters = [
-        ...(operation.parameters ?? []),
+        ...params.filter(param => !unusedParams.includes(param)),
         ...undeclaredPathParams.map(name => ({ name, in: 'path', required: true, schema: { type: 'string' } }))
     ] as TOperation['parameters'];
-    return { operation: { ...operation, parameters }, undeclaredPathParams, caseMismatches };
+    return { operation: { ...operation, parameters }, undeclaredPathParams, unusedPathParams, caseMismatches };
 }
 
 /** Methods whose declared request body the generated code leaves out (see transformSwaggerSchema). */
@@ -360,7 +366,7 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
         apiParsedSchema[apiPrefix].apiList.push(...apiOperations.map((
             [operationKey, declaredOperation]
         ): IParsedApiItem => {
-            const { operation: fullOperation, undeclaredPathParams, caseMismatches } = withUndeclaredPathParams(declaredOperation, segments);
+            const { operation: fullOperation, undeclaredPathParams, unusedPathParams, caseMismatches } = withPathParamsMatchingPath(declaredOperation, segments);
             // A browser can't send a GET or HEAD body (fetch throws, XHR drops it), and a TRACE request
             // must not have one (RFC 9110); OpenAPI 3.0 says to ignore it there, 3.1 to avoid it. The
             // operation is parsed without it, so no parameter gives up the `body` variable for it either
@@ -370,6 +376,9 @@ export const transformSwaggerSchema = (swaggerSchema: ISwaggerSchema, options?: 
                 undeclaredPathParams.forEach(name => console.warn(`Path parameter '${name}' of ${operationKey.toUpperCase()} ${apiPathKey} ` +
                     "is not declared in the operation's parameters; the generated method takes it as a required string. " +
                     'Declare it in the OpenAPI document to give it its type.'));
+                unusedPathParams.forEach(name => console.warn(`Path parameter '${name}' of ${operationKey.toUpperCase()} ${apiPathKey} ` +
+                    `has no '{${name}}' placeholder in the path, so the generated method leaves it out. ` +
+                    'Add the placeholder to the path or remove the parameter from the OpenAPI document.'));
                 caseMismatches.forEach(([placeholder, name]) => console.warn(`Path parameter '{${placeholder}}' of ` +
                     `${operationKey.toUpperCase()} ${apiPathKey} is declared as '${name}'; the generated method uses '${name}' for it. ` +
                     'Parameter names are case-sensitive: use the same case in the path and the parameter.'));

@@ -12,7 +12,7 @@ import {
 } from '@angular-devkit/schematics';
 import { SwaggerApiSchema } from '../schema';
 import { strings } from '@angular-devkit/core';
-import { parseName } from '@schematics/angular/utility/parse-name';
+import { parseName } from '../../helpers/schematic-path.helper';
 import { resolveAngularBaseApiDir } from './import-path.helper';
 
 // Default base API paths

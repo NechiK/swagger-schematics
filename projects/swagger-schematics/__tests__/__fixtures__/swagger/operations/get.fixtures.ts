@@ -28,7 +28,6 @@ export const GET_CHILD_BY_PARENT_ID: IPathOperations = createGetOperation({
 
 export const GET_SERVICE_ACTIONS: IPathOperations = createGetOperation({
   summary: 'Get service actions',
-  parameters: [createPathParam('serviceActionId')],
   responses: createResponse({ type: 'array', itemsType: 'integer' })
 });
 

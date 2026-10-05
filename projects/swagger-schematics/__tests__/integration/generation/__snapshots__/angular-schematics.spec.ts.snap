@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Schematics Integration API Service Generation should generate full API service 1`] = `
+exports[`Schematics Integration > API Service Generation > should generate full API service 1`] = `
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
@@ -98,7 +98,7 @@ export class ClaimApiService extends ApiBaseService {
   }
 
   /** Get service actions */
-  getClaimServiceactions(serviceActionId: number): Observable<number[]> {
+  getClaimServiceactions(): Observable<number[]> {
     return this.httpClient.get<number[]>(
       this.getUrl('/serviceactions')
     );
@@ -153,7 +153,7 @@ export class ClaimApiService extends ApiBaseService {
 "
 `;
 
-exports[`Schematics Integration Binary Response Support should generate the full binary/multipart API service 1`] = `
+exports[`Schematics Integration > Binary Response Support > should generate the full binary/multipart API service 1`] = `
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";
@@ -197,7 +197,7 @@ export class DocumentApiService extends ApiBaseService {
 "
 `;
 
-exports[`Schematics Integration Enum Generation should generate ClaimStatuses enum without names 1`] = `
+exports[`Schematics Integration > Enum Generation > should generate ClaimStatuses enum without names 1`] = `
 "export enum TClaimStatuses {
   _1 = 1,
   _2 = 2,
@@ -207,7 +207,7 @@ exports[`Schematics Integration Enum Generation should generate ClaimStatuses en
 "
 `;
 
-exports[`Schematics Integration Enum Generation should generate ClaimType enum with names 1`] = `
+exports[`Schematics Integration > Enum Generation > should generate ClaimType enum with names 1`] = `
 "export enum TClaimType {
   MS = 1,
   PP = 2
@@ -215,7 +215,7 @@ exports[`Schematics Integration Enum Generation should generate ClaimType enum w
 "
 `;
 
-exports[`Schematics Integration File Generation should generate expected files 1`] = `
+exports[`Schematics Integration > File Generation > should generate expected files 1`] = `
 [
   "/.editorconfig",
   "/tsconfig.json",
@@ -243,7 +243,7 @@ exports[`Schematics Integration File Generation should generate expected files 1
 ]
 `;
 
-exports[`Schematics Integration Interface Generation should generate ClaimDetailDTO interface with ref and optional properties 1`] = `
+exports[`Schematics Integration > Interface Generation > should generate ClaimDetailDTO interface with ref and optional properties 1`] = `
 "import { IIdNameDTO } from './id-name-dto.interface';
 import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
@@ -258,7 +258,7 @@ export interface IClaimDetailDTO {
 "
 `;
 
-exports[`Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
+exports[`Schematics Integration > Interface Generation > should generate IdNameDTO interface 1`] = `
 "
 
 /** IdName lookup */

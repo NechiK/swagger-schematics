@@ -44,4 +44,33 @@ describe('loadTsConfig', () => {
     const result = loadTsConfig('/tsconfig.json', tree);
     expect(result.paths).toEqual({ '@own/*': ['src/own/*'] });
   });
+
+  describe('reading the file', () => {
+    const treeWithText = (text: string): Tree => {
+      const tree = Tree.empty();
+      tree.create('tsconfig.json', text);
+      return tree;
+    };
+
+    it('accepts comments, trailing commas and a BOM, as TypeScript does', () => {
+      const tree = treeWithText('\uFEFF// app\n{ /* aliases */ "compilerOptions": { "paths": { "@/*": ["src/*"], }, }, }');
+      expect(loadTsConfig('tsconfig.json', tree).paths).toEqual({ '@/*': ['src/*'] });
+    });
+
+    it('reads an empty or comments-only file as an empty config', () => {
+      expect(loadTsConfig('tsconfig.json', treeWithText('  \n')).paths).toEqual({});
+      expect(loadTsConfig('tsconfig.json', treeWithText('// no options yet\n/* block */')).paths).toEqual({});
+    });
+
+    it('rejects invalid JSON and a root value that is not an object', () => {
+      expect(() => loadTsConfig('tsconfig.json', treeWithText('{ "compilerOptions": {'))).toThrow("Invalid tsconfig at 'tsconfig.json': CloseBraceExpected");
+      expect(() => loadTsConfig('tsconfig.json', treeWithText('[1]'))).toThrow('must be an object');
+      expect(() => loadTsConfig('tsconfig.json', treeWithText(','))).toThrow('ValueExpected at offset 0');
+    });
+
+    it('rejects an unterminated comment, as TypeScript does', () => {
+      expect(() => loadTsConfig('tsconfig.json', treeWithText('/* broken'))).toThrow('UnexpectedEndOfComment');
+      expect(() => loadTsConfig('tsconfig.json', treeWithText('// fine\n/* broken'))).toThrow('UnexpectedEndOfComment');
+    });
+  });
 });

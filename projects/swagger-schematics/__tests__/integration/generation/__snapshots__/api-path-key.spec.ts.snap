@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`apiPathKey generation (Angular) the generated service renders consistently 1`] = `
+exports[`apiPathKey generation (Angular) > the generated service renders consistently 1`] = `
 "import { Injectable } from "@angular/core";
 import { ApiBaseService } from "./_api-base.service";
 import { Observable } from "rxjs";

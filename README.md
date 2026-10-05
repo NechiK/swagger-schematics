@@ -36,8 +36,8 @@ Supported OpenAPI versions:
 
 ### Requirements
 
-- Node.js `^20.19.0 || ^22.12.0 || >=24.0.0`, npm 10+
-- Angular output: Angular 15+ (the generated code uses `inject()` and `makeEnvironmentProviders`); checked against Angular 20 under `strict`
+- Node.js `^22.22.3 || ^24.15.0 || >=26.0.0` (the same as Angular 22), npm 10+
+- Angular output: Angular 15+ (the generated code uses `inject()` and `makeEnvironmentProviders`); CI type-checks it under `strict` against Angular 15 and 22
 - React output: Redux Toolkit 2.x (RTK Query)
 
 ### Usage

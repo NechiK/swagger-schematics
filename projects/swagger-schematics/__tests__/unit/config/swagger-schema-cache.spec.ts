@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import type * as SchemaHelper from '@lib/helpers/swagger-schema.helper';
 
 /**
@@ -10,21 +11,20 @@ describe('fetchSwaggerSchema cache', () => {
   const schemaFor = (title: string) => ({ openapi: '3.0.1', info: { title, version: 'v1' }, paths: {}, components: { schemas: {} } });
 
   const originalFetch = globalThis.fetch;
-  let fetchMock: jest.Mock;
+  let fetchMock: Mock;
   let helper: typeof SchemaHelper;
 
-  beforeEach(() => {
-    fetchMock = jest.fn(async (url: string) => ({ ok: true, status: 200, json: async () => schemaFor(url) }));
+  beforeEach(async () => {
+    fetchMock = vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => schemaFor(url) }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    jest.spyOn(console, 'info').mockImplementation();
-    jest.isolateModules(() => {
-      helper = require('@lib/helpers/swagger-schema.helper');
-    });
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    vi.resetModules();
+    helper = await import('@lib/helpers/swagger-schema.helper');
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('loads the source on every call when the cache is off (the default)', async () => {

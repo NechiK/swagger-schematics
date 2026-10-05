@@ -1,7 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../out-tsc/spec"
+    "outDir": "../../out-tsc/spec",
+    // Type-checking only (`npm run test:types`); Vitest's types need a modern resolution
+    "module": "preserve",
+    "moduleResolution": "bundler"
   },
   "include": [
     "__tests__/**/*.ts",

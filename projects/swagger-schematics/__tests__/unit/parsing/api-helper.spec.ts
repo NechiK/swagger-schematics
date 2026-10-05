@@ -164,7 +164,7 @@ describe('getApiMethodName - operationId priority', () => {
       paths: { '/api/Ticket/{ticketId}': { head: operationWithId(undefined) } },
       schemas: {}
     });
-    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       transformSwaggerSchema(swagger);
       expect(warn).toHaveBeenCalledWith('Unexpected API path pattern: ', 'Ticket/{ticketId}');

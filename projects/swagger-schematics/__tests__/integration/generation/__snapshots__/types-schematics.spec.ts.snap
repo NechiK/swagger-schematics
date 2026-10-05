@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Types Schematics Integration Enum Generation should generate ClaimStatuses enum without names 1`] = `
+exports[`Types Schematics Integration > Enum Generation > should generate ClaimStatuses enum without names 1`] = `
 "export enum TClaimStatuses {
   _1 = 1,
   _2 = 2,
@@ -10,7 +10,7 @@ exports[`Types Schematics Integration Enum Generation should generate ClaimStatu
 "
 `;
 
-exports[`Types Schematics Integration Enum Generation should generate ClaimType enum with x-enum-varnames 1`] = `
+exports[`Types Schematics Integration > Enum Generation > should generate ClaimType enum with x-enum-varnames 1`] = `
 "export enum TClaimType {
   MS = 1,
   PP = 2
@@ -18,7 +18,7 @@ exports[`Types Schematics Integration Enum Generation should generate ClaimType 
 "
 `;
 
-exports[`Types Schematics Integration Enum Generation should generate string enum with quoted string values 1`] = `
+exports[`Types Schematics Integration > Enum Generation > should generate string enum with quoted string values 1`] = `
 "export enum TDistributionType {
   TypeA = 'TypeA',
   TypeB = 'TypeB'
@@ -26,7 +26,7 @@ exports[`Types Schematics Integration Enum Generation should generate string enu
 "
 `;
 
-exports[`Types Schematics Integration Enum Generation should generate string enum with x-enum-varnames and quoted string values 1`] = `
+exports[`Types Schematics Integration > Enum Generation > should generate string enum with x-enum-varnames and quoted string values 1`] = `
 "export enum TDeliveryChannel {
   Email = 'email',
   PhoneCall = 'phone-call'
@@ -34,7 +34,7 @@ exports[`Types Schematics Integration Enum Generation should generate string enu
 "
 `;
 
-exports[`Types Schematics Integration File Generation should generate expected type files 1`] = `
+exports[`Types Schematics Integration > File Generation > should generate expected type files 1`] = `
 [
   "/.editorconfig",
   "/tsconfig.json",
@@ -58,7 +58,7 @@ exports[`Types Schematics Integration File Generation should generate expected t
 ]
 `;
 
-exports[`Types Schematics Integration Interface Generation should generate ClaimDetailDTO interface 1`] = `
+exports[`Types Schematics Integration > Interface Generation > should generate ClaimDetailDTO interface 1`] = `
 "import { IIdNameDTO } from './id-name-dto.interface';
 import { TClaimStatuses } from '../enums/claim-statuses.enum';
 
@@ -73,7 +73,7 @@ export interface IClaimDetailDTO {
 "
 `;
 
-exports[`Types Schematics Integration Interface Generation should generate ClaimNoteViewDTO interface 1`] = `
+exports[`Types Schematics Integration > Interface Generation > should generate ClaimNoteViewDTO interface 1`] = `
 "
 
 /** Add a note to a claim */
@@ -84,7 +84,7 @@ export interface IClaimNoteViewDTO {
 "
 `;
 
-exports[`Types Schematics Integration Interface Generation should generate CreateNoteDTO interface 1`] = `
+exports[`Types Schematics Integration > Interface Generation > should generate CreateNoteDTO interface 1`] = `
 "
 
 /** Add a note to a claim */
@@ -95,7 +95,7 @@ export interface ICreateNoteDTO {
 "
 `;
 
-exports[`Types Schematics Integration Interface Generation should generate IdNameDTO interface 1`] = `
+exports[`Types Schematics Integration > Interface Generation > should generate IdNameDTO interface 1`] = `
 "
 
 /** IdName lookup */

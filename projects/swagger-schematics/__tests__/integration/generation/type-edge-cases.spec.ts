@@ -38,6 +38,7 @@ describe('Type generation edge cases', () => {
     ['quotes and backslashes are escaped', 'enums/tricky-values.enum.ts'],
     ['arrays of unions and nullable refs are parenthesized', 'interfaces/mixed-list-dto.interface.ts'],
     ['nullable Record keeps its outer | null', 'interfaces/nullable-map-dto.interface.ts'],
+    ['free-form object is a record, closed object stays object', 'interfaces/free-form-dto.interface.ts'],
     ['allOf with own properties renders the inline literal', 'interfaces/derived-dto.type.ts'],
     ['allOf with a nullable ref member is parenthesized', 'interfaces/intersect-nullable-dto.type.ts']
   ])('%s', (_description, file) => {

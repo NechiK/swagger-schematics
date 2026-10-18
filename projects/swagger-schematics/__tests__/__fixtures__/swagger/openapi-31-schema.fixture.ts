@@ -83,6 +83,26 @@ export const OPENAPI_31_SWAGGER_SCHEMA: ISwaggerSchema<TOpenApi31MockApiPath> = 
       NotString: {
         not: { type: 'string' }
       } as any,
+      // Free-form objects (`type: object` with no properties and no additionalProperties):
+      // a property, an array item and a 3.1 nullable one -> Record<string, any>
+      ExecuteReportDTO: {
+        type: 'object',
+        required: ['filters'],
+        properties: {
+          filters: { type: 'object' }
+        }
+      } as any,
+      ReportResultDTO: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          grandTotals: { type: ['null', 'object'] }
+        }
+      } as any,
+      // A free-form object component: an interface with an index signature
+      ReportRow: {
+        type: 'object'
+      } as any,
       ReportDto: {
         type: 'object',
         additionalProperties: false,

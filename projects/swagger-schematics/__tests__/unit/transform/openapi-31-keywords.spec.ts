@@ -44,7 +44,7 @@ describe('OpenAPI 3.1 schema keywords', () => {
     });
 
     it('renders an object or array const from its type', () => {
-      expect(typeOf({ type: 'object', const: { a: 1 } })).toBe('object');
+      expect(typeOf({ type: 'object', const: { a: 1 } })).toBe('Record<string, any>');
       expect(typeOf({ type: 'array', items: { type: 'integer' }, const: [1] })).toBe('number[]');
     });
 

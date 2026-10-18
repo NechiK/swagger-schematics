@@ -1,4 +1,4 @@
-import { transformType, transformTypeWithAllImports, parseRefToSymbol, isNullable, ITransformTypeOptions } from '@lib/types/utils/transform-type';
+import { transformType, transformTypeWithAllImports, transformProperties, parseRefToSymbol, isNullable, ITransformTypeOptions } from '@lib/types/utils/transform-type';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 import { IRef } from '@lib/interfaces/version_3_1/ref.interface';
 
@@ -91,6 +91,48 @@ describe('Transform Type', () => {
       const [symbol, importRef] = transformType({ $ref: '#/components/schemas/Status' }, swagger);
       expect(symbol).toBe('TStatus | null');
       expect(importRef?.type).toBe('enum');
+    });
+
+    it('should transform a bare object (no properties, no additionalProperties) to a record', () => {
+      const swagger = createSwaggerSchema();
+
+      // JSON Schema allows any properties on it, so it reads like `additionalProperties: true`
+      expect(transformType({ type: 'object' }, swagger)).toEqual(['Record<string, any>']);
+      expect(transformType({ type: 'object', additionalProperties: true }, swagger)).toEqual(['Record<string, any>']);
+      // Empty `properties` declares none
+      expect(transformType({ type: 'object', properties: {} }, swagger)).toEqual(['Record<string, any>']);
+    });
+
+    it('should keep a closed object (additionalProperties: false) and an object with properties as `object`', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(transformType({ type: 'object', additionalProperties: false }, swagger)).toEqual(['object']);
+      expect(transformType({ type: 'object', properties: { a: { type: 'string' } } }, swagger)).toEqual(['object']);
+    });
+
+    it('should transform a bare object in arrays and 3.1 type arrays', () => {
+      const swagger = createSwaggerSchema();
+
+      expect(transformType({ type: 'array', items: { type: 'object' } }, swagger)).toEqual(['Record<string, any>[]', undefined]);
+      // The null member affects nullability only (see the property below), not the symbol
+      expect(transformType({ type: ['null', 'object'] } as any, swagger)).toEqual(['Record<string, any>', undefined]);
+    });
+
+    it('should type a nullable bare object property as `Record<string, any> | null`', () => {
+      const swagger = createSwaggerSchema();
+      const { propertiesContent } = transformProperties({
+        filters: { type: 'object' },
+        grandTotals: { type: ['null', 'object'] },
+        legacyTotals: { type: 'object', nullable: true },
+        items: { type: 'array', items: { type: 'object' } }
+      } as any, swagger, {}, ['filters']);
+
+      expect(propertiesContent).toEqual([
+        ['filters', 'Record<string, any>'],
+        ['grandTotals?', 'Record<string, any> | null'],
+        ['legacyTotals?', 'Record<string, any> | null'],
+        ['items?', 'Record<string, any>[]']
+      ]);
     });
 
     it('should transform $ref to interface symbol', () => {

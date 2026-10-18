@@ -29,6 +29,12 @@ Add an entry when an issue is found, remove it when its fix lands, and add a CHA
 - **Workaround for the backend:** keep the default schema ids, or strip the generic parts in `CustomSchemaIds`.
 - **Introduced by 2.0.0:** no, 1.4.0 behaves the same.
 
+### An inline object with `properties` is typed `object`
+- **Where:** `transformObjectSchema` in `types/utils/transform-type.ts`: an object with `properties` and no `additionalProperties` falls through to `object` (since 3.1.0 only a bare object, with no properties, renders `Record<string, any>`).
+- **Example:** `"address": { "type": "object", "properties": { "city": { "type": "string" } } }` written inline on a property generates `address?: object`, so `dto.address.city` doesn't compile under `strict` (TS2339). Rare in practice: Swashbuckle and most generators emit every DTO as a component, which generates an interface.
+- **Fix:** render the inline object type the generator already writes for `allOf` own properties and for properties next to `additionalProperties`: `address?: { city?: string }`, nested objects recursing. Nested properties get no JSDoc or `@aggregatable`, since those render per interface line. The alternative, hoisting it to a named interface (`IDtoAddress` in its own file, as NSwag does), needs a naming rule, collision handling and stale-file ownership. Either way the change summary reports the property's type change once.
+- **Introduced by 2.0.0:** no, 1.4.0 behaves the same.
+
 ## Low
 
 ### The stale `_provide-api.ts` check depends on the import's exact spelling

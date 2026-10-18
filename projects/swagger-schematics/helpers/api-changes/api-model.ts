@@ -116,10 +116,11 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
             propertiesContent.forEach(([name, type]) => {
                 properties[fromPropertyKey(name)] = `${name}: ${type}`;
             });
-            // Same rule as the types schematic: an index signature only next to properties
+            // Same rules as the types schematic: `additionalProperties` is an index signature next
+            // to properties, and a bare object (no properties, not closed) gets `[key: string]: any`
             const indexSignature = propertiesContent.length > 0
                 ? transformIndexSignature(schema, propertiesContent, swagger, transformOptions)?.[0]
-                : undefined;
+                : (schema as { additionalProperties?: unknown }).additionalProperties !== false ? 'any' : undefined;
             types[symbol] = indexSignature === undefined ? { kind, properties } : { kind, properties, indexSignature };
         }
     });

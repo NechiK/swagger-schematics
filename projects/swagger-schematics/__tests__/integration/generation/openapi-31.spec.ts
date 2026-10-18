@@ -93,6 +93,24 @@ describe('OpenAPI 3.1 support', () => {
     });
   });
 
+  describe('Free-form objects', () => {
+    it('should type a bare object property, array item and nullable property as Record<string, any>', () => {
+      const execute = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/execute-report-dto.interface.ts`);
+      const result = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/report-result-dto.interface.ts`);
+      expect(execute).toContain('filters: Record<string, any>;');
+      expect(result).toContain('items?: Record<string, any>[];');
+      expect(result).toContain('grandTotals?: Record<string, any> | null;');
+      expect(execute).toMatchSnapshot();
+      expect(result).toMatchSnapshot();
+    });
+
+    it('should give a bare object component an index signature, keeping its interface name', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/report-row.interface.ts`);
+      expect(content).toContain('export interface IReportRow {\n  [key: string]: any;\n}');
+      expect(content).toMatchSnapshot();
+    });
+  });
+
   describe('Primitive-wrapper schemas', () => {
     it('should not generate a file for an inlined primitive-wrapper schema', () => {
       // GuidIdentifier = { type: 'string', format: 'uuid' } is inlined everywhere,

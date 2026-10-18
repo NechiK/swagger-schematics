@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.1.0] - unreleased
+
 ## [3.0.1] - 2026-11-10
 
 ### 🐛 Fixed
@@ -544,6 +546,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[3.1.0]: https://github.com/NechiK/swagger-schematics/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/NechiK/swagger-schematics/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0

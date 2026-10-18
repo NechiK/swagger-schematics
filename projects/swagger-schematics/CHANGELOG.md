@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.1.0] - unreleased
 
+### ♻️ Changed
+- **A free-form object is typed `Record<string, any>`** - a schema that is only `{ "type": "object" }`, with no `properties` and no `additionalProperties`, generated `object`, which can't be indexed under `strict`: reading `result.items[0]['total']` failed with TS7053 (`Element implicitly has an 'any' type because expression of type '"total"' can't be used to index type '{}'`). JSON Schema allows any properties on such an object, so it is now `Record<string, any>`, the type `additionalProperties: true` already gives, as a property (`ExecuteReportDTO.filters`, `ExportReportDTO.filters`), an array item (`ReportResultDTO.items` -> `Record<string, any>[]`) and a nullable property (`ReportResultDTO.grandTotals` with `"type": ["null", "object"]` -> `Record<string, any> | null`). A component that is only `{ "type": "object" }` keeps its interface name and file and gets `[key: string]: any`, in the change summary too, so references don't change
+  - Not breaking: `object` values assign to `Record<string, any>` and back under `strict`, so existing callers keep compiling. The change summary doesn't list it either, since it renders the previous document with the same generator
+  - `{ "type": "object", "additionalProperties": false }` with no properties stays `object`, and objects with `properties` don't change
+
 ## [3.0.0] - 2026-10-05
 
 A major release: it drops Node.js 20, which reached end of life in April 2026, moves to the Angular 22 devkit, and leaves out path parameters the path doesn't use. Angular 15+ is still supported, now checked in CI against Angular 15 and 22.

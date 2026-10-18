@@ -81,8 +81,9 @@ describe('array, tuple and record components', () => {
     expect(alias('items')).toContain('export type TItems = IItem[];');
     expect(tree.files).not.toContain(`${OUT}/interfaces/tags.interface.ts`);
     expect(tree.files.filter(file => file.includes('/free.'))).toEqual([]);
-    // A free-form object without additionalProperties stays an interface
+    // A free-form object without additionalProperties stays an interface, with an index signature
     expect(tree.files).toContain(`${OUT}/interfaces/empty.interface.ts`);
+    expect(tree.readContent(`${OUT}/interfaces/empty.interface.ts`)).toContain('export interface IEmpty {\n  [key: string]: any;\n}');
   });
 
   it('let a record refer back to itself through a union', async () => {

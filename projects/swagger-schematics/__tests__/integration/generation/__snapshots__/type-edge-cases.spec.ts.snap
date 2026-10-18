@@ -37,6 +37,16 @@ exports[`Type generation edge cases > enum without varnames sanitizes string val
 "
 `;
 
+exports[`Type generation edge cases > free-form object is a record, closed object stays object 1`] = `
+"
+
+export interface IFreeFormDto {
+  payload?: Record<string, any>;
+  closed?: object;
+}
+"
+`;
+
 exports[`Type generation edge cases > generates the expected files 1`] = `
 [
   "/.editorconfig",
@@ -46,6 +56,7 @@ exports[`Type generation edge cases > generates the expected files 1`] = `
   "/test-output/enums/status-without-names.enum.ts",
   "/test-output/enums/tricky-values.enum.ts",
   "/test-output/interfaces/derived-dto.type.ts",
+  "/test-output/interfaces/free-form-dto.interface.ts",
   "/test-output/interfaces/intersect-nullable-dto.type.ts",
   "/test-output/interfaces/mixed-list-dto.interface.ts",
   "/test-output/interfaces/model-a.interface.ts",

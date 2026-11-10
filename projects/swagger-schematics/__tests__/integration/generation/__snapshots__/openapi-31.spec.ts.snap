@@ -50,6 +50,34 @@ export type TAuditedReportDto = IBaseAuditDto & { note?: string | null };
 "
 `;
 
+exports[`OpenAPI 3.1 support > Free-form objects > should give a bare object component an index signature, keeping its interface name 1`] = `
+"
+
+export interface IReportRow {
+  [key: string]: any;
+}
+"
+`;
+
+exports[`OpenAPI 3.1 support > Free-form objects > should type a bare object property, array item and nullable property as Record<string, any> 1`] = `
+"
+
+export interface IExecuteReportDTO {
+  filters: Record<string, any>;
+}
+"
+`;
+
+exports[`OpenAPI 3.1 support > Free-form objects > should type a bare object property, array item and nullable property as Record<string, any> 2`] = `
+"
+
+export interface IReportResultDTO {
+  items?: Record<string, any>[];
+  grandTotals?: Record<string, any> | null;
+}
+"
+`;
+
 exports[`OpenAPI 3.1 support > Interface generation with 3.1 schemas > should generate the interface snapshot 1`] = `
 "import { TReportStatus } from '../enums/report-status.enum';
 import { IOwnerDto } from './owner-dto.interface';

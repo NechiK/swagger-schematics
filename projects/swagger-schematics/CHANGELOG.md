@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.1.0] - 2026-11-10
+
+### ♻️ Changed
+- **A free-form object is typed `Record<string, any>`** - a schema that is only `{ "type": "object" }`, with no `properties` and no `additionalProperties`, generated `object`, which can't be indexed under `strict`: reading `result.items[0]['total']` failed with TS7053 (`Element implicitly has an 'any' type because expression of type '"total"' can't be used to index type '{}'`). JSON Schema allows any properties on such an object, so it is now `Record<string, any>`, the type `additionalProperties: true` already gives, as a property (`ExecuteReportDTO.filters`, `ExportReportDTO.filters`), an array item (`ReportResultDTO.items` -> `Record<string, any>[]`) and a nullable property (`ReportResultDTO.grandTotals` with `"type": ["null", "object"]` -> `Record<string, any> | null`). A component that is only `{ "type": "object" }` keeps its interface name and file and gets `[key: string]: any`, in the change summary too, so references don't change
+- Only a component that declares `type: object` (or the nullable `["object", "null"]`) gets the index signature. An untyped one (`{}`, or only a `description`) allows any value, a scalar included, so it keeps its empty interface
+- Not breaking: `object` values assign to `Record<string, any>` and back under `strict`, so existing callers keep compiling. The change summary doesn't list it either, since it renders the previous document with the same generator
+- `{ "type": "object", "additionalProperties": false }` with no properties stays `object`, and objects with `properties` don't change
+
 ## [3.0.1] - 2026-11-10
 
 ### 🐛 Fixed
@@ -544,6 +552,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[3.1.0]: https://github.com/NechiK/swagger-schematics/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/NechiK/swagger-schematics/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0

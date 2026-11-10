@@ -15,6 +15,7 @@ export type TEdgeCasesMockApiPath =
  * - allOf with a nullable ref member (parenthesization)
  * - allOf with sibling own properties (inline object literal)
  * - a nullable Record of nullable values (outer | null not suppressed)
+ * - a free-form object property (Record<string, any>) next to a closed one (object)
  * - response resolution: bodyless 200 next to a binary 2XX (type and
  *   responseType: 'blob' must agree), an xml-only response, and a
  *   response-level $ref
@@ -120,6 +121,13 @@ const BASE_SCHEMA = createSwaggerSchema<TEdgeCasesMockApiPath>({
           nullable: true,
           additionalProperties: { $ref: '#/components/schemas/NullableString' }
         }
+      }
+    },
+    FreeFormDto: {
+      type: 'object',
+      properties: {
+        payload: { type: 'object' },
+        closed: { type: 'object', additionalProperties: false }
       }
     },
     DerivedDto: {

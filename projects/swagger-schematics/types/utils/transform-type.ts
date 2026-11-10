@@ -26,12 +26,6 @@ export interface IImportRef {
     importSymbol: string;
 }
 
-export interface ITypeSymbolInline {
-    type: string;
-    typeSymbol: TPropertySymbol;
-}
-export type TPropertySymbol = 'number' | 'object' | 'string' | 'boolean' | 'object[]' | 'string[]' | 'number[]' | 'boolean[]';
-
 export type TTypeWithImport = [string, IImportRef?];
 export type TTypeWithImports = [string, IImportRef[]];
 
@@ -98,6 +92,22 @@ export function isCollectionSchema(schema: TSchemaByType): boolean {
     return (type === undefined || types.includes('object'))
         && (!properties || Object.keys(properties).length === 0)
         && (additionalProperties === true || (typeof additionalProperties === 'object' && additionalProperties !== null));
+}
+
+/**
+ * Whether a component generated as an interface is a bare object: declared `type: object`
+ * (or its nullable type array, `["object", "null"]`), with no properties and not closed with
+ * `additionalProperties: false`. JSON Schema allows any properties on it, so its interface gets
+ * `[key: string]: any`. An untyped schema (`{}`, or one with only a description) is not one: it
+ * allows any value, a scalar included, which an index signature would reject.
+ */
+export function isBareObjectComponent(schema: TSchemaByType): boolean {
+    const type = (schema as { type?: unknown }).type;
+    const types: unknown[] = (Array.isArray(type) ? type : [type]).filter(item => item !== 'null');
+    const properties = (schema as { properties?: object }).properties;
+    return types.length === 1 && types[0] === 'object'
+        && (!properties || Object.keys(properties).length === 0)
+        && (schema as { additionalProperties?: unknown }).additionalProperties !== false;
 }
 
 /**
@@ -720,15 +730,28 @@ function transformObjectSchema(schema: ISchemaObject, swagger: ISwaggerSchema, o
         }
     }
     
-    // Regular object without additionalProperties
+    // A bare object (no properties, `additionalProperties` not set): JSON Schema allows any
+    // properties on it, so it's a record, as with `additionalProperties: true`. `object` would
+    // not let a caller read a property under `strict` (TS7053)
+    if (schema.additionalProperties === undefined && !hasProperties(schema)) {
+        return ['Record<string, any>'];
+    }
+
+    // An object with properties (referenced by its component elsewhere), or closed with
+    // `additionalProperties: false`
     return ['object'];
+}
+
+/** Whether an object schema declares at least one property (`properties: {}` declares none). */
+function hasProperties(schema: TSchemaByType): boolean {
+    const properties = (schema as ISchemaObject).properties;
+    return !!properties && Object.keys(properties).length > 0;
 }
 
 /** Whether an object has `properties` and allows more (`additionalProperties` a schema or `true`). */
 function hasPropertiesAndIndexSignature(schema: TSchemaByType): boolean {
-    const { properties, additionalProperties } = schema as ISchemaObject;
-    return !!properties && Object.keys(properties).length > 0
-        && additionalProperties !== undefined && additionalProperties !== false;
+    const { additionalProperties } = schema as ISchemaObject;
+    return hasProperties(schema) && additionalProperties !== undefined && additionalProperties !== false;
 }
 
 /**
@@ -990,7 +1013,9 @@ export const transformPrimitives = (property: TSchemaWithType): [string] => {
             }
             return ['string'];
         case 'object':
-            return ['object'];
+            // Unreachable from transformType, which routes objects to transformObjectSchema;
+            // agrees with it for a bare object
+            return ['Record<string, any>'];
         case 'array':
             return ['any[]'];
         default:

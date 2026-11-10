@@ -1,6 +1,6 @@
 import {
     apply,
-    applyTemplates, chain,
+    applyTemplates,
     MergeStrategy,
     mergeWith,
     move, Rule, SchematicContext, Tree,
@@ -23,6 +23,7 @@ import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
+import { runRulesInSequence } from '../helpers/rule-sequence.helper';
 import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
 
 /**
@@ -190,7 +191,7 @@ export default function(options: SwaggerSchema): Rule {
               { dir: `${openApiSchematicsConfig.path}/enums`, suffixes: ['.enum.ts'] }
           ]
       });
-      return chain([...rules, eslintFixRule, staleFilesRule]);
+      return runRulesInSequence([...rules, eslintFixRule, staleFilesRule]);
   };
 
   return wrapRuleWithErrorLogging('types', typesRule);

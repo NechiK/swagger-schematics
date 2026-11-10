@@ -109,6 +109,32 @@ describe('OpenAPI 3.1 support', () => {
       expect(content).toContain('export interface IReportRow {\n  [key: string]: any;\n}');
       expect(content).toMatchSnapshot();
     });
+
+    it('should keep the empty interface for an untyped component, which also allows a scalar', async () => {
+      const untyped = await runFullSchematics({
+        openapi: '3.1.0',
+        info: { title: 'Untyped', version: '1.0.0' },
+        paths: {},
+        components: {
+          schemas: {
+            Anything: {},
+            Described: { description: 'Any JSON value' },
+            NullableBag: { type: ['object', 'null'] }
+          }
+        }
+      } as unknown as Parameters<typeof runFullSchematics>[0], {
+        ...ANGULAR_SCHEMATIC_OPTIONS,
+        swaggerSchemaUrl: 'https://api.example.com/swagger/untyped.json'
+      });
+      const read = (name: string) => untyped.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/${name}.interface.ts`);
+
+      // `{}` allows any value: `const value: IAnything = 42` compiled before and still does
+      expect(read('anything')).toContain('export interface IAnything {');
+      expect(read('anything')).not.toContain('[key: string]');
+      expect(read('described')).not.toContain('[key: string]');
+      // A nullable object is still an object
+      expect(read('nullable-bag')).toContain('export interface INullableBag {\n  [key: string]: any;\n}');
+    });
   });
 
   describe('Primitive-wrapper schemas', () => {

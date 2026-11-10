@@ -95,6 +95,22 @@ export function isCollectionSchema(schema: TSchemaByType): boolean {
 }
 
 /**
+ * Whether a component generated as an interface is a bare object: declared `type: object`
+ * (or its nullable type array, `["object", "null"]`), with no properties and not closed with
+ * `additionalProperties: false`. JSON Schema allows any properties on it, so its interface gets
+ * `[key: string]: any`. An untyped schema (`{}`, or one with only a description) is not one: it
+ * allows any value, a scalar included, which an index signature would reject.
+ */
+export function isBareObjectComponent(schema: TSchemaByType): boolean {
+    const type = (schema as { type?: unknown }).type;
+    const types: unknown[] = (Array.isArray(type) ? type : [type]).filter(item => item !== 'null');
+    const properties = (schema as { properties?: object }).properties;
+    return types.length === 1 && types[0] === 'object'
+        && (!properties || Object.keys(properties).length === 0)
+        && (schema as { additionalProperties?: unknown }).additionalProperties !== false;
+}
+
+/**
  * Whether a schema is the bare JSON Schema null type: { "type": "null" }
  * (or a type array equal to ["null"]). OpenAPI 3.1 uses this as a member of
  * oneOf/anyOf (and, rarely, allOf) to express nullability - e.g.

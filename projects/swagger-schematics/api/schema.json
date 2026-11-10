@@ -68,7 +68,7 @@
     },
     "schemaSnapshotPath": {
       "type": "string",
-      "description": "Path of a copy of the schema saved by 'swagger-schematics all', relative to the project root (a leading '/' is allowed, like 'path'), e.g. '/src/app/core/openapi.snapshot.json'. Commit it with the generated code: the next run compares the new schema with it and prints the API changes (see --change-report). CLI 'all' command only."
+      "description": "Path of a copy of the schema saved by 'swagger-schematics all', relative to the project root (a leading '/' is allowed, like 'path'), e.g. '/src/app/core/openapi.snapshot.json'. Commit it with the generated code: the next run compares the new schema with it and prints the API changes (see --change-report). CLI 'all' command only. The CLI flag --from-snapshot generates from this file instead of swaggerSchemaUrl."
     },
     "rtkCacheTags": {
       "type": "boolean",

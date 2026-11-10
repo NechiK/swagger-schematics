@@ -301,6 +301,110 @@ describe('swagger-schematics CLI', () => {
     }, 120000);
   });
 
+  describe('--from-snapshot', () => {
+    const snapshotFile = () => path.join(projectDir, 'src/app/core/openapi.snapshot.json');
+    const servicePath = () => path.join(projectDir, 'src/app/core/widget-api.service.ts');
+    const interfacePath = () => path.join(projectDir, 'src/app/core/interfaces/widget-dto.interface.ts');
+
+    const writeConfig = (config: Record<string, unknown>) => {
+      fs.writeFileSync(path.join(projectDir, 'openapi-schematics.json'), JSON.stringify({
+        path: '/src/app/core',
+        framework: 'angular',
+        ...config
+      }));
+    };
+
+    beforeEach(() => {
+      writeConfig({ swaggerSchemaUrl: './schema.json', schemaSnapshotPath: '/src/app/core/openapi.snapshot.json' });
+    });
+
+    it('should regenerate the same files from the snapshot alone, leaving the snapshot as it is', () => {
+      runCli('all');
+      const service = fs.readFileSync(servicePath(), 'utf8');
+      const dto = fs.readFileSync(interfacePath(), 'utf8');
+      // Hand-formatted on purpose: a rewrite would normalize it
+      const snapshot = JSON.stringify(SCHEMA);
+      fs.writeFileSync(snapshotFile(), snapshot);
+
+      // Neither the schema source nor the generated files are there: an older branch, offline
+      fs.rmSync(path.join(projectDir, 'schema.json'));
+      fs.rmSync(servicePath());
+      fs.rmSync(path.join(projectDir, 'src/app/core/interfaces'), { recursive: true });
+      // The source is not even configured: the snapshot is all the run needs
+      writeConfig({ schemaSnapshotPath: '/src/app/core/openapi.snapshot.json' });
+
+      const output = runCli('all --from-snapshot');
+
+      expect(output).toContain('Generating from the schema snapshot /src/app/core/openapi.snapshot.json; it is not updated.');
+      expect(output).toContain(`Reading swagger schema from file '${fs.realpathSync(snapshotFile())}'`);
+      expect(fs.readFileSync(servicePath(), 'utf8')).toBe(service);
+      expect(fs.readFileSync(interfacePath(), 'utf8')).toBe(dto);
+      expect(output).not.toContain('API changes since the last snapshot');
+      expect(output).not.toContain('Saved the schema snapshot');
+      expect(fs.readFileSync(snapshotFile(), 'utf8')).toBe(snapshot);
+    }, 180000);
+
+    it('should ignore a schema source that changed since the snapshot was saved', () => {
+      runCli('all');
+      const changed = JSON.parse(JSON.stringify(SCHEMA));
+      changed.components.schemas.TagDto = { type: 'object', properties: { label: { type: 'string' } } };
+      fs.writeFileSync(path.join(projectDir, 'schema.json'), JSON.stringify(changed));
+
+      const output = runCli('all --from-snapshot');
+
+      expect(output).not.toContain('CREATE');
+      expect(fs.existsSync(path.join(projectDir, 'src/app/core/interfaces/tag-dto.interface.ts'))).toBe(false);
+      expect(JSON.parse(fs.readFileSync(snapshotFile(), 'utf8')).components.schemas.TagDto).toBeUndefined();
+    }, 180000);
+
+    it('should fail before writing anything when there is no snapshot yet', () => {
+      const output = runCli('all --from-snapshot', true);
+
+      expect(output).toContain('EXIT:1');
+      expect(output).toContain('--from-snapshot: no schema snapshot at /src/app/core/openapi.snapshot.json');
+      expect(output).toContain('Run swagger-schematics all without --from-snapshot once to save it.');
+      expect(output).not.toContain('CREATE');
+      expect(fs.existsSync(path.join(projectDir, 'src'))).toBe(false);
+    }, 120000);
+
+    it('should fail when schemaSnapshotPath is not set', () => {
+      writeConfig({ swaggerSchemaUrl: './schema.json' });
+
+      const output = runCli('all --from-snapshot', true);
+
+      expect(output).toContain('EXIT:1');
+      expect(output).toContain('--from-snapshot needs schemaSnapshotPath');
+      expect(fs.existsSync(path.join(projectDir, 'src'))).toBe(false);
+    }, 120000);
+
+    it.each([
+      ['a positional schema source', 'all ./schema.json --from-snapshot', "can't be combined with the schema source './schema.json'"],
+      ['--swagger-schema-url', 'all --from-snapshot --swagger-schema-url=./schema.json', "can't be combined with the schema source './schema.json'"],
+      ['--change-report', 'all --from-snapshot --change-report=api-changes.md', "can't be combined with --change-report"]
+    ])('should fail when combined with %s', (_case, cliArgs, message) => {
+      runCli('all');
+      const snapshot = fs.readFileSync(snapshotFile(), 'utf8');
+
+      const output = runCli(cliArgs, true);
+
+      expect(output).toContain('EXIT:1');
+      expect(output).toContain(message);
+      expect(fs.readFileSync(snapshotFile(), 'utf8')).toBe(snapshot);
+      expect(fs.existsSync(path.join(projectDir, 'api-changes.md'))).toBe(false);
+    }, 180000);
+
+    it('should generate a single schematic from the snapshot without the all-only warning', () => {
+      runCli('all');
+      fs.rmSync(path.join(projectDir, 'schema.json'));
+      fs.rmSync(interfacePath());
+
+      const output = runCli('types --from-snapshot');
+
+      expect(output).toContain('CREATE src/app/core/interfaces/widget-dto.interface.ts');
+      expect(output).not.toContain('The API change summary runs with the all command only');
+    }, 180000);
+  });
+
   it('should fail with exit code 1 for an unknown command', () => {
     const output = runCli('generate', true);
 

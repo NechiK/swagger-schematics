@@ -23,6 +23,7 @@ Supported OpenAPI versions:
   - [Available options](#available-options)
   - [Removed schemas and endpoints](#removed-schemas-and-endpoints)
   - [API change summary](#api-change-summary)
+  - [Generating from the snapshot](#generating-from-the-snapshot)
   - [Filtering APIs](#filtering-apis)
   - [Angular: `provideApi()`](#angular-provideapi)
   - [RTK cache tags](#rtk-cache-tags)
@@ -63,7 +64,7 @@ npx swagger-schematics types swaggerUrl --path=/src/app/core
 npx swagger-schematics api swaggerUrl --path=/src/app/core --framework=angular
 ```
 
-Useful flags: `--dry-run` (report files without writing), `--change-report=<file>` (see [API change summary](#api-change-summary)), `--help`, `--version`.
+Useful flags: `--dry-run` (report files without writing), `--change-report=<file>` (see [API change summary](#api-change-summary)), `--from-snapshot` (see [Generating from the snapshot](#generating-from-the-snapshot)), `--help`, `--version`.
 Any schematic option can be passed as `--option=value` (kebab-case accepted, e.g. `--swagger-schema-url`).
 
 <details>
@@ -263,6 +264,26 @@ npx swagger-schematics all --change-report=api-changes.md
 ```
 
 If the report can't be written, the run exits with code 1 so the pipeline doesn't pick up a missing or stale file. The generated code is still written, and other summary problems are only warnings: a snapshot that can't be saved, or one that can't be compared with the schema (it is then replaced, the report says so, and changes are listed from the next run; a `--dry-run` leaves it as it is).
+
+### Generating from the snapshot
+
+The snapshot is the exact schema the generated code came from, so it can stand in for the back-end. `--from-snapshot` generates from it instead of `swaggerSchemaUrl`:
+
+```json
+{
+  "scripts": {
+    "openapi": "swagger-schematics all",
+    "openapi:snapshot": "swagger-schematics all --from-snapshot"
+  }
+}
+```
+
+- `npm run openapi` loads the schema from the back-end, regenerates and updates the snapshot. `npm run openapi:snapshot` regenerates what the committed snapshot describes: offline, and on an older branch it gives that branch's API, not today's.
+- The path comes from `schemaSnapshotPath`, so it is written once, in `openapi-schematics.json`.
+- The snapshot is never rewritten and no API changes are listed: there is nothing to compare it with.
+- This lets a project commit only the snapshot and generate the code on install or before a build, instead of committing the generated files. Pin the `swagger-schematics` version exactly then, since the output also depends on the generator.
+- The run fails before writing anything when `schemaSnapshotPath` is not set or the file doesn't exist yet (run `swagger-schematics all` once to save it), and when it is combined with a schema source (the `source` argument or `--swagger-schema-url`) or `--change-report`.
+- It works with `types` and `api` too.
 
 ### Filtering APIs
 

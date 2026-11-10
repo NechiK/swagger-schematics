@@ -15,6 +15,17 @@ const DEFAULT_CONFIG: Partial<SwaggerApiSchema> = {
     excludeDeprecated: false,
 };
 
+/** The settings in openapi-schematics.json, or none when the project has no config file. */
+export const readOpenapiSchematicsConfigFile = (): Partial<SwaggerApiSchema> => {
+    const config = fs.existsSync(openApiConfigFilePath) ? fs.readFileSync(openApiConfigFilePath, 'utf-8') : '{}';
+
+    try {
+        return JSON.parse(config);
+    } catch (error) {
+        throw new Error(`Failed to parse '${openApiConfigFilePath}' as JSON: ${(error as Error).message}`);
+    }
+};
+
 export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerApiSchema => {
     const optionKeys = Object.keys(options) as swaggerSchemaKeys[];
     const filteredOptions = optionKeys.reduce((acc, key) => {
@@ -24,14 +35,7 @@ export const getOpenapiSchematicsConfig = (options: SwaggerApiSchema): SwaggerAp
         return acc;
     }, {} as SwaggerApiSchema);
 
-    const config = fs.existsSync(openApiConfigFilePath) ? fs.readFileSync(openApiConfigFilePath, 'utf-8') : '{}';
-
-    let parsedConfigFile: Partial<SwaggerApiSchema>;
-    try {
-        parsedConfigFile = JSON.parse(config);
-    } catch (error) {
-        throw new Error(`Failed to parse '${openApiConfigFilePath}' as JSON: ${(error as Error).message}`);
-    }
+    const parsedConfigFile = readOpenapiSchematicsConfigFile();
 
     const openApiSchematicsConfig: SwaggerApiSchema = {
         ...DEFAULT_CONFIG,

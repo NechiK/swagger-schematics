@@ -33,6 +33,25 @@ describe('parseCliArgs', () => {
     expect(() => parseCliArgs(['all', '--change-report'])).toThrow('--change-report needs a file path');
   });
 
+  it('should take --from-snapshot out of the schematic options without consuming the next token', () => {
+    expect(parseCliArgs(['all', '--from-snapshot', '--path=/src'])).toMatchObject({
+      fromSnapshot: true,
+      options: { path: '/src' },
+      positionals: []
+    });
+    expect(parseCliArgs(['all', '--from-snapshot', './schema.json'])).toMatchObject({
+      fromSnapshot: true,
+      options: {},
+      positionals: ['./schema.json']
+    });
+    expect(parseCliArgs(['all', '--from-snapshot=false']).fromSnapshot).toBe(false);
+    expect(parseCliArgs(['all']).fromSnapshot).toBe(false);
+  });
+
+  it('should reject --from-snapshot with a value', () => {
+    expect(() => parseCliArgs(['all', '--from-snapshot=./snapshot.json'])).toThrow('--from-snapshot takes no value');
+  });
+
   it('should split array options on commas', () => {
     expect(parseCliArgs(['api', '--exclude-apis=Admin, Internal*', '--include-apis', 'Orders']).options).toEqual({
       excludeApis: ['Admin', 'Internal*'],

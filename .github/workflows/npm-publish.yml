@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - develop
+      - release/2.0.x
     paths:
       - 'projects/swagger-schematics/**'
 
@@ -67,7 +67,9 @@ jobs:
             PRERELEASE="${VERSION#*-}"
             TAG="${PRERELEASE%%.*}"
           else
-            TAG="latest"
+            # A maintenance line: `latest` stays on the newest major (3.x), so
+            # `npm install swagger-schematics` doesn't go back to 2.x
+            TAG="latest-2"
           fi
           echo "Publishing $VERSION with tag $TAG"
           npm publish --access public --tag "$TAG"

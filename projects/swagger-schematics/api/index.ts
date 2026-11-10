@@ -1,7 +1,6 @@
 import {
     apply,
     applyTemplates,
-    chain,
     MergeStrategy,
     mergeWith,
     move,
@@ -28,6 +27,7 @@ import { generateBaseApiRule, DEFAULT_RTK_BASE_API_PATH } from './helpers/base-a
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
 import { wrapRuleWithErrorLogging } from '../helpers/error-logging.helper';
+import { runRulesInSequence } from '../helpers/rule-sequence.helper';
 import { createStaleFilesRule, recordGeneratedFiles } from '../helpers/generated-files-manifest.helper';
 import { resolveTemplateDir, templateDirSource } from './helpers/template-path.helper';
 import * as path from 'path';
@@ -224,7 +224,7 @@ export default function(options: SwaggerApiSchema) {
                     : undefined,
             ownedFilePatterns: [{ dir: config.path, suffixes: [apiFileExt], exclude: [baseApiPath] }]
         });
-        return chain([...rules, eslintFixRule, staleFilesRule]);
+        return runRulesInSequence([...rules, eslintFixRule, staleFilesRule]);
     };
 
     return wrapRuleWithErrorLogging('api', apiRule);

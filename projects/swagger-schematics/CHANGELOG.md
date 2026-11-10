@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.0.1] - 2026-11-10
+
+A backport of the 3.0.1 fix for projects that still run the generator on Node.js 20.
+
+### 🐛 Fixed
+- **Large API documents no longer overflow the stack** - 2.0.0 failed with `RangeError: Maximum call stack size exceeded` on a document with 1,059 component schemas loaded from a URL, and on larger documents it could exit with code 0 having written nothing (seen with 5,000 schemas read from a file). The schematics build one rule per generated file and passed them all to the devkit's `chain()`, which wraps each rule's observable in the next one's, so subscribing to the result went one level deeper per file. The rules now run one after another, each finishing before the next starts, so the depth no longer depends on the size of the document:
+  - Applies to both schematics: `types` (one rule per schema) and `api` (one rule per API)
+  - Generated output is unchanged
+  - Covered by a test that generates 3,000 schemas and 3,000 APIs
+
 ## [2.0.0] - 2026-09-28
 
 A major release: regenerating can require changes at call sites and in custom templates. The list below says what to do; each item is described in full under ♻️ Changed, marked ⚠️ **BREAKING**.
@@ -508,6 +518,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[2.0.1]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/NechiK/swagger-schematics/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/NechiK/swagger-schematics/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/NechiK/swagger-schematics/compare/v1.3.0...v1.3.1

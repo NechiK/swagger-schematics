@@ -1,5 +1,7 @@
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
-import { resolveProjectPath, serializeSchemaSnapshot } from '@lib/helpers/api-changes/schema-snapshot';
+import { resolveProjectPath, resolveSnapshotSource, serializeSchemaSnapshot } from '@lib/helpers/api-changes/schema-snapshot';
 import { ISwaggerSchema } from '@lib/interfaces/version_3_1/swagger.interface';
 
 describe('schema snapshot', () => {
@@ -35,5 +37,50 @@ describe('schema snapshot', () => {
 
     expect(Object.keys(reparsed.components.schemas)).toEqual(['__proto__', 'Order']);
     expect(reparsed.components.schemas.__proto__).toEqual({ type: 'string' });
+  });
+
+  describe('resolveSnapshotSource (--from-snapshot)', () => {
+    let projectDir: string;
+    let cwd: string;
+
+    beforeEach(() => {
+      cwd = process.cwd();
+      projectDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'swagger-schematics-snapshot-')));
+      process.chdir(projectDir);
+    });
+
+    afterEach(() => {
+      process.chdir(cwd);
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    });
+
+    it('returns the absolute path of the snapshot, a leading slash meaning the project root', () => {
+      fs.mkdirSync(path.join(projectDir, 'src'));
+      fs.writeFileSync(path.join(projectDir, 'src/openapi.snapshot.json'), '{}');
+
+      expect(resolveSnapshotSource({ snapshotSetting: '/src/openapi.snapshot.json' }))
+        .toBe(path.join(projectDir, 'src/openapi.snapshot.json'));
+      expect(resolveSnapshotSource({ snapshotSetting: 'src/openapi.snapshot.json' }))
+        .toBe(path.join(projectDir, 'src/openapi.snapshot.json'));
+    });
+
+    it('fails when schemaSnapshotPath is not set', () => {
+      expect(() => resolveSnapshotSource({})).toThrow('--from-snapshot needs schemaSnapshotPath');
+      expect(() => resolveSnapshotSource({ snapshotSetting: true })).toThrow('--from-snapshot needs schemaSnapshotPath');
+    });
+
+    it('fails when the snapshot file does not exist, naming the setting and the resolved path', () => {
+      expect(() => resolveSnapshotSource({ snapshotSetting: '/src/openapi.snapshot.json' }))
+        .toThrow(`--from-snapshot: no schema snapshot at /src/openapi.snapshot.json ('${path.join(projectDir, 'src/openapi.snapshot.json')}')`);
+    });
+
+    it('fails when a schema source or a change report is asked for as well', () => {
+      fs.writeFileSync(path.join(projectDir, 'openapi.snapshot.json'), '{}');
+
+      expect(() => resolveSnapshotSource({ snapshotSetting: 'openapi.snapshot.json', explicitSource: './schema.json' }))
+        .toThrow("can't be combined with the schema source './schema.json'");
+      expect(() => resolveSnapshotSource({ snapshotSetting: 'openapi.snapshot.json', reportPath: 'api-changes.md' }))
+        .toThrow("can't be combined with --change-report");
+    });
   });
 });

@@ -5,11 +5,12 @@ import { NodeWorkflow } from '@angular-devkit/schematics/tools';
 import { parseCliArgs, helpText, TCliCommand } from './cli-args';
 import { logCliError } from '../helpers/error-logging.helper';
 import { enableSwaggerSchemaCache } from '../helpers/swagger-schema.helper';
-import { getOpenapiSchematicsConfig } from '../helpers/config';
+import { getOpenapiSchematicsConfig, readOpenapiSchematicsConfigFile } from '../helpers/config';
 import { resolveFramework } from '../interfaces/swagger-schematics/framework';
 import { resolveTemplateDir } from '../api/helpers/template-path.helper';
 import { SwaggerApiSchema } from '../api/schema';
 import { runChangeSummaryAfterGeneration } from '../helpers/api-changes/change-summary';
+import { resolveSnapshotSource } from '../helpers/api-changes/schema-snapshot';
 import { IFileCounts } from '../helpers/api-changes/format';
 import { version } from '../package.json';
 
@@ -93,6 +94,18 @@ async function main(): Promise<void> {
         ? ['types', 'api']
         : [args.command as Exclude<TCliCommand, 'all'>];
 
+    if (args.fromSnapshot) {
+        // The snapshot path is written once, in the config: this run reads the schema from it
+        // instead of swaggerSchemaUrl, and leaves the snapshot as it is
+        const snapshotSetting = args.options.schemaSnapshotPath ?? readOpenapiSchematicsConfigFile().schemaSnapshotPath;
+        args.options.swaggerSchemaUrl = resolveSnapshotSource({
+            snapshotSetting,
+            explicitSource: args.options.swaggerSchemaUrl ?? args.positionals[0],
+            reportPath: args.changeReport
+        });
+        console.info(`[swagger-schematics] Generating from the schema snapshot ${snapshotSetting as string}; it is not updated.`);
+    }
+
     let config: SwaggerApiSchema | null = null;
     if (args.command === 'all') {
         // `all` runs types before api: validate what api needs up front, so a
@@ -109,7 +122,7 @@ async function main(): Promise<void> {
         if (config.baseApiTemplatePath) {
             resolveTemplateDir('baseApiTemplatePath', config.baseApiTemplatePath);
         }
-    } else if (args.changeReport || args.options.schemaSnapshotPath) {
+    } else if (!args.fromSnapshot && (args.changeReport || args.options.schemaSnapshotPath)) {
         console.warn('[swagger-schematics] The API change summary runs with the all command only; ' +
             'no snapshot or change report is written for a single schematic.');
     }
@@ -122,7 +135,8 @@ async function main(): Promise<void> {
         await runSchematic(schematic, args.options, args.positionals, args.dryRun, files);
     }
 
-    if (config) {
+    // From the snapshot there is nothing to compare, and the snapshot must stay as committed
+    if (config && !args.fromSnapshot) {
         const succeeded = await runChangeSummaryAfterGeneration({
             config, reportPath: args.changeReport, dryRun: args.dryRun, files, logger: createConsoleLogger()
         });

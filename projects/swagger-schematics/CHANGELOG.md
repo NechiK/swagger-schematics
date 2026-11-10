@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.2.0] - unreleased
+
+### ✨ Added
+- **`--from-snapshot` generates from the schema snapshot** - `swagger-schematics all --from-snapshot` reads the schema from the file `schemaSnapshotPath` names instead of `swaggerSchemaUrl`, so a project regenerates the API it was written against, offline, and an older branch gets its own API rather than today's. A project can then commit only the snapshot and generate the code on install or before a build. Until now this took the snapshot path as the source argument (`swagger-schematics all src/app/core/openapi.snapshot.json`), so the path was written twice: in `openapi-schematics.json` and in the npm script
+- The snapshot is never rewritten and no API changes are listed: passing it as the source compared it with itself and saved it again, reformatting a snapshot that wasn't in the generator's own formatting
+- `swaggerSchemaUrl` is not needed for such a run
+- Fails before writing anything, with exit code 1, when `schemaSnapshotPath` is not set or the snapshot file doesn't exist yet, and when combined with a schema source (the `source` argument or `--swagger-schema-url`) or with `--change-report`
+- Works with the `types` and `api` commands too
+
 ## [3.1.0] - 2026-11-10
 
 ### ♻️ Changed
@@ -552,6 +561,7 @@ A major release: regenerating can require changes at call sites and in custom te
 - Updated axios to 1.10.0
 
 
+[3.2.0]: https://github.com/NechiK/swagger-schematics/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/NechiK/swagger-schematics/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/NechiK/swagger-schematics/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/NechiK/swagger-schematics/compare/v2.0.0...v3.0.0

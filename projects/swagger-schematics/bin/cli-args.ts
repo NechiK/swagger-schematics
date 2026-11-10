@@ -9,6 +9,8 @@ export interface IParsedCliArgs {
     dryRun: boolean;
     /** `--change-report <file>`: write the API change summary as markdown (CLI-only, not passed to the schematics) */
     changeReport?: string;
+    /** `--from-snapshot`: generate from the committed schema snapshot instead of the schema source (CLI-only) */
+    fromSnapshot: boolean;
     help: boolean;
     version: boolean;
     /** Set when the first non-flag argument is not a known command */
@@ -45,6 +47,9 @@ const ARRAY_OPTIONS: ReadonlySet<string> = new Set(
     )
 );
 
+/** Boolean flags of the CLI itself, which no schematic schema declares. */
+const CLI_BOOLEAN_FLAGS: ReadonlySet<string> = new Set(['fromSnapshot']);
+
 function camelize(key: string): string {
     return key.replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
 }
@@ -65,6 +70,7 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
         options: {},
         positionals: [],
         dryRun: false,
+        fromSnapshot: false,
         help: false,
         version: false
     };
@@ -96,7 +102,7 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
 
             const name = camelize(body);
             const next = argv[index + 1];
-            if (BOOLEAN_OPTIONS.has(name)) {
+            if (BOOLEAN_OPTIONS.has(name) || CLI_BOOLEAN_FLAGS.has(name)) {
                 // Boolean flags never swallow a following positional; an
                 // explicit `--flag true` / `--flag false` is still accepted
                 if (next === 'true' || next === 'false') {
@@ -142,6 +148,15 @@ export function parseCliArgs(argv: string[]): IParsedCliArgs {
         parsed.changeReport = changeReport;
     }
 
+    if ('fromSnapshot' in parsed.options) {
+        const fromSnapshot = parsed.options.fromSnapshot;
+        delete parsed.options.fromSnapshot;
+        if (typeof fromSnapshot !== 'boolean') {
+            throw new Error('--from-snapshot takes no value: the snapshot path comes from schemaSnapshotPath');
+        }
+        parsed.fromSnapshot = fromSnapshot;
+    }
+
     return parsed;
 }
 
@@ -164,11 +179,15 @@ Options:
   --change-report=<file>
                       With 'all': write the API change summary as markdown,
                       e.g. for a pull request description (see schemaSnapshotPath)
+  --from-snapshot     Generate from the schema snapshot (schemaSnapshotPath)
+                      instead of the schema source, e.g. to regenerate offline.
+                      The snapshot is not updated and no changes are listed
   -h, --help          Show this help
   -v, --version       Show the package version
 
 Examples:
   swagger-schematics all ./openapi-swagger.json --path=/src/app/core
   swagger-schematics types https://api.example.com/swagger/v1/swagger.json
-  swagger-schematics api --framework=react-rtk --dry-run`;
+  swagger-schematics api --framework=react-rtk --dry-run
+  swagger-schematics all --from-snapshot`;
 }

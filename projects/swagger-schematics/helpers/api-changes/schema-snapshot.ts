@@ -40,3 +40,39 @@ export function writeTextFile(filePath: string, content: string): void {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content);
 }
+
+/** What `--from-snapshot` was run with, besides the snapshot setting. */
+export interface ISnapshotSourceRequest {
+    /** `schemaSnapshotPath`, from the CLI option or openapi-schematics.json */
+    snapshotSetting?: unknown;
+    /** A schema source given on the command line: the positional argument or `--swagger-schema-url` */
+    explicitSource?: unknown;
+    /** `--change-report` file */
+    reportPath?: string;
+}
+
+/**
+ * The schema source for `--from-snapshot`: the absolute path of the snapshot `schemaSnapshotPath`
+ * names. Throws when the run can't be what was asked for (no setting, no file, or an option that
+ * needs the live schema), so a build never silently generates from something else.
+ */
+export function resolveSnapshotSource(request: ISnapshotSourceRequest): string {
+    const { snapshotSetting, explicitSource, reportPath } = request;
+
+    if (explicitSource !== undefined) {
+        throw new Error(`--from-snapshot generates from the schema snapshot, so it can't be combined with the schema source '${String(explicitSource)}'. Remove one of them.`);
+    }
+    if (reportPath) {
+        throw new Error('--from-snapshot lists no API changes (the snapshot is the schema it generates from), so it can\'t be combined with --change-report.');
+    }
+    if (typeof snapshotSetting !== 'string' || !snapshotSetting) {
+        throw new Error('--from-snapshot needs schemaSnapshotPath: set it in openapi-schematics.json to the snapshot file, e.g. "/src/app/core/openapi.snapshot.json".');
+    }
+
+    const snapshotPath = resolveProjectPath(snapshotSetting);
+    if (!fs.existsSync(snapshotPath)) {
+        throw new Error(`--from-snapshot: no schema snapshot at ${snapshotSetting} ('${snapshotPath}'). ` +
+            'Run swagger-schematics all without --from-snapshot once to save it.');
+    }
+    return snapshotPath;
+}

@@ -93,6 +93,50 @@ describe('OpenAPI 3.1 support', () => {
     });
   });
 
+  describe('Free-form objects', () => {
+    it('should type a bare object property, array item and nullable property as Record<string, any>', () => {
+      const execute = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/execute-report-dto.interface.ts`);
+      const result = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/report-result-dto.interface.ts`);
+      expect(execute).toContain('filters: Record<string, any>;');
+      expect(result).toContain('items?: Record<string, any>[];');
+      expect(result).toContain('grandTotals?: Record<string, any> | null;');
+      expect(execute).toMatchSnapshot();
+      expect(result).toMatchSnapshot();
+    });
+
+    it('should give a bare object component an index signature, keeping its interface name', () => {
+      const content = tree.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/report-row.interface.ts`);
+      expect(content).toContain('export interface IReportRow {\n  [key: string]: any;\n}');
+      expect(content).toMatchSnapshot();
+    });
+
+    it('should keep the empty interface for an untyped component, which also allows a scalar', async () => {
+      const untyped = await runFullSchematics({
+        openapi: '3.1.0',
+        info: { title: 'Untyped', version: '1.0.0' },
+        paths: {},
+        components: {
+          schemas: {
+            Anything: {},
+            Described: { description: 'Any JSON value' },
+            NullableBag: { type: ['object', 'null'] }
+          }
+        }
+      } as unknown as Parameters<typeof runFullSchematics>[0], {
+        ...ANGULAR_SCHEMATIC_OPTIONS,
+        swaggerSchemaUrl: 'https://api.example.com/swagger/untyped.json'
+      });
+      const read = (name: string) => untyped.readContent(`${ANGULAR_SCHEMATIC_OPTIONS.path}/interfaces/${name}.interface.ts`);
+
+      // `{}` allows any value: `const value: IAnything = 42` compiled before and still does
+      expect(read('anything')).toContain('export interface IAnything {');
+      expect(read('anything')).not.toContain('[key: string]');
+      expect(read('described')).not.toContain('[key: string]');
+      // A nullable object is still an object
+      expect(read('nullable-bag')).toContain('export interface INullableBag {\n  [key: string]: any;\n}');
+    });
+  });
+
   describe('Primitive-wrapper schemas', () => {
     it('should not generate a file for an inlined primitive-wrapper schema', () => {
       // GuidIdentifier = { type: 'string', format: 'uuid' } is inlined everywhere,

@@ -85,6 +85,35 @@ describe('buildApiModel', () => {
     expect(buildApiModel(SCHEMA, { framework: 'angular' }).types.IUserDto).toBeDefined();
   });
 
+  it('gives a bare object component the index signature the generated interface has', () => {
+    const schema = {
+      ...SCHEMA,
+      components: { schemas: { Payload: { type: 'object' }, Closed: { type: 'object', additionalProperties: false } } }
+    } as unknown as ISwaggerSchema;
+    const { types } = buildApiModel(schema, { framework: 'angular' });
+
+    expect(types.IPayload).toEqual({ kind: 'interface', properties: {}, indexSignature: 'any' });
+    expect(types.IClosed).toEqual({ kind: 'interface', properties: {} });
+  });
+
+  it('gives no index signature to an untyped component, which also allows a scalar', () => {
+    const schema = {
+      ...SCHEMA,
+      components: {
+        schemas: {
+          Anything: {},
+          Described: { description: 'Any JSON value' },
+          NullableBag: { type: ['object', 'null'] }
+        }
+      }
+    } as unknown as ISwaggerSchema;
+    const { types } = buildApiModel(schema, { framework: 'angular' });
+
+    expect(types.IAnything).toEqual({ kind: 'interface', properties: {} });
+    expect(types.IDescribed).toEqual({ kind: 'interface', properties: {} });
+    expect(types.INullableBag).toEqual({ kind: 'interface', properties: {}, indexSignature: 'any' });
+  });
+
   it('applies legacyOptionalProperties to parameters like the generator', () => {
     const schema = {
       ...SCHEMA,

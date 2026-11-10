@@ -18,7 +18,7 @@ import {dasherize} from "@angular-devkit/core/src/utils/strings";
 import {parseBuffer as editorconfigParseBuffer} from 'editorconfig';
 import { TSwaggerSchematicsSchema } from '../interfaces/swagger-schematics/schema';
 import { removeImportDuplicates, transformProperties, transformCompositionSchema } from './helpers/template.helper';
-import { transformIndexSignature } from './utils/transform-type';
+import { isBareObjectComponent, transformIndexSignature } from './utils/transform-type';
 import { getOpenapiSchematicsConfig } from '../helpers/config';
 import { createEslintFixRule } from '../helpers/eslint-fix.helper';
 import { detectOpenApiVersion } from '../helpers/openapi-version.helper';
@@ -154,6 +154,12 @@ export default function(options: SwaggerSchema): Rule {
             if (indexSignature && propertiesContent.length > 0) {
                 propertiesContent.push(['[key: string]', indexSignature[0]]);
                 refs.push(...indexSignature[1]);
+            } else if (propertiesContent.length === 0 && isBareObjectComponent(schemaData.data as TSchemaByType)) {
+                // A bare object (`type: object`, no properties, not closed) allows any properties, like
+                // `Record<string, any>` inline: an empty interface would not let a caller read them
+                // under `strict` (TS7053). It keeps its interface name, so references don't change.
+                // An untyped schema (`{}`) keeps its empty interface, which also accepts a scalar
+                propertiesContent.push(['[key: string]', 'any']);
             }
             const importRefs = removeImportDuplicates(refs.filter(refItem => refItem.importSymbol !== `I${strings.classify(parsed.name)}`));
             itemSource = apply(interfaceTemplates, [

@@ -2,7 +2,7 @@ import { strings } from '@angular-devkit/core';
 import { ISwaggerSchema, TSchemaByType } from '../../interfaces/version_3_1/swagger.interface';
 import { TFrameworkType } from '../../interfaces/swagger-schematics/framework';
 import { getGeneratedSchemaKind, TGeneratedSchemaKind } from '../../types/utils/schema-kind';
-import { fromPropertyKey, transformIndexSignature, transformProperties } from '../../types/utils/transform-type';
+import { fromPropertyKey, isBareObjectComponent, transformIndexSignature, transformProperties } from '../../types/utils/transform-type';
 import { transformCompositionSchema } from '../../types/helpers/template.helper';
 import { buildEnumMembers } from '../../types/utils/enum';
 import { transformSwaggerSchema } from '../../api/helpers/api.helper';
@@ -116,10 +116,12 @@ function buildTypes(swagger: ISwaggerSchema, options: IApiModelOptions): IApiMod
             propertiesContent.forEach(([name, type]) => {
                 properties[fromPropertyKey(name)] = `${name}: ${type}`;
             });
-            // Same rule as the types schematic: an index signature only next to properties
+            // Same rules as the types schematic: `additionalProperties` is an index signature next
+            // to properties, and a bare object (`type: object`, no properties, not closed) gets
+            // `[key: string]: any`
             const indexSignature = propertiesContent.length > 0
                 ? transformIndexSignature(schema, propertiesContent, swagger, transformOptions)?.[0]
-                : undefined;
+                : isBareObjectComponent(schema) ? 'any' : undefined;
             types[symbol] = indexSignature === undefined ? { kind, properties } : { kind, properties, indexSignature };
         }
     });
